@@ -1,0 +1,66 @@
+NOTICE — Third-Party Software Licenses
+
+This project uses the following open-source dependencies:
+
+================================================================================
+MIT License
+================================================================================
+
+The following packages are licensed under the MIT License:
+
+- Electron (https://electronjs.org) — Copyright GitHub Inc.
+- React (https://react.dev) — Copyright Meta Platforms, Inc.
+- React DOM — Copyright Meta Platforms, Inc.
+- React Router DOM (https://reactrouter.com) — Copyright Remix Software, Inc.
+- Vite (https://vitejs.dev) — Copyright VoidZero Inc.
+- Tailwind CSS (https://tailwindcss.com) — Copyright Tailwind Labs, Inc.
+- Zustand (https://github.com/pmndrs/zustand) — Copyright Paul Henschel
+- Zod (https://zod.dev) — Copyright Colin McDonnell
+- better-sqlite3 (https://github.com/WiseLibs/better-sqlite3) — Copyright Joshua Wise
+- Express (https://expressjs.com) — Copyright TJ Holowaychuk et al.
+- pdfmake (https://pdfmake.org) — Copyright bpampuch
+- PapaParse (https://www.papaparse.com) — Copyright Matthew Holt
+- electron-builder (https://www.electron.build) — Copyright Electron team
+- @electron/rebuild — Copyright Electron team
+- @vitejs/plugin-react — Copyright Vite team
+- drizzle-kit (https://orm.drizzle.team) — Copyright Drizzle Team
+- tsx — Copyright esbuild contributors
+- autoprefixer — Copyright Andrii Kozhevnikov
+- Vitest (https://vitest.dev) — Copyright Vitest contributors
+
+================================================================================
+Apache License 2.0
+================================================================================
+
+The following packages are licensed under the Apache License 2.0:
+
+- Drizzle ORM (https://orm.drizzle.team) — Copyright Drizzle Team
+  Full license: https://github.com/drizzle-team/drizzle-orm/blob/main/LICENSE
+
+- TypeScript (https://www.typescriptlang.org) — Copyright Microsoft Corporation
+  Full license: https://github.com/microsoft/TypeScript/blob/main/LICENSE
+
+- Playwright (https://playwright.dev) — Copyright Microsoft Corporation
+  Full license: https://github.com/microsoft/playwright/blob/main/LICENSE
+
+================================================================================
+MIT License Text
+================================================================================
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

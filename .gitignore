@@ -1,0 +1,36 @@
+# Dependencias
+node_modules/
+.pnpm-store
+
+# Build output
+dist/
+dist-electron/
+release/
+*.AppImage
+
+# Temporal (AppImage extraído)
+squashfs-root/
+
+# Base de datos (datos del negocio)
+*.sqlite
+*.sqlite3
+*.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Documentación interna
+AGENT.md
+DESIGN.md
+docs/superpowers/

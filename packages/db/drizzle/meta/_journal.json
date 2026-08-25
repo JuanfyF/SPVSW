@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1786145681921,
+      "tag": "0000_chief_nightcrawler",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787000000000,
+      "tag": "0001_add_pedido_unidad_drop_porciones",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787362296101,
+      "tag": "0002_legal_surge",
+      "breakpoints": true
+    }
+  ]
+}

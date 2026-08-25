@@ -1,0 +1,2 @@
+ALTER TABLE `cortes_producto` ADD `unidades_enteras` integer DEFAULT 1 NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `stock_diario_sesion_producto_unidad_idx` ON `stock_diario` (`sesion_caja_id`,`producto_id`,`unidad`);
