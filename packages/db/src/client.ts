@@ -19,6 +19,14 @@ export function createDb(rutaArchivo: string) {
   return drizzle(sqlite, { schema: { ...schema, ...relations } });
 }
 
+export function createDbWithSqlite(rutaArchivo: string) {
+  const sqlite = new Database(rutaArchivo);
+  sqlite.pragma("journal_mode = WAL");
+  sqlite.pragma("foreign_keys = ON");
+  const drizzleDb = drizzle(sqlite, { schema: { ...schema, ...relations } });
+  return { db: drizzleDb, sqlite };
+}
+
 export type PosDatabase = ReturnType<typeof createDb>;
 
 export * from "./schema";

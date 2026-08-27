@@ -25,6 +25,7 @@ import Nomina from "./screens/escritorio/Nomina";
 import CierreCaja from "./screens/escritorio/CierreCaja";
 import Reportes from "./screens/escritorio/Reportes";
 import Usuarios from "./screens/escritorio/Usuarios";
+import BackupRestore from "./screens/escritorio/BackupRestore";
 
 // Pantallas móviles (7)
 import MenuMovil from "./screens/movil/Menu";
@@ -105,6 +106,10 @@ export const router: RouterType = createHashRouter([
       {
         path: "usuarios",
         element: <Usuarios />,
+      },
+      {
+        path: "backup",
+        element: <BackupRestore />,
       },
     ],
   },

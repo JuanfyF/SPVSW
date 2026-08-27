@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { formatearFecha } from "@pos/shared";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/auth";
 
 interface Producto {
@@ -25,6 +25,10 @@ export default function Nuevo() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  if (usuario?.rol === "pastelera") {
+    return <Navigate to="/movil/pedidos" replace />;
+  }
 
   // Formulario
   const [cliente, setCliente] = useState("");

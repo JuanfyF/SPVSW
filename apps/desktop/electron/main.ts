@@ -9,7 +9,7 @@ app.commandLine.appendSwitch("disable-software-rasterizer");
 app.commandLine.appendSwitch("ozone-platform=x11");
 app.commandLine.appendSwitch("in-process-gpu");
 app.commandLine.appendSwitch("no-sandbox");
-import { createDb, migrate, eq } from "@pos/db";
+import { createDb, createDbWithSqlite, migrate, eq } from "@pos/db";
 import { usuarios } from "@pos/db";
 import { crearHashPin } from "@pos/shared";
 import { startLocalServer } from "@pos/local-server";
@@ -29,6 +29,7 @@ import {
 
 let mainWindow: BrowserWindow | null = null;
 let db: ReturnType<typeof createDb> | null = null;
+let dbPath: string = "";
 
 // Servicios de dominio
 let servicios: {
@@ -593,6 +594,69 @@ function registrarHandlers() {
   ipcMain.handle("sistema:getVersion", async () => {
     return app.getVersion();
   });
+
+  ipcMain.handle("sistema:backup", async (_event, rutaDestino: string) => {
+    if (!db) throw new Error("Base de datos no inicializada");
+    const fs = await import("fs");
+    const currentDbPath = path.join(app.getPath("userData"), "pos.sqlite");
+    const walPath = currentDbPath + "-wal";
+    const shmPath = currentDbPath + "-shm";
+
+    // Forzar checkpoint para que todo esté en el archivo principal
+    const { createDbWithSqlite: createDbFn } = await import("@pos/db");
+    const { sqlite: tempSqlite } = createDbFn(currentDbPath);
+    tempSqlite.pragma("wal_checkpoint(TRUNCATE)");
+    tempSqlite.close();
+
+    fs.copyFileSync(currentDbPath, rutaDestino);
+
+    // Copiar WAL y SHM si existen
+    if (fs.existsSync(walPath)) {
+      fs.copyFileSync(walPath, rutaDestino + "-wal");
+    }
+    if (fs.existsSync(shmPath)) {
+      fs.copyFileSync(shmPath, rutaDestino + "-shm");
+    }
+
+    return { ok: true, ruta: rutaDestino };
+  });
+
+  ipcMain.handle("sistema:restore", async (_event, rutaBackup: string) => {
+    const fs = await import("fs");
+    const currentDbPath = path.join(app.getPath("userData"), "pos.sqlite");
+    const walPath = currentDbPath + "-wal";
+    const shmPath = currentDbPath + "-shm";
+
+    // Verificar que el backup existe
+    if (!fs.existsSync(rutaBackup)) {
+      throw new Error("El archivo de backup no existe");
+    }
+
+    // Cerrar conexión actual
+    if (db) {
+      db = null;
+    }
+
+    // Restaurar archivos
+    fs.copyFileSync(rutaBackup, currentDbPath);
+    if (fs.existsSync(rutaBackup + "-wal")) {
+      fs.copyFileSync(rutaBackup + "-wal", walPath);
+    } else if (fs.existsSync(walPath)) {
+      fs.unlinkSync(walPath);
+    }
+    if (fs.existsSync(rutaBackup + "-shm")) {
+      fs.copyFileSync(rutaBackup + "-shm", shmPath);
+    } else if (fs.existsSync(shmPath)) {
+      fs.unlinkSync(shmPath);
+    }
+
+    // Reconectar
+    const { createDbWithSqlite: createDbFn } = await import("@pos/db");
+    const { db: newDb } = createDbFn(currentDbPath);
+    db = newDb;
+
+    return { ok: true };
+  });
 }
 
 async function crearVentanaPrincipal() {
@@ -618,7 +682,8 @@ app.whenReady().then(async () => {
   const dbPath = path.join(app.getPath("userData"), "pos.sqlite");
   
   // Crear conexión a la base de datos
-  db = createDb(dbPath);
+  const { db: dbInstance } = createDbWithSqlite(dbPath);
+  db = dbInstance;
   
   // Ejecutar migraciones automáticamente antes de abrir la ventana
   try {

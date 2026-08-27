@@ -190,5 +190,7 @@ contextBridge.exposeInMainWorld("pos", {
   sistema: {
     getDbPath: () => ipcRenderer.invoke("sistema:getDbPath"),
     getVersion: () => ipcRenderer.invoke("sistema:getVersion"),
+    backup: (rutaDestino: string) => ipcRenderer.invoke("sistema:backup", rutaDestino),
+    restore: (rutaBackup: string) => ipcRenderer.invoke("sistema:restore", rutaBackup),
   },
 });

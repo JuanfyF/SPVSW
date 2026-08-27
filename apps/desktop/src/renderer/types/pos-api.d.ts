@@ -962,6 +962,8 @@ export interface PosAPI {
   sistema: {
     getDbPath: () => Promise<string>;
     getVersion: () => Promise<string>;
+    backup: (rutaDestino: string) => Promise<{ ok: boolean; ruta: string }>;
+    restore: (rutaBackup: string) => Promise<{ ok: boolean }>;
   };
 }
 

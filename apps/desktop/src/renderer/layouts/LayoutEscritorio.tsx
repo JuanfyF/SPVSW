@@ -12,6 +12,7 @@ const menuItemsAdmin = [
   { path: "/nomina", label: "Nómina", icon: "👥" },
   { path: "/reportes", label: "Reportes", icon: "📈" },
   { path: "/usuarios", label: "Usuarios", icon: "🔑" },
+  { path: "/backup", label: "Backup", icon: "💾" },
 ];
 
 const menuItemsPastelera = [
@@ -27,6 +28,7 @@ const rutasRestringidasPastelera = [
   "/nomina",
   "/reportes",
   "/usuarios",
+  "/backup",
   "/caja/apertura",
   "/caja/cierre",
 ];
