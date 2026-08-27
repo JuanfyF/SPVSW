@@ -1,18 +1,14 @@
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
+import { verificarRuta as verificarRutaBase } from "./route-guard-logic";
 
-const rutasRestringidasPastelera: Record<string, string> = {
-  "/movil/pedidos/nuevo": "/movil/pedidos",
-};
+export { verificarRuta } from "./route-guard-logic";
 
 export function useRouteGuard() {
   const { usuario } = useAuthStore();
 
   function verificarRuta(pathname: string): string | null {
-    if (usuario?.rol === "pastelera" && rutasRestringidasPastelera[pathname]) {
-      return rutasRestringidasPastelera[pathname];
-    }
-    return null;
+    return verificarRutaBase(pathname, usuario?.rol ?? "");
   }
 
   return { verificarRuta };
@@ -22,8 +18,8 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
   const { usuario } = useAuthStore();
   const pathname = window.location.hash.replace("#", "").split("?")[0];
 
-  if (usuario?.rol === "pastelera" && rutasRestringidasPastelera[pathname]) {
-    return <Navigate to={rutasRestringidasPastelera[pathname]} replace />;
+  if (verificarRutaBase(pathname, usuario?.rol ?? "")) {
+    return <Navigate to={verificarRutaBase(pathname, usuario?.rol ?? "")!} replace />;
   }
 
   return <>{children}</>;
