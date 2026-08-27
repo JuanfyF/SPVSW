@@ -18,6 +18,7 @@ import {
   and,
   sql,
 } from "@pos/db";
+import { calcularStockDisponible } from "../stock/stock-calculo";
 import { CrearVentaInput, CrearVentaSchema, IdSchema } from "@pos/shared";
 
 export function crearServicioVentas(db: PosDatabase) {
@@ -110,51 +111,10 @@ export function crearServicioVentas(db: PosDatabase) {
         throw new Error("Producto no encontrado");
       }
 
-      const unidadVendido = unidad === "porcion_llevar" ? "porcion" : unidad;
-
-      const vendido = await this.calcularVendido(
-        productoId,
-        sesionCajaId,
-        unidad
-      );
-
-      const stockInicial = await this.obtenerStockInicial(
-        productoId,
-        sesionCajaId,
-        unidad
-      );
-
-      // Subtract mermas
-      const mermasResult = await db
-        .select({ total: sql<number>`coalesce(sum(${mermas.cantidad}), 0)` })
-        .from(mermas)
-        .where(
-          and(
-            eq(mermas.productoId, productoId),
-            eq(mermas.sesionCajaId, sesionCajaId),
-            eq(mermas.unidad, unidadVendido)
-          )
-        );
-      const totalMermas = mermasResult[0]?.total ?? 0;
-
-      // Subtract cortesias
-      const cortesiasResult = await db
-        .select({ total: sql<number>`coalesce(sum(${cortesias.cantidad}), 0)` })
-        .from(cortesias)
-        .where(
-          and(
-            eq(cortesias.productoId, productoId),
-            eq(cortesias.sesionCajaId, sesionCajaId),
-            eq(cortesias.unidad, unidadVendido)
-          )
-        );
-      const totalCortesias = cortesiasResult[0]?.total ?? 0;
-
-      const disponible = stockInicial - vendido - totalMermas - totalCortesias;
-
+      const calc = await calcularStockDisponible(db, productoId, sesionCajaId, unidad);
       return {
-        suficiente: disponible >= cantidadRequerida,
-        disponible,
+        suficiente: calc.disponible >= cantidadRequerida,
+        disponible: calc.disponible,
       };
     },
 

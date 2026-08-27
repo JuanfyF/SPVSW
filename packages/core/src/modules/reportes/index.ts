@@ -413,6 +413,7 @@ export function crearServicioReportes(db: PosDatabase) {
      */
     async reporteProductosMasVendidos(fechaInicio: string, fechaFin: string) {
       const validados = ReportePorFechasSchema.parse({ fechaInicio, fechaFin });
+      const fechaFinConHora = `${validados.fechaFin} 23:59:59`;
       return db
         .select({
           productoId: ventaDetalle.productoId,
@@ -422,7 +423,7 @@ export function crearServicioReportes(db: PosDatabase) {
         .from(ventaDetalle)
         .innerJoin(ventas, eq(ventaDetalle.ventaId, ventas.id))
         .innerJoin(productos, eq(ventaDetalle.productoId, productos.id))
-        .where(and(gte(ventas.fechaHora, validados.fechaInicio), lte(ventas.fechaHora, validados.fechaFin)))
+        .where(and(gte(ventas.fechaHora, validados.fechaInicio), lte(ventas.fechaHora, fechaFinConHora)))
         .groupBy(ventaDetalle.productoId, productos.nombre)
         .orderBy(sql`sum(${ventaDetalle.cantidad}) DESC`)
         .limit(10);

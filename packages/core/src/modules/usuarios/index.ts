@@ -120,6 +120,14 @@ export function crearServicioUsuarios(db: PosDatabase) {
      */
     async cambiarPin(id: number, nuevoPin: string) {
       CambiarPinSchema.parse({ nuevoPin, confirmarPin: nuevoPin });
+      const existe = await db
+        .select({ id: usuarios.id })
+        .from(usuarios)
+        .where(eq(usuarios.id, id))
+        .limit(1);
+      if (existe.length === 0) {
+        throw new Error("Usuario no encontrado");
+      }
       const pinHash = await crearHashPin(nuevoPin);
       await db
         .update(usuarios)

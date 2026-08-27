@@ -25,12 +25,6 @@ export default function Nuevo() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  if (usuario?.rol === "pastelera") {
-    return <Navigate to="/movil/pedidos" replace />;
-  }
-
-  // Formulario
   const [cliente, setCliente] = useState("");
   const [telefono, setTelefono] = useState("");
   const [fechaEntrega, setFechaEntrega] = useState("");
@@ -38,8 +32,6 @@ export default function Nuevo() {
   const [anticipo, setAnticipo] = useState("");
   const [notas, setNotas] = useState("");
   const [detalles, setDetalles] = useState<DetallePedido[]>([]);
-
-  // Para agregar producto
   const [productoSeleccionado, setProductoSeleccionado] = useState<string>("");
   const [unidadProducto, setUnidadProducto] = useState<"entero" | "porcion">("entero");
   const [cantidad, setCantidad] = useState("1");
@@ -49,6 +41,10 @@ export default function Nuevo() {
   useEffect(() => {
     cargarProductos();
   }, []);
+
+  if (usuario?.rol === "pastelera") {
+    return <Navigate to="/movil/pedidos" replace />;
+  }
 
   const cargarProductos = async () => {
     try {

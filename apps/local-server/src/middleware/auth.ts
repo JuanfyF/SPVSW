@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { crearServicioAuth } from "@pos/core";
+import { randomUUID } from "crypto";
 
 /**
  * Middleware de autenticación y control de roles para el servidor local.
@@ -77,7 +78,7 @@ export function requerirRol(...rolesPermitidos: string[]) {
  * Crea una sesión y retorna el token.
  */
 export function crearSesion(usuario: SesionUsuario): string {
-  const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+  const token = randomUUID();
   sesiones.set(token, usuario);
   return token;
 }

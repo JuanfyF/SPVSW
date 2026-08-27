@@ -12,6 +12,7 @@ import {
   pedidoDetalle,
   devolucionesAnticipo,
   sesionesCaja,
+  ventas,
   eq,
   and,
   notInArray,
@@ -163,13 +164,21 @@ export function crearServicioPedidos(db: PosDatabase) {
         throw new Error("Solo se puede entregar un pedido listo");
       }
 
-      // Si hay saldo pendiente, cobrar
+      // Si hay saldo pendiente, cobrar y crear venta
       if (pedido.saldoPendiente > 0) {
         if (!validados.metodoPagoSaldo) {
           throw new Error(
             "Se requiere método de pago para cobrar saldo pendiente"
           );
         }
+
+        // Crear venta para el saldo cobrado (para que aparezca en cierre de caja)
+        await db.insert(ventas).values({
+          sesionCajaId: validados.sesionCajaEntregaId!,
+          total: pedido.saldoPendiente,
+          metodoPago: validados.metodoPagoSaldo,
+          tipoOrigen: "pedido",
+        });
 
         await db
           .update(pedidos)

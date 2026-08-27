@@ -43,7 +43,6 @@ export default function BackupRestore() {
     setMensaje("");
     setError("");
     try {
-      // Crear input file dinámicamente
       const input = document.createElement("input");
       input.type = "file";
       input.accept = ".sqlite";
@@ -54,22 +53,25 @@ export default function BackupRestore() {
           return;
         }
 
-        // Leer el archivo como ArrayBuffer
-        const arrayBuffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
+        try {
+          // En Electron, el File object tiene una propiedad `path` con la ruta real del disco
+          const rutaBackup = (file as File & { path: string }).path;
+          if (!rutaBackup) {
+            setError("No se pudo obtener la ruta del archivo. Usa la versión de escritorio.");
+            setLoading(false);
+            return;
+          }
 
-        // Crear archivo temporal y restaurar
-        const tempPath = `/tmp/${file.name}`;
-
-        // Usar el File API para obtener la ruta
-        // En Electron, podemos usar dialog.showOpenDialog para obtener la ruta real
-        // Pero para simplificar, usamos el nombre del archivo
-        const result = await window.pos.sistema.restore(tempPath);
-        if (result.ok) {
-          setMensaje("Base de datos restaurada exitosamente. Reiniciando...");
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
+          const result = await window.pos.sistema.restore(rutaBackup);
+          if (result.ok) {
+            setMensaje("Base de datos restaurada exitosamente. Reiniciando...");
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          }
+        } catch (err: unknown) {
+          setError(err instanceof Error ? err.message : "Error al restaurar backup");
+          setLoading(false);
         }
       };
       input.click();

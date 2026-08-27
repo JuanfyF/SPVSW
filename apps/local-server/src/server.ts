@@ -56,7 +56,7 @@ export function startLocalServer(opciones: OpcionesServidor) {
   // ─── Login ────────────────────────────────────────────
   app.post("/auth/login", async (req, res) => {
     try {
-      const { pin } = req.body;
+      const { pin, rol } = req.body;
       if (!pin) {
         return res.status(400).json({ error: "PIN es requerido" });
       }
@@ -64,6 +64,11 @@ export function startLocalServer(opciones: OpcionesServidor) {
       const usuario = await servicios.auth.login(pin);
       if (!usuario) {
         return res.status(401).json({ error: "PIN incorrecto" });
+      }
+
+      // Filtrar por rol si se especifica (AGENT.md 5.1 — defensa en profundidad)
+      if (rol && usuario.rol !== rol) {
+        return res.status(403).json({ error: "PIN no corresponde al rol solicitado" });
       }
 
       const token = crearSesion({

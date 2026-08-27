@@ -385,6 +385,12 @@ export interface PosAPI {
         conteoFisico: number;
       }>
     ) => Promise<void>;
+    verificarDisponibilidad: (
+      productoId: number,
+      sesionCajaId: number,
+      unidad: "entero" | "porcion",
+      cantidadRequerida: number
+    ) => Promise<{ suficiente: boolean; disponible: number }>;
   };
 
   // ============================================================
@@ -462,6 +468,7 @@ export interface PosAPI {
       telefono?: string | null;
       fechaPedido: string;
       fechaEntrega: string;
+      horaEntrega?: string | null;
       anticipo: number;
       metodoPagoAnticipo: string;
       sesionCajaAnticipoId: number;
@@ -483,6 +490,7 @@ export interface PosAPI {
       telefono: string | null;
       fechaPedido: string;
       fechaEntrega: string;
+      horaEntrega: string | null;
       estado: string;
       anticipo: number;
       metodoPagoAnticipo: string;

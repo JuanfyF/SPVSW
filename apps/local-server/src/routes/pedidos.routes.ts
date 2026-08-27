@@ -72,8 +72,22 @@ export function pedidosRoutes(
 
         const detalles = await pedidos.obtenerDetalle(pedido.id);
 
+        // Pastelera NO ve datos financieros (AGENT.md 2.7)
+        const rol = (req as any).usuario?.rol;
+        const pedidoLimpio = rol === "pastelera"
+          ? {
+              id: pedido.id,
+              cliente: pedido.cliente,
+              telefono: pedido.telefono,
+              fechaPedido: pedido.fechaPedido,
+              fechaEntrega: pedido.fechaEntrega,
+              estado: pedido.estado,
+              notas: pedido.notas,
+            }
+          : pedido;
+
         res.json({
-          pedido,
+          pedido: pedidoLimpio,
           detalles: detalles.map((d) => ({
             id: d.id,
             productoId: d.productoId,

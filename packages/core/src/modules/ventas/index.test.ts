@@ -26,18 +26,20 @@ describe("crearServicioVentas", () => {
       // Secuencia de llamadas select():
       // 1. crear() → sesionesCaja.where().limit() → [{id:1, estado:"abierta"}]
       // 2. verificarStock() → productos.where().limit() → [{id:1}]
-      // 3. calcularVendido() → ventaDetalle.innerJoin(ventas).where() → [{total:0}]
-      // 4. obtenerStockInicial() → stockDiario.where() → [{total:10}]
-      // 5. mermas.where() → [{total:0}]
-      // 6. cortesias.where() → [{total:0}]
+      // 3. calcularStockDisponible() → stockDiario.where().limit() → [{cantidadInicial:10, cantidadAgregada:0}]
+      // 4. calcularStockDisponible() → ventaDetalle.innerJoin(ventas).where() → [{total:0}]
+      // 5. calcularStockDisponible() → mermas.where() → [{total:0}]
+      // 6. calcularStockDisponible() → cortesias.where() → [{total:0}]
+      // 7. calcularStockDisponible() → cortesProducto.where() → [{enteras:0, porciones:0}]
       let callIdx = 0;
       const resultados = [
-        [{ id: 1, estado: "abierta" }],  // 1: sesion
-        [{ id: 1 }],                       // 2: producto
-        [{ total: 0 }],                     // 3: vendido
-        [{ total: 10 }],                    // 4: stockInicial
-        [{ total: 0 }],                     // 5: mermas
-        [{ total: 0 }],                     // 6: cortesias
+        [{ id: 1, estado: "abierta" }],                     // 1: sesion
+        [{ id: 1 }],                                        // 2: producto
+        [{ cantidadInicial: 10, cantidadAgregada: 0 }],     // 3: stockDiario
+        [{ total: 0 }],                                      // 4: vendido
+        [{ total: 0 }],                                      // 5: mermas
+        [{ total: 0 }],                                      // 6: cortesias
+        [{ enteras: 0, porciones: 0 }],                      // 7: cortesProducto
       ];
 
       mockDb.select.mockImplementation(() => {
@@ -96,12 +98,13 @@ describe("crearServicioVentas", () => {
       const insertCalls: any[] = [];
       let callIdx = 0;
       const resultados = [
-        [{ id: 1, estado: "abierta" }],
-        [{ id: 1 }],
-        [{ total: 0 }],
-        [{ total: 10 }],
-        [{ total: 0 }],
-        [{ total: 0 }],
+        [{ id: 1, estado: "abierta" }],                     // sesion
+        [{ id: 1 }],                                        // producto
+        [{ cantidadInicial: 10, cantidadAgregada: 0 }],     // stockDiario
+        [{ total: 0 }],                                      // vendido
+        [{ total: 0 }],                                      // mermas
+        [{ total: 0 }],                                      // cortesias
+        [{ enteras: 0, porciones: 0 }],                      // cortesProducto
       ];
 
       const mockDb: any = {

@@ -34,6 +34,7 @@ import {
   IdSchema,
   formatearFecha,
 } from "@pos/shared";
+import { calcularStockDisponible } from "./stock-calculo";
 
 export function crearServicioStock(db: PosDatabase) {
   return {
@@ -400,49 +401,8 @@ export function crearServicioStock(db: PosDatabase) {
         const s = stock[0];
         if (!s) continue;
 
-        // Vendido
-        const vendidoResult = await db
-          .select({ total: sql<number>`coalesce(sum(${ventaDetalle.cantidad}), 0)` })
-          .from(ventaDetalle)
-          .innerJoin(ventas, eq(ventaDetalle.ventaId, ventas.id))
-          .where(
-            and(
-              eq(ventaDetalle.productoId, item.productoId),
-              eq(ventaDetalle.unidad, item.unidad),
-              eq(ventas.sesionCajaId, validados.sesionCajaId)
-            )
-          );
-        const vendido = vendidoResult[0]?.total ?? 0;
-
-        // Mermas
-        const mermasResult = await db
-          .select({ total: sql<number>`coalesce(sum(${mermas.cantidad}), 0)` })
-          .from(mermas)
-          .where(
-            and(
-              eq(mermas.productoId, item.productoId),
-              eq(mermas.unidad, item.unidad),
-              eq(mermas.sesionCajaId, validados.sesionCajaId)
-            )
-          );
-        const totalMermas = mermasResult[0]?.total ?? 0;
-
-        // Cortesías
-        const cortesiasResult = await db
-          .select({ total: sql<number>`coalesce(sum(${cortesias.cantidad}), 0)` })
-          .from(cortesias)
-          .where(
-            and(
-              eq(cortesias.productoId, item.productoId),
-              eq(cortesias.unidad, item.unidad),
-              eq(cortesias.sesionCajaId, validados.sesionCajaId)
-            )
-          );
-        const totalCortesias = cortesiasResult[0]?.total ?? 0;
-
-        // Esperado = inicial + agregada - vendida - mermas - cortesías
-        const esperado = s.cantidadInicial + s.cantidadAgregada - vendido - totalMermas - totalCortesias;
-        const diferencia = item.conteoFisico - esperado;
+        const calc = await calcularStockDisponible(db, item.productoId, validados.sesionCajaId, item.unidad);
+        const diferencia = item.conteoFisico - calc.disponible;
 
         await db
           .update(stockDiario)
@@ -528,90 +488,8 @@ export function crearServicioStock(db: PosDatabase) {
       IdSchema.parse(productoId);
       IdSchema.parse(sesionCajaId);
 
-      const stockResult = await db
-        .select()
-        .from(stockDiario)
-        .where(
-          and(
-            eq(stockDiario.productoId, productoId),
-            eq(stockDiario.sesionCajaId, sesionCajaId),
-            eq(stockDiario.unidad, unidad)
-          )
-        )
-        .limit(1);
-
-      if (stockResult.length === 0) {
-        return { suficiente: false, disponible: 0 };
-      }
-
-      const s = stockResult[0]!;
-      const inicial = s.cantidadInicial;
-      const agregada = s.cantidadAgregada;
-
-      // Vendido
-      const vendidoResult = await db
-        .select({ total: sql<number>`coalesce(sum(${ventaDetalle.cantidad}), 0)` })
-        .from(ventaDetalle)
-        .innerJoin(ventas, eq(ventaDetalle.ventaId, ventas.id))
-        .where(
-          and(
-            eq(ventaDetalle.productoId, productoId),
-            eq(ventas.sesionCajaId, sesionCajaId),
-            eq(ventaDetalle.unidad, unidad)
-          )
-        );
-      const vendido = vendidoResult[0]?.total ?? 0;
-
-      // Mermas
-      const mermasResult = await db
-        .select({ total: sql<number>`coalesce(sum(${mermas.cantidad}), 0)` })
-        .from(mermas)
-        .where(
-          and(
-            eq(mermas.productoId, productoId),
-            eq(mermas.sesionCajaId, sesionCajaId),
-            eq(mermas.unidad, unidad)
-          )
-        );
-      const totalMermas = mermasResult[0]?.total ?? 0;
-
-      // Cortesías
-      const cortesiasResult = await db
-        .select({ total: sql<number>`coalesce(sum(${cortesias.cantidad}), 0)` })
-        .from(cortesias)
-        .where(
-          and(
-            eq(cortesias.productoId, productoId),
-            eq(cortesias.sesionCajaId, sesionCajaId),
-            eq(cortesias.unidad, unidad)
-          )
-        );
-      const totalCortesias = cortesiasResult[0]?.total ?? 0;
-
-      // Ajuste por cortes entero→porción
-      let corteAjuste = 0;
-      if (unidad === "entero" || unidad === "porcion") {
-        const cortesResult = await db
-          .select({
-            enteras: sql<number>`coalesce(sum(${cortesProducto.unidadesEnteras}), 0)`,
-            porciones: sql<number>`coalesce(sum(${cortesProducto.porcionesObtenidas}), 0)`,
-          })
-          .from(cortesProducto)
-          .where(
-            and(
-              eq(cortesProducto.productoId, productoId),
-              eq(cortesProducto.sesionCajaId, sesionCajaId)
-            )
-          );
-        corteAjuste =
-          unidad === "entero"
-            ? -(cortesResult[0]?.enteras ?? 0)
-            : (cortesResult[0]?.porciones ?? 0);
-      }
-
-      const disponible =
-        inicial + agregada - vendido - totalMermas - totalCortesias + corteAjuste;
-      return { suficiente: disponible >= cantidadRequerida, disponible };
+      const calc = await calcularStockDisponible(db, productoId, sesionCajaId, unidad);
+      return { suficiente: calc.disponible >= cantidadRequerida, disponible: calc.disponible };
     },
   };
 }

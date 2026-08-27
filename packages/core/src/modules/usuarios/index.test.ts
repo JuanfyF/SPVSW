@@ -186,11 +186,20 @@ describe("ServicioUsuarios", () => {
 
   describe("cambiarPin", () => {
     it("debería cambiar el PIN correctamente", async () => {
+      mockDb._pushWhereData([{ id: 1 }]);
       await servicio.cambiarPin(1, "654321");
       expect(mockDb.update).toHaveBeenCalled();
       const setCall = mockDb.set.mock.calls[0][0];
       expect(setCall.pinHash).not.toBe("654321");
       expect(setCall.pinHash).toBeTruthy();
+    });
+
+    it("debería fallar si el usuario no existe", async () => {
+      mockDb._pushWhereData([]);
+      await expect(servicio.cambiarPin(999, "654321")).rejects.toThrow(
+        "Usuario no encontrado"
+      );
+      expect(mockDb.update).not.toHaveBeenCalled();
     });
 
     it("debería fallar con PIN muy corto", async () => {
