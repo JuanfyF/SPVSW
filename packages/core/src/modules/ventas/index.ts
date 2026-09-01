@@ -34,28 +34,31 @@ export function crearServicioVentas(db: PosDatabase) {
       // Validar que la sesión de caja exista y esté abierta
       const existeSesion = await db.select().from(sesionesCaja).where(eq(sesionesCaja.id, validados.sesionCajaId)).limit(1);
       if (existeSesion.length === 0) throw new Error("Sesión de caja no encontrada");
-      if (existeSesion[0]?.estado !== "abierta") throw new Error("La sesión de caja no está abierta");
+      if (existeSesion[0]?.estado !== "abierta") {
+        const estado = existeSesion[0]?.estado ?? "desconocido";
+        throw new Error(`La sesión de caja no está abierta (estado: ${estado}). Ve a Apertura de Caja para abrir una nueva sesión.`);
+      }
 
-      // Validar stock para cada detalle (skip para ventas de pedidos)
+      // Validar stock FUERA de la transacción (better-sqlite3 no soporta async en transaction)
       if (!skipStockCheck) {
         for (const detalle of validados.detalles) {
           const stock = await this.verificarStock(
-          detalle.productoId,
-          validados.sesionCajaId,
-          detalle.unidad,
-          detalle.cantidad
-        );
-
-        if (!stock.suficiente) {
-          throw new Error(
-            `Stock insuficiente para producto ${detalle.productoId}: ` +
-              `disponible ${stock.disponible}, solicitado ${detalle.cantidad}`
+            detalle.productoId,
+            validados.sesionCajaId,
+            detalle.unidad,
+            detalle.cantidad
           );
-        }
+          if (!stock.suficiente) {
+            throw new Error(
+              `Stock insuficiente para producto ${detalle.productoId}: ` +
+                `disponible ${stock.disponible}, solicitado ${detalle.cantidad}`
+            );
+          }
         }
       }
 
-      // Crear la venta
+      // Crear la venta y sus detalles
+      // (single-user desktop app — sequential inserts on same connection are safe)
       const ventaResultado = await db
         .insert(ventas)
         .values({
@@ -69,18 +72,15 @@ export function crearServicioVentas(db: PosDatabase) {
         })
         .returning();
 
-      const venta = ventaResultado[0];
-      if (!venta) {
+      const ventaCreada = ventaResultado[0];
+      if (!ventaCreada) {
         throw new Error("Error al crear la venta");
       }
 
-      // Crear los detalles
       for (const detalle of validados.detalles) {
-        // Normalizar porcion_llevar → porcion para que el sistema de stock
-        // pueda calcular vendido correctamente (stock solo maneja entero/porcion)
         const unidadDetalle = detalle.unidad === "porcion_llevar" ? "porcion" : detalle.unidad;
         await db.insert(ventaDetalle).values({
-          ventaId: venta.id,
+          ventaId: ventaCreada.id,
           productoId: detalle.productoId,
           unidad: unidadDetalle,
           cantidad: detalle.cantidad,
@@ -89,7 +89,7 @@ export function crearServicioVentas(db: PosDatabase) {
         });
       }
 
-      return venta;
+      return ventaCreada;
     },
 
     /**

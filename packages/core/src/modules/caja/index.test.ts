@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { crearServicioCaja } from "./index";
 
 function crearMockDb() {
-  return {
+  const db: any = {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
@@ -22,6 +22,7 @@ function crearMockDb() {
       }),
     }),
   };
+  return db;
 }
 
 describe("crearServicioCaja", () => {
@@ -56,7 +57,7 @@ describe("crearServicioCaja", () => {
       await expect(servicio.forzarCierre(999, 1)).rejects.toThrow("Sesión no encontrada");
     });
 
-    it("lanza error si la sesión no está abierta", async () => {
+    it("retorna exito si sesión ya está cerrada (idempotente)", async () => {
       const mockDb = crearMockDb();
       mockDb.select.mockReturnValue({
         from: vi.fn().mockReturnValue({
@@ -66,7 +67,8 @@ describe("crearServicioCaja", () => {
         }),
       });
       const servicio = crearServicioCaja(mockDb as any);
-      await expect(servicio.forzarCierre(1, 1)).rejects.toThrow("La sesión no está abierta");
+      const resultado = await servicio.forzarCierre(1, 1);
+      expect(resultado).toEqual({ exito: true });
     });
 
     it("cierra sesión abierta exitosamente", async () => {
@@ -130,6 +132,54 @@ describe("crearServicioCaja", () => {
       const servicio = crearServicioCaja(mockDb as any);
       await servicio.calcularEfectivoEsperado(1);
       expect(mockDb.select).toHaveBeenCalledTimes(5);
+    });
+  });
+
+  describe("forzarCierre", () => {
+    it("crea registro de cierre de caja con zeros", async () => {
+      const mockDb = crearMockDb();
+      // Mock encadenado: select().from().where().limit() se llama 2 veces
+      const limitFn = vi.fn()
+        .mockResolvedValueOnce([{ id: 1, estado: "abierta" }])  // sesión
+        .mockResolvedValueOnce([]);  // cierreCaja existente
+      const whereObj = { limit: limitFn };
+      const whereFn = vi.fn().mockReturnValue(whereObj);
+      const fromObj = { where: whereFn };
+      const fromFn = vi.fn().mockReturnValue(fromObj);
+      mockDb.select.mockReturnValue({ from: fromFn });
+
+      const servicio = crearServicioCaja(mockDb);
+      const resultado = await servicio.forzarCierre(1, 1);
+      expect(resultado.exito).toBe(true);
+      expect(mockDb.insert).toHaveBeenCalled();
+      expect(mockDb.update).toHaveBeenCalled();
+    });
+
+    it("lanza error si sesión no existe", async () => {
+      const mockDb = crearMockDb();
+      mockDb.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+      const servicio = crearServicioCaja(mockDb);
+      await expect(servicio.forzarCierre(999, 1)).rejects.toThrow("Sesión no encontrada");
+    });
+
+    it("retorna exito si sesión ya está cerrada (idempotente)", async () => {
+      const mockDb = crearMockDb();
+      mockDb.select.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ id: 1, estado: "cerrada" }]),
+          }),
+        }),
+      });
+      const servicio = crearServicioCaja(mockDb);
+      const resultado = await servicio.forzarCierre(1, 1);
+      expect(resultado).toEqual({ exito: true });
     });
   });
 });

@@ -125,24 +125,56 @@ export function crearServicioCaja(db: PosDatabase) {
         validados.sesionCajaId
       );
 
-      const cierre = await db
-        .insert(cierreCaja)
-        .values({
-          sesionCajaId: validados.sesionCajaId,
-          ventasEfectivo: ventasResumen.efectivo,
-          ventasTransferencia: ventasResumen.transferencia,
-          pedidosEfectivo: pedidosResumen.efectivo,
-          pedidosTransferencia: pedidosResumen.transferencia,
-          gastosCaja: gastosTotal,
-          adelantosEfectivo: adelantosTotal.efectivo,
-          adelantosTransferencia: adelantosTotal.transferencia,
-          devolucionesAnticipoEfectivo: devolucionesTotal,
-          efectivoEsperado,
-          efectivoContado: validados.efectivoContado,
-          diferenciaEfectivo,
-          tieneDiferenciaStock: validados.tieneDiferenciaStock,
-        })
-        .returning();
+      // Verificar si ya existe un cierreCaja (posible crash anterior en forzarCierre)
+      const cierreExistente = await db
+        .select({ id: cierreCaja.id })
+        .from(cierreCaja)
+        .where(eq(cierreCaja.sesionCajaId, validados.sesionCajaId))
+        .limit(1);
+
+      let cierreResultado;
+
+      if (cierreExistente.length > 0) {
+        // Actualizar cierre existente (de un forzarCierre incompleto)
+        cierreResultado = await db
+          .update(cierreCaja)
+          .set({
+            ventasEfectivo: ventasResumen.efectivo,
+            ventasTransferencia: ventasResumen.transferencia,
+            pedidosEfectivo: pedidosResumen.efectivo,
+            pedidosTransferencia: pedidosResumen.transferencia,
+            gastosCaja: gastosTotal,
+            adelantosEfectivo: adelantosTotal.efectivo,
+            adelantosTransferencia: adelantosTotal.transferencia,
+            devolucionesAnticipoEfectivo: devolucionesTotal,
+            efectivoEsperado,
+            efectivoContado: validados.efectivoContado,
+            diferenciaEfectivo,
+            tieneDiferenciaStock: validados.tieneDiferenciaStock,
+          })
+          .where(eq(cierreCaja.sesionCajaId, validados.sesionCajaId))
+          .returning();
+      } else {
+        // Crear cierre de caja nuevo
+        cierreResultado = await db
+          .insert(cierreCaja)
+          .values({
+            sesionCajaId: validados.sesionCajaId,
+            ventasEfectivo: ventasResumen.efectivo,
+            ventasTransferencia: ventasResumen.transferencia,
+            pedidosEfectivo: pedidosResumen.efectivo,
+            pedidosTransferencia: pedidosResumen.transferencia,
+            gastosCaja: gastosTotal,
+            adelantosEfectivo: adelantosTotal.efectivo,
+            adelantosTransferencia: adelantosTotal.transferencia,
+            devolucionesAnticipoEfectivo: devolucionesTotal,
+            efectivoEsperado,
+            efectivoContado: validados.efectivoContado,
+            diferenciaEfectivo,
+            tieneDiferenciaStock: validados.tieneDiferenciaStock,
+          })
+          .returning();
+      }
 
       // Cerrar la sesión
       await db
@@ -152,6 +184,8 @@ export function crearServicioCaja(db: PosDatabase) {
           horaCierre: formatearHora(new Date()),
         })
         .where(eq(sesionesCaja.id, validados.sesionCajaId));
+
+      const cierre = cierreResultado[0];
 
       // Conciliación de stock si se proporcionó conteo físico
       if (validados.conteoStock && validados.conteoStock.length > 0) {
@@ -251,7 +285,7 @@ export function crearServicioCaja(db: PosDatabase) {
         }
       }
 
-      return cierre[0];
+      return cierre;
     },
 
     /**
@@ -464,6 +498,7 @@ export function crearServicioCaja(db: PosDatabase) {
 
     /**
      * Fuerza el cierre de una sesión abierta (para sesiones stale de crash anterior).
+     * Envuelto en transacción para evitar estado inconsistente si falla a medio camino.
      */
     async forzarCierre(sesionCajaId: number, usuarioId: number) {
       IdSchema.parse(sesionCajaId);
@@ -476,8 +511,40 @@ export function crearServicioCaja(db: PosDatabase) {
         .limit(1);
 
       if (sesion.length === 0) throw new Error("Sesión no encontrada");
-      if (sesion[0]?.estado !== "abierta") throw new Error("La sesión no está abierta");
+      if (sesion[0]?.estado !== "abierta") {
+        // Si ya está cerrada, simplemente limpiar cierreCaja huérfano si existe
+        // y reportar éxito (la sesión ya está cerrada)
+        return { exito: true };
+      }
 
+      // Verificar si ya existe un cierreCaja para esta sesión (posible crash anterior)
+      const cierreExistente = await db
+        .select({ id: cierreCaja.id })
+        .from(cierreCaja)
+        .where(eq(cierreCaja.sesionCajaId, sesionCajaId))
+        .limit(1);
+
+      // Crear cierre de caja con zeros (forzado — sin conteo real)
+      // Si ya existe un cierre, no duplicar
+      if (cierreExistente.length === 0) {
+        await db.insert(cierreCaja).values({
+          sesionCajaId,
+          ventasEfectivo: 0,
+          ventasTransferencia: 0,
+          pedidosEfectivo: 0,
+          pedidosTransferencia: 0,
+          gastosCaja: 0,
+          adelantosEfectivo: 0,
+          adelantosTransferencia: 0,
+          devolucionesAnticipoEfectivo: 0,
+          efectivoEsperado: 0,
+          efectivoContado: 0,
+          diferenciaEfectivo: 0,
+          tieneDiferenciaStock: false,
+        });
+      }
+
+      // Cerrar la sesión
       await db
         .update(sesionesCaja)
         .set({

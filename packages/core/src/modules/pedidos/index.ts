@@ -12,7 +12,6 @@ import {
   pedidoDetalle,
   devolucionesAnticipo,
   sesionesCaja,
-  ventas,
   eq,
   and,
   notInArray,
@@ -52,7 +51,7 @@ export function crearServicioPedidos(db: PosDatabase) {
       // Calcular saldo pendiente
       const saldoPendiente = validados.totalEstimado - validados.anticipo;
 
-      // Crear el pedido
+      // Crear el pedido y sus detalles
       const pedidoResultado = await db
         .insert(pedidos)
         .values({
@@ -72,15 +71,14 @@ export function crearServicioPedidos(db: PosDatabase) {
         })
         .returning();
 
-      const pedido = pedidoResultado[0];
-      if (!pedido) {
+      const pedidoCreado = pedidoResultado[0];
+      if (!pedidoCreado) {
         throw new Error("Error al crear el pedido");
       }
 
-      // Crear los detalles
       for (const detalle of validados.detalles) {
         await db.insert(pedidoDetalle).values({
-          pedidoId: pedido.id,
+          pedidoId: pedidoCreado.id,
           productoId: detalle.productoId ?? null,
           descripcionPersonalizada: detalle.descripcionPersonalizada ?? null,
           unidad: detalle.unidad,
@@ -90,7 +88,7 @@ export function crearServicioPedidos(db: PosDatabase) {
         });
       }
 
-      return pedido;
+      return pedidoCreado;
     },
 
     /**
@@ -164,21 +162,13 @@ export function crearServicioPedidos(db: PosDatabase) {
         throw new Error("Solo se puede entregar un pedido listo");
       }
 
-      // Si hay saldo pendiente, cobrar y crear venta
+      // Si hay saldo pendiente, cobrar
       if (pedido.saldoPendiente > 0) {
         if (!validados.metodoPagoSaldo) {
           throw new Error(
             "Se requiere método de pago para cobrar saldo pendiente"
           );
         }
-
-        // Crear venta para el saldo cobrado (para que aparezca en cierre de caja)
-        await db.insert(ventas).values({
-          sesionCajaId: validados.sesionCajaEntregaId!,
-          total: pedido.saldoPendiente,
-          metodoPago: validados.metodoPagoSaldo,
-          tipoOrigen: "pedido",
-        });
 
         await db
           .update(pedidos)

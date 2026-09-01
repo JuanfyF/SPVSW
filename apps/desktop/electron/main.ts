@@ -67,8 +67,14 @@ function registrarHandlers() {
   // ============================================================
   // AUTH
   // ============================================================
-  ipcMain.handle("auth:login", async (_event, pin: string) => {
+  ipcMain.handle("auth:login", async (_event, pin: string, rol?: string) => {
     const usuario = await servicios!.auth.login(pin);
+
+    // Filtrar por rol si se especifica (AGENT.md 5.1 — defensa en profundidad)
+    if (rol && usuario && usuario.rol !== rol) {
+      return { usuario: null, sesionAbierta: null };
+    }
+
     usuarioActual = usuario;
 
     // Si hay sesión de caja abierta, devolverla junto con el usuario
@@ -372,7 +378,17 @@ function registrarHandlers() {
       );
 
       // Registrar venta por SOLO el saldo cobrado (el anticipo ya fue contado en su sesión).
-      if (saldoCobrado > 0) {
+      const detallesValidos = detalles
+        .filter((d) => d.productoId !== null)
+        .map((d) => ({
+          productoId: d.productoId!,
+          unidad: ((d as any).unidad as "entero" | "porcion") || "entero",
+          cantidad: d.cantidad,
+          precioUnitario: d.precioUnitario,
+          subtotal: d.subtotal,
+        }));
+
+      if (saldoCobrado > 0 && detallesValidos.length > 0) {
         try {
           await servicios!.ventas.crear({
             sesionCajaId: sesionCajaEntregaId,
@@ -381,15 +397,7 @@ function registrarHandlers() {
             tipoOrigen: "pedido",
             requiereFactura: false,
             clienteNombre: pedido.cliente,
-            detalles: detalles
-              .filter((d) => d.productoId !== null)
-              .map((d) => ({
-                productoId: d.productoId!,
-                unidad: ((d as any).unidad as "entero" | "porcion") || "entero",
-                cantidad: d.cantidad,
-                precioUnitario: d.precioUnitario,
-                subtotal: d.subtotal,
-              })),
+            detalles: detallesValidos,
           }, true); // skipStockCheck: los pedidos no dependen del stock diario
         } catch (ventaErr) {
           // Rollback explícito: restaurar campos de entrega directamente
@@ -595,68 +603,74 @@ function registrarHandlers() {
     return app.getVersion();
   });
 
-  ipcMain.handle("sistema:backup", async (_event, rutaDestino: string) => {
-    if (!db) throw new Error("Base de datos no inicializada");
-    const fs = await import("fs");
-    const currentDbPath = path.join(app.getPath("userData"), "pos.sqlite");
-    const walPath = currentDbPath + "-wal";
-    const shmPath = currentDbPath + "-shm";
+  ipcMain.handle(
+    "sistema:backup",
+    safeHandler(async (_event, rutaDestino: string) => {
+      if (!db) throw new Error("Base de datos no inicializada");
+      const fs = await import("fs");
+      const currentDbPath = path.join(app.getPath("userData"), "pos.sqlite");
+      const walPath = currentDbPath + "-wal";
+      const shmPath = currentDbPath + "-shm";
 
-    // Forzar checkpoint para que todo esté en el archivo principal
-    const { createDbWithSqlite: createDbFn } = await import("@pos/db");
-    const { sqlite: tempSqlite } = createDbFn(currentDbPath);
-    tempSqlite.pragma("wal_checkpoint(TRUNCATE)");
-    tempSqlite.close();
+      // Forzar checkpoint para que todo esté en el archivo principal
+      const { createDbWithSqlite: createDbFn } = await import("@pos/db");
+      const { sqlite: tempSqlite } = createDbFn(currentDbPath);
+      tempSqlite.pragma("wal_checkpoint(TRUNCATE)");
+      tempSqlite.close();
 
-    fs.copyFileSync(currentDbPath, rutaDestino);
+      fs.copyFileSync(currentDbPath, rutaDestino);
 
-    // Copiar WAL y SHM si existen
-    if (fs.existsSync(walPath)) {
-      fs.copyFileSync(walPath, rutaDestino + "-wal");
-    }
-    if (fs.existsSync(shmPath)) {
-      fs.copyFileSync(shmPath, rutaDestino + "-shm");
-    }
+      // Copiar WAL y SHM si existen
+      if (fs.existsSync(walPath)) {
+        fs.copyFileSync(walPath, rutaDestino + "-wal");
+      }
+      if (fs.existsSync(shmPath)) {
+        fs.copyFileSync(shmPath, rutaDestino + "-shm");
+      }
 
-    return { ok: true, ruta: rutaDestino };
-  });
+      return { ok: true, ruta: rutaDestino };
+    })
+  );
 
-  ipcMain.handle("sistema:restore", async (_event, rutaBackup: string) => {
-    const fs = await import("fs");
-    const currentDbPath = path.join(app.getPath("userData"), "pos.sqlite");
-    const walPath = currentDbPath + "-wal";
-    const shmPath = currentDbPath + "-shm";
+  ipcMain.handle(
+    "sistema:restore",
+    safeHandler(async (_event, rutaBackup: string) => {
+      const fs = await import("fs");
+      const currentDbPath = path.join(app.getPath("userData"), "pos.sqlite");
+      const walPath = currentDbPath + "-wal";
+      const shmPath = currentDbPath + "-shm";
 
-    // Verificar que el backup existe
-    if (!fs.existsSync(rutaBackup)) {
-      throw new Error("El archivo de backup no existe");
-    }
+      // Verificar que el backup existe
+      if (!fs.existsSync(rutaBackup)) {
+        throw new Error("El archivo de backup no existe");
+      }
 
-    // Cerrar conexión actual
-    if (db) {
-      db = null;
-    }
+      // Cerrar conexión actual
+      if (db) {
+        db = null;
+      }
 
-    // Restaurar archivos
-    fs.copyFileSync(rutaBackup, currentDbPath);
-    if (fs.existsSync(rutaBackup + "-wal")) {
-      fs.copyFileSync(rutaBackup + "-wal", walPath);
-    } else if (fs.existsSync(walPath)) {
-      fs.unlinkSync(walPath);
-    }
-    if (fs.existsSync(rutaBackup + "-shm")) {
-      fs.copyFileSync(rutaBackup + "-shm", shmPath);
-    } else if (fs.existsSync(shmPath)) {
-      fs.unlinkSync(shmPath);
-    }
+      // Restaurar archivos
+      fs.copyFileSync(rutaBackup, currentDbPath);
+      if (fs.existsSync(rutaBackup + "-wal")) {
+        fs.copyFileSync(rutaBackup + "-wal", walPath);
+      } else if (fs.existsSync(walPath)) {
+        fs.unlinkSync(walPath);
+      }
+      if (fs.existsSync(rutaBackup + "-shm")) {
+        fs.copyFileSync(rutaBackup + "-shm", shmPath);
+      } else if (fs.existsSync(shmPath)) {
+        fs.unlinkSync(shmPath);
+      }
 
-    // Reconectar
-    const { createDbWithSqlite: createDbFn } = await import("@pos/db");
-    const { db: newDb } = createDbFn(currentDbPath);
-    db = newDb;
+      // Reconectar
+      const { createDbWithSqlite: createDbFn } = await import("@pos/db");
+      const { db: newDb } = createDbFn(currentDbPath);
+      db = newDb;
 
-    return { ok: true };
-  });
+      return { ok: true };
+    })
+  );
 }
 
 async function crearVentanaPrincipal() {

@@ -8,7 +8,7 @@ export interface PosAPI {
   // AUTH
   // ============================================================
   auth: {
-    login: (pin: string) => Promise<{
+    login: (pin: string, rol?: string) => Promise<{
       usuario: { id: number; nombre: string; rol: string } | null;
       sesionAbierta: { id: number; usuarioId: number; fecha: string; horaApertura: string; estado: string } | null;
     }>;

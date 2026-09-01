@@ -14,7 +14,7 @@ export default function LoginMovil() {
     setLoading(true);
 
     try {
-      const resultado = await window.pos.auth.login(pinToSubmit ?? pin);
+      const resultado = await window.pos.auth.login(pinToSubmit ?? pin, "pastelera");
       const { usuario, sesionAbierta } = resultado;
       if (usuario) {
         setUsuario(usuario);

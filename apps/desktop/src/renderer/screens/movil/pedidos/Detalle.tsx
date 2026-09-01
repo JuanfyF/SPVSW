@@ -50,6 +50,7 @@ export default function Detalle() {
   const [error, setError] = useState("");
   const [modalMarcarListo, setModalMarcarListo] = useState(false);
   const [modalMarcarEnProceso, setModalMarcarEnProceso] = useState(false);
+  const [modalEntregar, setModalEntregar] = useState(false);
   const pedidoVersionRef = useRef(0);
 
   const esPastelera = usuario?.rol === "pastelera";
@@ -105,6 +106,24 @@ export default function Detalle() {
     setModalMarcarEnProceso(false);
     try {
       await window.pos.pedidos.actualizarEstado(pedido.id, "en_proceso");
+      await cargarPedido(pedido.id);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setAccionLoading(false);
+    }
+  };
+
+  const handleEntregar = () => {
+    setModalEntregar(true);
+  };
+
+  const confirmarEntregar = async () => {
+    if (!pedido) return;
+    setAccionLoading(true);
+    setModalEntregar(false);
+    try {
+      await window.pos.pedidos.entregar(pedido.id);
       await cargarPedido(pedido.id);
     } catch (err: any) {
       setError(err.message);
@@ -282,9 +301,9 @@ export default function Detalle() {
               {accionLoading ? "Procesando..." : "Marcar como Listo"}
             </button>
           )}
-          {pedido.estado === "listo" && (
+          {pedido.estado === "listo" && !esPastelera && (
             <button
-              onClick={() => navigate(`/movil/pedidos/${pedido.id}/entregar`)}
+              onClick={handleEntregar}
               className="w-full py-3 bg-tertiary text-on-secondary rounded-xl"
             >
               Entregar
@@ -313,6 +332,17 @@ export default function Detalle() {
         variante="info"
         onConfirmar={confirmarEnProceso}
         onCancelar={() => setModalMarcarEnProceso(false)}
+      />
+
+      <ConfirmModal
+        open={modalEntregar}
+        titulo="Entregar Pedido"
+        mensaje={`¿Confirmar entrega del pedido #${pedido?.id}?\n\nCliente: ${pedido?.cliente}\nSaldo pendiente: $${pedido?.saldoPendiente?.toFixed(2) ?? "0.00"}`}
+        textoConfirmar="Confirmar Entrega"
+        textoCancelar="Cancelar"
+        variante="info"
+        onConfirmar={confirmarEntregar}
+        onCancelar={() => setModalEntregar(false)}
       />
     </div>
   );

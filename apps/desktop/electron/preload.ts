@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld("pos", {
   // AUTH
   // ============================================================
   auth: {
-    login: (pin: string) => ipcRenderer.invoke("auth:login", pin),
+    login: (pin: string, rol?: string) => ipcRenderer.invoke("auth:login", pin, rol),
     logout: () => ipcRenderer.invoke("auth:logout"),
     getUsuarioActual: () => ipcRenderer.invoke("auth:getUsuarioActual"),
   },
