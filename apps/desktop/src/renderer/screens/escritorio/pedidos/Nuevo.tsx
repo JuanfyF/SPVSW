@@ -122,27 +122,6 @@ export default function Nuevo() {
       if (totalEstimado <= 0 || isNaN(totalEstimado)) throw new Error("El total estimado debe ser mayor a $0");
       if (anticipoNum > totalEstimado) throw new Error("El anticipo no puede exceder el total estimado");
 
-      // Verificar stock para productos del catálogo (no personalizados)
-      const detallesConProducto = detalles.filter((d) => d.productoId !== null);
-      if (detallesConProducto.length > 0 && sesionCaja) {
-        const productosLista = await window.pos.productos.listar();
-        for (const detalle of detallesConProducto) {
-          const resultado = await window.pos.stock.verificarDisponibilidad(
-            detalle.productoId!,
-            sesionCaja.id,
-            detalle.unidad,
-            detalle.cantidad
-          );
-          if (!resultado.suficiente) {
-            const producto = productosLista.find((p) => p.id === detalle.productoId);
-            throw new Error(
-              `Stock insuficiente para "${producto?.nombre ?? `#${detalle.productoId}`}": ` +
-              `disponible ${resultado.disponible}, solicitado ${detalle.cantidad}`
-            );
-          }
-        }
-      }
-
       await window.pos.pedidos.crear({
         cliente: cliente.trim(),
         telefono: telefono || null,

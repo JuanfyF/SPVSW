@@ -132,7 +132,7 @@ export default function Dashboard() {
     }
   }, [location.pathname]);
 
-  // Auto-refresh cada 3 segundos + al recuperar foco
+  // Auto-refresh cada 3 segundos + al recuperar foco + push notifications del main process
   useEffect(() => {
     const handleRefresh = () => {
       cargarDatosRef.current?.();
@@ -140,10 +140,12 @@ export default function Dashboard() {
     const handleVisibility = () => {
       if (document.visibilityState === "visible") handleRefresh();
     };
+    const removeListener = window.pos.onCambio(handleRefresh);
     window.addEventListener('focus', handleRefresh);
     document.addEventListener('visibilitychange', handleVisibility);
     const interval = setInterval(handleRefresh, 3000);
     return () => {
+      if (typeof removeListener === "function") removeListener();
       window.removeEventListener('focus', handleRefresh);
       document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(interval);

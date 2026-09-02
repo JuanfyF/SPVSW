@@ -188,11 +188,15 @@ function registrarHandlers() {
   // CAJA
   // ============================================================
   ipcMain.handle("caja:abrir", safeHandler(async (_event, datos: unknown) => {
-    return servicios!.caja.abrir(datos as any);
+    const resultado = await servicios!.caja.abrir(datos as any);
+    mainWindow?.webContents.send("data:cambio");
+    return resultado;
   }));
 
   ipcMain.handle("caja:cerrar", safeHandler(async (_event, datos: unknown) => {
-    return servicios!.caja.cerrar(datos as any);
+    const resultado = await servicios!.caja.cerrar(datos as any);
+    mainWindow?.webContents.send("data:cambio");
+    return resultado;
   }));
 
   ipcMain.handle(
@@ -316,7 +320,9 @@ function registrarHandlers() {
   // VENTAS
   // ============================================================
   ipcMain.handle("ventas:crear", safeHandler(async (_event, datos: unknown) => {
-    return servicios!.ventas.crear(datos as any);
+    const resultado = await servicios!.ventas.crear(datos as any);
+    mainWindow?.webContents.send("data:cambio");
+    return resultado;
   }));
 
   ipcMain.handle(
@@ -377,7 +383,7 @@ function registrarHandlers() {
         metodoPagoSaldo as "efectivo" | "transferencia" | undefined
       );
 
-      // Registrar venta por SOLO el saldo cobrado (el anticipo ya fue contado en su sesión).
+      // Detalles del pedido para la venta de saldo
       const detallesValidos = detalles
         .filter((d) => d.productoId !== null)
         .map((d) => ({
@@ -388,7 +394,9 @@ function registrarHandlers() {
           subtotal: d.subtotal,
         }));
 
-      if (saldoCobrado > 0 && detallesValidos.length > 0) {
+      // Registrar venta por SOLO el saldo cobrado (el anticipo ya fue contado en su sesión).
+      // Crear venta siempre que haya saldo, incluso sin detalles de producto (pedidos personalizados).
+      if (saldoCobrado > 0) {
         try {
           await servicios!.ventas.crear({
             sesionCajaId: sesionCajaEntregaId,
@@ -397,7 +405,13 @@ function registrarHandlers() {
             tipoOrigen: "pedido",
             requiereFactura: false,
             clienteNombre: pedido.cliente,
-            detalles: detallesValidos,
+            detalles: detallesValidos.length > 0 ? detallesValidos : [{
+              productoId: 1, // Producto genérico para pedidos personalizados
+              unidad: "entero" as const,
+              cantidad: 1,
+              precioUnitario: saldoCobrado,
+              subtotal: saldoCobrado,
+            }],
           }, true); // skipStockCheck: los pedidos no dependen del stock diario
         } catch (ventaErr) {
           // Rollback explícito: restaurar campos de entrega directamente
@@ -406,6 +420,9 @@ function registrarHandlers() {
           throw ventaErr;
         }
       }
+
+      // Notificar al renderer que los datos cambiaron (Dashboard refresca)
+      mainWindow?.webContents.send("data:cambio");
 
       return { exito: true };
     })
@@ -481,7 +498,9 @@ function registrarHandlers() {
   // GASTOS
   // ============================================================
   ipcMain.handle("gastos:crear", safeHandler(async (_event, datos: unknown) => {
-    return servicios!.gastos.crear(datos as any);
+    const resultado = await servicios!.gastos.crear(datos as any);
+    mainWindow?.webContents.send("data:cambio");
+    return resultado;
   }));
 
   ipcMain.handle(

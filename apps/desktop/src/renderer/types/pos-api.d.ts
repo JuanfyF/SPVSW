@@ -973,6 +973,9 @@ export interface PosAPI {
     backup: (rutaDestino: string) => Promise<{ ok: boolean; ruta: string }>;
     restore: (rutaBackup: string) => Promise<{ ok: boolean }>;
   };
+
+  // Eventos push del main process
+  onCambio: (callback: () => void) => () => void;
 }
 
 declare global {

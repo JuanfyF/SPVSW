@@ -193,4 +193,14 @@ contextBridge.exposeInMainWorld("pos", {
     backup: (rutaDestino: string) => ipcRenderer.invoke("sistema:backup", rutaDestino),
     restore: (rutaBackup: string) => ipcRenderer.invoke("sistema:restore", rutaBackup),
   },
+
+  // ============================================================
+  // EVENTOS (push notifications del main process)
+  // ============================================================
+  onCambio: (callback: () => void) => {
+    ipcRenderer.on("data:cambio", callback);
+    return () => {
+      ipcRenderer.removeListener("data:cambio", callback);
+    };
+  },
 });

@@ -294,6 +294,26 @@ export default function CierreCaja() {
               <span className="font-medium text-on-surface">${resumen?.anticipos.transferencia.toFixed(2) ?? "0.00"}</span>
             </div>
             <div className="flex justify-between border-t border-outline-variant pt-3">
+              <span className="text-on-surface-variant font-medium">Total anticipos:</span>
+              <span className="font-bold text-on-surface">${resumen?.anticipos.total.toFixed(2) ?? "0.00"}</span>
+            </div>
+            {(resumen?.pedidos.total ?? 0) > 0 && (
+              <>
+                <div className="flex justify-between pt-2">
+                  <span className="text-on-surface-variant">Saldos pedidos efectivo:</span>
+                  <span className="font-medium text-on-surface">${resumen?.pedidos.efectivo.toFixed(2) ?? "0.00"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Saldos pedidos transferencia:</span>
+                  <span className="font-medium text-on-surface">${resumen?.pedidos.transferencia.toFixed(2) ?? "0.00"}</span>
+                </div>
+                <div className="flex justify-between border-t border-outline-variant pt-3">
+                  <span className="text-on-surface-variant font-medium">Total saldos:</span>
+                  <span className="font-bold text-on-surface">${resumen?.pedidos.total.toFixed(2) ?? "0.00"}</span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between border-t border-outline-variant pt-3">
               <span className="text-on-surface font-medium">Total ingresos:</span>
               <span className="font-bold text-on-surface">${((resumen?.ventas.total ?? 0) + (resumen?.anticipos.total ?? 0) + (resumen?.pedidos.total ?? 0)).toFixed(2)}</span>
             </div>
