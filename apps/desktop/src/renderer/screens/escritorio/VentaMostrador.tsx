@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
+import { Package } from "lucide-react";
 
 const RECARGO_LLEVAR = 0.10; // Costo del repostero para llevar
 
@@ -284,7 +285,7 @@ export default function VentaMostrador() {
       {/* Panel de productos */}
       <div className="flex-1 p-6 overflow-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-on-surface mb-4">Venta de Mostrador</h1>
+          <h1 className="text-headline-lg font-bold text-on-surface mb-4">Venta de Mostrador</h1>
           <input
             type="text"
             placeholder="Buscar productos..."
@@ -298,6 +299,7 @@ export default function VentaMostrador() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {productosFiltrados.length === 0 ? (
               <div className="col-span-full text-center py-12">
+                <Package className="w-10 h-10 mx-auto mb-3 text-on-surface-variant/40" />
                 <p className="text-on-surface-variant">
                   {busqueda ? `No se encontraron productos para "${busqueda}"` : "No hay productos disponibles en stock"}
                 </p>
@@ -309,7 +311,7 @@ export default function VentaMostrador() {
                 return (
                   <div
                     key={producto.id}
-                    className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant overflow-hidden"
+                    className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant overflow-hidden hover:shadow-md transition-shadow"
                   >
                     <h3 className="font-medium text-on-surface mb-1">{producto.nombre}</h3>
                     {producto.categoria && (
@@ -318,7 +320,7 @@ export default function VentaMostrador() {
                     {sesionCaja && Object.keys(stockDisponible).length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {stockEntero !== Infinity && (
-                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-bold ${
+                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${
                             stockEntero === 0
                               ? "bg-error-container text-on-error-container"
                               : stockEntero <= 3
@@ -329,7 +331,7 @@ export default function VentaMostrador() {
                           </span>
                         )}
                         {stockPorcion !== Infinity && (
-                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-bold ${
+                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${
                             stockPorcion === 0
                               ? "bg-error-container text-on-error-container"
                               : stockPorcion <= 3
@@ -346,7 +348,7 @@ export default function VentaMostrador() {
                         <button
                           onClick={() => agregarAlCarrito(producto, "entero")}
                           disabled={stockEntero !== Infinity && stockEntero <= 0}
-                          className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Entero ${producto.precioEntero.toFixed(2)}
                         </button>
@@ -356,14 +358,14 @@ export default function VentaMostrador() {
                           <button
                             onClick={() => agregarAlCarrito(producto, "porcion")}
                             disabled={stockPorcion !== Infinity && stockPorcion <= 0}
-                            className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Porción (servir) ${producto.precioPorcion.toFixed(2)}
                           </button>
                           <button
                             onClick={() => agregarAlCarrito(producto, "porcion_llevar")}
                             disabled={stockPorcion !== Infinity && stockPorcion <= 0}
-                            className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Porción (llevar) ${(producto.precioPorcion + RECARGO_LLEVAR).toFixed(2)}
                           </button>
@@ -372,7 +374,7 @@ export default function VentaMostrador() {
                       <button
                         onClick={() => agregarCortesia(producto)}
                         disabled={!tieneStock(producto)}
-                        className="w-full py-2 bg-tertiary-fixed/30 text-tertiary rounded-xl hover:bg-tertiary-fixed/50 transition-colors text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="w-full py-2 bg-tertiary-fixed/30 text-tertiary rounded-xl hover:bg-tertiary-fixed/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Cortesía (gratis)
                       </button>
@@ -387,7 +389,7 @@ export default function VentaMostrador() {
       {/* Panel del carrito */}
       <div className="w-96 bg-surface-container-lowest border-l border-outline-variant flex flex-col">
         <div className="p-4 border-b border-outline-variant">
-          <h2 className="text-lg font-semibold text-on-surface">Carrito</h2>
+          <h2 className="text-headline-md font-semibold text-on-surface">Carrito</h2>
         </div>
 
         {/* Items del carrito */}
@@ -471,8 +473,8 @@ export default function VentaMostrador() {
           </div>
 
           <div className="flex justify-between items-center mb-4">
-            <span className="text-lg font-semibold text-on-surface">Total</span>
-            <span className="text-2xl font-bold text-on-surface">
+            <span className="text-headline-md font-semibold text-on-surface">Total</span>
+            <span className="text-headline-lg font-bold text-on-surface">
               ${total.toFixed(2)}
             </span>
           </div>
@@ -486,7 +488,7 @@ export default function VentaMostrador() {
           <button
             onClick={handleCobrar}
             disabled={carrito.length === 0 || loading}
-            className="w-full py-3 bg-tertiary text-on-tertiary rounded-xl hover:bg-tertiary/90 disabled:opacity-50 font-medium transition-colors"
+            className="w-full py-3 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 font-medium transition-colors"
           >
             {loading ? "Procesando..." : "Cobrar"}
           </button>

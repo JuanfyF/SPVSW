@@ -1,3 +1,5 @@
+import { AlertTriangle, Zap, Info } from "lucide-react";
+
 interface ConfirmModalProps {
   open: boolean;
   titulo: string;
@@ -26,15 +28,15 @@ export default function ConfirmModal({
   const colores = {
     peligro: {
       boton: "bg-error text-on-error hover:bg-error/90",
-      icono: "⚠️",
+      icono: <AlertTriangle className="w-8 h-8 text-error" />,
     },
     advertencia: {
       boton: "bg-tertiary text-on-tertiary hover:bg-tertiary/90",
-      icono: "⚡",
+      icono: <Zap className="w-8 h-8 text-tertiary" />,
     },
     info: {
       boton: "bg-secondary text-on-secondary hover:bg-secondary/90",
-      icono: "ℹ️",
+      icono: <Info className="w-8 h-8 text-secondary" />,
     },
   };
 
@@ -47,9 +49,9 @@ export default function ConfirmModal({
         if (e.target === e.currentTarget && !cargando) onCancelar();
       }}
     >
-      <div className="bg-surface-container-lowest rounded-2xl p-6 w-full max-w-sm shadow-xl">
+      <div className="bg-surface-container-lowest rounded-2xl p-6 w-full max-w-md shadow-xl">
         <div className="text-center mb-4">
-          <span className="text-3xl">{color.icono}</span>
+          {color.icono}
         </div>
         <h2 className="text-xl font-bold text-on-surface text-center mb-2">
           {titulo}

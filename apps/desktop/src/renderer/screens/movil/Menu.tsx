@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
+import {
+  CircleDollarSign,
+  AlertTriangle,
+  ClipboardList,
+  Package,
+  User,
+} from "lucide-react";
 
 export default function Menu() {
   const navigate = useNavigate();
@@ -48,7 +55,7 @@ export default function Menu() {
           }`}
         >
           <div className="flex items-center gap-3">
-            <span className="text-2xl">{sesionCaja ? "💰" : "⚠️"}</span>
+            {sesionCaja ? <CircleDollarSign className="w-6 h-6 text-tertiary" /> : <AlertTriangle className="w-6 h-6 text-error" />}
             <div>
               <p
                 className={`font-medium ${
@@ -74,7 +81,8 @@ export default function Menu() {
             onClick={() => navigate("/movil/pedidos/nuevo")}
             className="p-6 bg-secondary text-on-secondary rounded-2xl text-center"
           >
-            <span className="text-3xl block mb-2">📋</span>
+          <ClipboardList className="w-8 h-8 mb-2" />
+          <span className="font-medium">Pedidos</span>
             <span className="font-medium">Nuevo Pedido</span>
           </button>
         )}
@@ -83,8 +91,7 @@ export default function Menu() {
           onClick={() => navigate("/movil/pedidos")}
           className="p-6 bg-surface-container text-on-surface rounded-2xl text-center relative"
         >
-          <span className="text-3xl block mb-2">📋</span>
-          <span className="font-medium">Pedidos</span>
+          <ClipboardList className="w-8 h-8 mb-2" />
           {pedidosPendientes > 0 && (
             <span className="absolute top-2 right-2 bg-error text-on-error text-xs px-2 py-1 rounded-full">
               {pedidosPendientes}
@@ -96,7 +103,7 @@ export default function Menu() {
           onClick={() => navigate("/movil/stock")}
           className="p-6 bg-surface-container text-on-surface rounded-2xl text-center"
         >
-          <span className="text-3xl block mb-2">📦</span>
+          <Package className="w-8 h-8 mb-2" />
           <span className="font-medium">Stock</span>
         </button>
 
@@ -104,7 +111,7 @@ export default function Menu() {
           onClick={() => navigate("/movil/perfil")}
           className="p-6 bg-surface-container text-on-surface rounded-2xl text-center"
         >
-          <span className="text-3xl block mb-2">👤</span>
+          <User className="w-8 h-8 mb-2" />
           <span className="font-medium">Perfil</span>
         </button>
       </div>

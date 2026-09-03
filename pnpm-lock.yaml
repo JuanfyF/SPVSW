@@ -41,6 +41,9 @@ importers:
       file-uri-to-path:
         specifier: ^2.0.0
         version: 2.0.0
+      lucide-react:
+        specifier: ^1.40.0
+        version: 1.40.0(react@18.3.1)
       papaparse:
         specifier: ^5.5.4
         version: 5.5.4
@@ -121,9 +124,6 @@ importers:
       '@types/express':
         specifier: ^5.0.6
         version: 5.0.6
-      tsx:
-        specifier: ^4.23.12
-        version: 4.23.12
 
   packages/core:
     dependencies:
@@ -2326,6 +2326,11 @@ packages:
   lru-cache@6.0.0:
     resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
     engines: {node: '>=10'}
+
+  lucide-react@1.40.0:
+    resolution: {integrity: sha512-MaG+8WnOXkDWz9XeElj7TnQ890tTZUB0a36i03aRRCKGWE6e7jJpmdCvtxxuxcjjdqyN6m4sL6qlHVuSUDtYgg==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -5381,6 +5386,10 @@ snapshots:
   lru-cache@6.0.0:
     dependencies:
       yallist: 4.0.0
+
+  lucide-react@1.40.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
 
   magic-string@0.30.21:
     dependencies:

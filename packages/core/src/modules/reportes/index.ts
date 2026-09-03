@@ -49,6 +49,18 @@ export function crearServicioReportes(db: PosDatabase) {
         .where(like(ventas.fechaHora, `${validados.fecha}%`))
         .groupBy(ventas.metodoPago);
 
+      // Ventas del día por tipoOrigen (mostrador vs pedido/saldo)
+      const ventasPorOrigen = await db
+        .select({
+          tipoOrigen: ventas.tipoOrigen,
+          metodoPago: ventas.metodoPago,
+          total: sql<number>`sum(${ventas.total})`,
+          cantidad: sql<number>`count(*)`,
+        })
+        .from(ventas)
+        .where(like(ventas.fechaHora, `${validados.fecha}%`))
+        .groupBy(ventas.tipoOrigen, ventas.metodoPago);
+
       // Pedidos del día (anticipos)
       const pedidosDelDia = await db
         .select({
@@ -152,6 +164,26 @@ export function crearServicioReportes(db: PosDatabase) {
       const devolucionesTransferencia =
         devolucionesDelDia.find((d) => d.metodoDevolucion === "transferencia")?.total ?? 0;
 
+      // Ventas mostrador (tipoOrigen = "mostrador")
+      const ventasMostradorEfectivo =
+        ventasPorOrigen.find((v) => v.tipoOrigen === "mostrador" && v.metodoPago === "efectivo")?.total ?? 0;
+      const ventasMostradorTransferencia =
+        ventasPorOrigen.find((v) => v.tipoOrigen === "mostrador" && v.metodoPago === "transferencia")?.total ?? 0;
+      const ventasMostradorCantidadEfectivo =
+        ventasPorOrigen.find((v) => v.tipoOrigen === "mostrador" && v.metodoPago === "efectivo")?.cantidad ?? 0;
+      const ventasMostradorCantidadTransferencia =
+        ventasPorOrigen.find((v) => v.tipoOrigen === "mostrador" && v.metodoPago === "transferencia")?.cantidad ?? 0;
+
+      // Saldos cobrados al entregar pedidos (tipoOrigen = "pedido")
+      const saldosEfectivo =
+        ventasPorOrigen.find((v) => v.tipoOrigen === "pedido" && v.metodoPago === "efectivo")?.total ?? 0;
+      const saldosTransferencia =
+        ventasPorOrigen.find((v) => v.tipoOrigen === "pedido" && v.metodoPago === "transferencia")?.total ?? 0;
+      const saldosCantidadEfectivo =
+        ventasPorOrigen.find((v) => v.tipoOrigen === "pedido" && v.metodoPago === "efectivo")?.cantidad ?? 0;
+      const saldosCantidadTransferencia =
+        ventasPorOrigen.find((v) => v.tipoOrigen === "pedido" && v.metodoPago === "transferencia")?.cantidad ?? 0;
+
       return {
         fecha: validados.fecha,
         ventas: {
@@ -161,6 +193,22 @@ export function crearServicioReportes(db: PosDatabase) {
           cantidadEfectivo: ventasEfectivoCantidad,
           cantidadTransferencia: ventasTransferenciaCantidad,
           cantidadTotal: ventasEfectivoCantidad + ventasTransferenciaCantidad,
+        },
+        ventasMostrador: {
+          efectivo: ventasMostradorEfectivo,
+          transferencia: ventasMostradorTransferencia,
+          total: ventasMostradorEfectivo + ventasMostradorTransferencia,
+          cantidadEfectivo: ventasMostradorCantidadEfectivo,
+          cantidadTransferencia: ventasMostradorCantidadTransferencia,
+          cantidadTotal: ventasMostradorCantidadEfectivo + ventasMostradorCantidadTransferencia,
+        },
+        saldosPedidos: {
+          efectivo: saldosEfectivo,
+          transferencia: saldosTransferencia,
+          total: saldosEfectivo + saldosTransferencia,
+          cantidadEfectivo: saldosCantidadEfectivo,
+          cantidadTransferencia: saldosCantidadTransferencia,
+          cantidadTotal: saldosCantidadEfectivo + saldosCantidadTransferencia,
         },
         pedidos: {
           efectivo: pedidosEfectivo,

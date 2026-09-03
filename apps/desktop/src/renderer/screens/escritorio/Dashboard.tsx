@@ -2,6 +2,17 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { formatearFecha } from "@pos/shared";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
+import {
+  AlertTriangle,
+  ShoppingCart,
+  Banknote,
+  ClipboardList,
+  TrendingDown,
+  CircleDollarSign,
+  Package,
+  BarChart3,
+  Search,
+} from "lucide-react";
 
 interface ResumenDiario {
   ventas: {
@@ -162,7 +173,7 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="p-6">
+    <div className="p-6 max-w-7xl mx-auto">
         <div className="p-4 bg-error-container text-on-error-container rounded-xl">
           {error}
         </div>
@@ -171,12 +182,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 ">
+    <div className="p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface">Dashboard</h1>
-          <p className="text-on-surface-variant">
+          <h1 className="text-headline-lg font-bold text-on-surface">Dashboard</h1>
+          <p className="text-body-md text-on-surface-variant">
             Bienvenido, {usuario?.nombre} •{" "}
             {new Date().toLocaleDateString("es-EC", {
               weekday: "long",
@@ -192,10 +203,10 @@ export default function Dashboard() {
       {!sesionCaja && (
         <div className="mb-6 p-4 bg-error-container/50 border border-error/30 rounded-xl">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">⚠️</span>
+            <AlertTriangle className="w-6 h-6 text-error" />
             <div>
               <p className="font-semibold text-on-error-container">Caja cerrada</p>
-              <p className="text-sm text-on-error-container/80">
+              <p className="text-body-md text-on-error-container/80">
                 Debes abrir la caja para realizar ventas
               </p>
             </div>
@@ -210,56 +221,72 @@ export default function Dashboard() {
       )}
 
       {/* Tarjetas de resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Ventas del día */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-3xl">🛒</span>
-            <span className="text-sm text-tertiary font-medium">Ventas</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        {/* Ventas mostrador */}
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <ShoppingCart className="w-8 h-8 text-tertiary" />
+            <span className="text-label-md text-tertiary font-medium">Ventas</span>
           </div>
-          <p className="text-3xl font-bold text-on-surface">
-            ${resumen?.ventas.total.toFixed(2) ?? "0.00"}
+          <p className="text-headline-lg font-bold text-on-surface">
+            ${resumen?.ventasMostrador.total.toFixed(2) ?? "0.00"}
           </p>
-          <div className="mt-2 text-sm text-on-surface-variant">
-            <p>Efectivo: ${resumen?.ventas.efectivo.toFixed(2) ?? "0.00"} ({resumen?.ventas.cantidadEfectivo ?? 0})</p>
-            <p>Transferencia: ${resumen?.ventas.transferencia.toFixed(2) ?? "0.00"} ({resumen?.ventas.cantidadTransferencia ?? 0})</p>
+          <div className="mt-2 text-body-md text-on-surface-variant">
+            <p>Efectivo: ${resumen?.ventasMostrador.efectivo.toFixed(2) ?? "0.00"} ({resumen?.ventasMostrador.cantidadEfectivo ?? 0})</p>
+            <p>Transferencia: ${resumen?.ventasMostrador.transferencia.toFixed(2) ?? "0.00"} ({resumen?.ventasMostrador.cantidadTransferencia ?? 0})</p>
           </div>
-          <p className="mt-2 text-xs text-on-surface-variant">{resumen?.ventas.cantidadTotal ?? 0} transacciones</p>
+          <p className="mt-2 text-caption text-on-surface-variant">{resumen?.ventasMostrador.cantidadTotal ?? 0} transacciones</p>
+        </div>
+
+        {/* Saldos pedidos */}
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <Banknote className="w-8 h-8 text-tertiary" />
+            <span className="text-label-md text-tertiary font-medium">Saldos pedidos</span>
+          </div>
+          <p className="text-headline-lg font-bold text-on-surface">
+            ${resumen?.saldosPedidos.total.toFixed(2) ?? "0.00"}
+          </p>
+          <div className="mt-2 text-body-md text-on-surface-variant">
+            <p>Efectivo: ${resumen?.saldosPedidos.efectivo.toFixed(2) ?? "0.00"} ({resumen?.saldosPedidos.cantidadEfectivo ?? 0})</p>
+            <p>Transferencia: ${resumen?.saldosPedidos.transferencia.toFixed(2) ?? "0.00"} ({resumen?.saldosPedidos.cantidadTransferencia ?? 0})</p>
+          </div>
+          <p className="mt-2 text-caption text-on-surface-variant">{resumen?.saldosPedidos.cantidadTotal ?? 0} transacciones</p>
         </div>
 
         {/* Pedidos */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-3xl">📋</span>
-            <span className="text-sm text-tertiary font-medium">Pedidos</span>
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <ClipboardList className="w-8 h-8 text-tertiary" />
+            <span className="text-label-md text-tertiary font-medium">Pedidos</span>
           </div>
-          <p className="text-3xl font-bold text-on-surface">
+          <p className="text-headline-lg font-bold text-on-surface">
             ${resumen?.pedidos.total.toFixed(2) ?? "0.00"}
           </p>
-          <div className="mt-2 text-sm text-on-surface-variant">
+          <div className="mt-2 text-body-md text-on-surface-variant">
             <p>Efectivo: ${resumen?.pedidos.efectivo.toFixed(2) ?? "0.00"} ({resumen?.pedidos.cantidadEfectivo ?? 0})</p>
             <p>Transferencia: ${resumen?.pedidos.transferencia.toFixed(2) ?? "0.00"} ({resumen?.pedidos.cantidadTransferencia ?? 0})</p>
           </div>
-          <p className="mt-2 text-xs text-on-surface-variant">{pedidosPendientes} pedidos activos</p>
+          <p className="mt-2 text-caption text-on-surface-variant">{pedidosPendientes} pedidos activos</p>
         </div>
 
         {/* Gastos */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-3xl">💸</span>
-            <span className="text-sm text-error font-medium">Gastos</span>
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <TrendingDown className="w-8 h-8 text-error" />
+            <span className="text-label-md text-error font-medium">Gastos</span>
           </div>
-          <p className="text-3xl font-bold text-error">
+          <p className="text-headline-lg font-bold text-error">
             ${resumen?.gastos.total.toFixed(2) ?? "0.00"}
           </p>
-          <div className="mt-2 text-sm text-on-surface-variant">
+          <div className="mt-2 text-body-md text-on-surface-variant">
             <p>Caja: ${resumen?.gastos.caja.toFixed(2) ?? "0.00"}</p>
             <p>Pedidos: ${resumen?.gastos.pedidos.toFixed(2) ?? "0.00"}</p>
           </div>
           {resumen?.gastos.detalle && resumen.gastos.detalle.length > 0 && (
             <div className="mt-3 pt-3 border-t border-outline-variant max-h-32 overflow-y-auto">
               {resumen.gastos.detalle.map((g) => (
-                <div key={g.id} className="flex justify-between text-xs text-on-surface-variant py-0.5">
+                <div key={g.id} className="flex justify-between text-caption text-on-surface-variant py-0.5">
                   <span className="truncate mr-2">{g.descripcion}</span>
                   <span className="whitespace-nowrap">${g.monto.toFixed(2)}</span>
                 </div>
@@ -268,9 +295,9 @@ export default function Dashboard() {
           )}
           {resumen?.gastos.porCategoria && resumen.gastos.porCategoria.length > 0 && (
             <div className="mt-3 pt-3 border-t border-outline-variant">
-              <p className="text-xs font-medium text-on-surface-variant mb-1">Por categoría:</p>
+              <p className="text-caption font-medium text-on-surface-variant mb-1">Por categoría:</p>
               {resumen.gastos.porCategoria.map((cat) => (
-                <div key={cat.categoriaId} className="flex justify-between text-xs text-on-surface-variant">
+                <div key={cat.categoriaId} className="flex justify-between text-caption text-on-surface-variant">
                   <span>{cat.categoriaNombre} ({cat.cantidad})</span>
                   <span>${cat.total.toFixed(2)}</span>
                 </div>
@@ -280,52 +307,52 @@ export default function Dashboard() {
         </div>
 
         {/* Ingreso neto */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-3xl">💰</span>
-            <span className="text-sm text-tertiary font-medium">Ingreso Neto</span>
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <CircleDollarSign className="w-8 h-8 text-tertiary" />
+            <span className="text-label-md text-tertiary font-medium">Ingreso Neto</span>
           </div>
-          <p className={`text-3xl font-bold ${
+          <p className={`text-headline-lg font-bold ${
             (resumen?.consolidado.ingresoNeto ?? 0) >= 0
               ? "text-tertiary"
               : "text-error"
           }`}>
             ${resumen?.consolidado.ingresoNeto.toFixed(2) ?? "0.00"}
           </p>
-          <p className="mt-2 text-sm text-on-surface-variant">ingreso del día</p>
+          <p className="mt-2 text-body-md text-on-surface-variant">ingreso del día</p>
         </div>
       </div>
 
       {/* Accesos rápidos */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-on-surface mb-4">Accesos Rápidos</h2>
+        <h2 className="text-headline-md font-semibold text-on-surface mb-4">Accesos Rápidos</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <button
             onClick={() => navigate("/venta")}
-            className="p-4 bg-secondary text-on-secondary rounded-2xl hover:bg-secondary/90 transition-all shadow-sm"
+            className="p-4 bg-secondary text-on-secondary rounded-2xl hover:bg-secondary/90 active:scale-[0.98] transition-all shadow-sm"
           >
-            <span className="text-2xl block mb-2">🛒</span>
+            <ShoppingCart className="w-6 h-6 mb-2" />
             <span className="font-medium">Nueva Venta</span>
           </button>
           <button
             onClick={() => navigate("/pedidos/nuevo")}
-            className="p-4 bg-tertiary text-on-tertiary rounded-2xl hover:bg-tertiary/90 transition-all shadow-sm"
+            className="p-4 bg-tertiary text-on-tertiary rounded-2xl hover:bg-tertiary/90 active:scale-[0.98] transition-all shadow-sm"
           >
-            <span className="text-2xl block mb-2">📋</span>
+            <ClipboardList className="w-6 h-6 mb-2" />
             <span className="font-medium">Nuevo Pedido</span>
           </button>
           <button
             onClick={() => navigate("/stock")}
             className="p-4 bg-surface-container text-on-surface rounded-2xl hover:bg-surface-container-high transition-all"
           >
-            <span className="text-2xl block mb-2">📦</span>
+            <Package className="w-6 h-6 mb-2" />
             <span className="font-medium">Stock</span>
           </button>
           <button
             onClick={() => navigate("/reportes")}
             className="p-4 bg-surface-container text-on-surface rounded-2xl hover:bg-surface-container-high transition-all"
           >
-            <span className="text-2xl block mb-2">📈</span>
+            <BarChart3 className="w-6 h-6 mb-2" />
             <span className="font-medium">Reportes</span>
           </button>
         </div>
@@ -333,7 +360,7 @@ export default function Dashboard() {
 
       {/* Resumen de pedidos pendientes */}
       <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-        <h2 className="text-lg font-semibold text-on-surface mb-4">Pedidos Pendientes</h2>
+        <h2 className="text-headline-md font-semibold text-on-surface mb-4">Pedidos Pendientes</h2>
         {pedidosPendientes === 0 ? (
           <p className="text-on-surface-variant text-center py-4">
             No hay pedidos pendientes
@@ -356,10 +383,10 @@ export default function Dashboard() {
       {diferenciasStock.length > 0 && (
         <div className="mt-6 bg-surface-container rounded-2xl p-6 shadow-sm border border-outline-variant">
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-2xl">⚠️</span>
-            <h2 className="text-lg font-semibold text-on-surface">Diferencias de Stock Pendientes</h2>
+            <AlertTriangle className="w-6 h-6 text-error" />
+            <h2 className="text-headline-md font-semibold text-on-surface">Diferencias de Stock Pendientes</h2>
           </div>
-          <p className="text-sm text-on-surface-variant mb-4">
+          <p className="text-body-md text-on-surface-variant mb-4">
             Se detectaron diferencias durante el cierre de caja. Revisa el conteo físico.
           </p>
           <div className="space-y-2">
@@ -367,7 +394,7 @@ export default function Dashboard() {
               <div key={`${d.productoId}-${d.unidad}`} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
                 <div>
                   <p className="font-medium text-on-surface">{d.productoNombre}</p>
-                  <p className="text-xs text-on-surface-variant">
+                  <p className="text-caption text-on-surface-variant">
                     {d.unidad === "entero" ? "Entero" : "Porción"} • Esperado: {d.esperado} • Conteo: {d.conteoFisico}
                   </p>
                 </div>
@@ -390,10 +417,10 @@ export default function Dashboard() {
       {cierresPendientes.length > 0 && (
         <div className="mt-6 bg-error-container/30 rounded-2xl p-6 shadow-sm border border-error/20">
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-2xl">🔍</span>
-            <h2 className="text-lg font-semibold text-on-surface">Diferencias Pendientes de Revisión</h2>
+            <Search className="w-6 h-6 text-error" />
+            <h2 className="text-headline-md font-semibold text-on-surface">Diferencias Pendientes de Revisión</h2>
           </div>
-          <p className="text-sm text-on-surface-variant mb-4">
+          <p className="text-body-md text-on-surface-variant mb-4">
             Cierres de caja con diferencias que aún no han sido revisados.
           </p>
           <div className="space-y-2">
@@ -401,7 +428,7 @@ export default function Dashboard() {
               <div key={c.id} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
                 <div>
                   <p className="font-medium text-on-surface">{c.cajeroNombre}</p>
-                  <p className="text-xs text-on-surface-variant">
+                  <p className="text-caption text-on-surface-variant">
                     {c.fechaApertura}
                     {c.tieneDiferenciaStock && " • Diferencia de stock"}
                   </p>

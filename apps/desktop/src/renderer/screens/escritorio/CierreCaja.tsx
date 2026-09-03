@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
+import { Check } from "lucide-react";
 
 interface Producto {
   id: number;
@@ -262,16 +263,16 @@ export default function CierreCaja() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto ">
+    <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-on-surface">Cierre de Caja</h1>
+        <h1 className="text-headline-lg font-bold text-on-surface">Cierre de Caja</h1>
         <p className="text-on-surface-variant">{sesionCaja?.fecha} - Sesión #{sesionCaja?.id}</p>
       </div>
 
       {/* Resumen financiero */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <h2 className="text-lg font-semibold text-on-surface mb-4">Ingresos</h2>
+          <h2 className="text-headline-md font-semibold text-on-surface mb-4">Ingresos</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Ventas efectivo:</span>
@@ -321,7 +322,7 @@ export default function CierreCaja() {
         </div>
 
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <h2 className="text-lg font-semibold text-on-surface mb-4">Egresos</h2>
+          <h2 className="text-headline-md font-semibold text-on-surface mb-4">Egresos</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Gastos caja:</span>
@@ -359,11 +360,11 @@ export default function CierreCaja() {
 
       {/* Conciliación de efectivo */}
       <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6">
-        <h2 className="text-lg font-semibold text-on-surface mb-4">Conciliación de Efectivo</h2>
+        <h2 className="text-headline-md font-semibold text-on-surface mb-4">Conciliación de Efectivo</h2>
         
         {/* Resumen detallado de efectivo */}
         <div className="bg-surface-container rounded-xl p-4 mb-4">
-          <h3 className="text-sm font-medium text-on-surface-variant mb-3">Resumen del Flujo de Efectivo</h3>
+          <h3 className="text-label-md font-medium text-on-surface-variant mb-3">Resumen del Flujo de Efectivo</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-on-surface-variant">+ Ventas en efectivo (mostrador):</span>
@@ -456,7 +457,7 @@ export default function CierreCaja() {
       {/* Conteo físico de stock */}
       {diferenciasStock.length > 0 && (
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 overflow-x-auto">
-          <h2 className="text-lg font-semibold text-on-surface mb-2">Conteo Físico de Stock</h2>
+          <h2 className="text-headline-md font-semibold text-on-surface mb-2">Conteo Físico de Stock</h2>
           <p className="text-sm text-on-surface-variant mb-4">
             Cuenta cuántos productos quedan en la vitrina. El sistema calcula lo esperado automáticamente.
           </p>
@@ -464,23 +465,23 @@ export default function CierreCaja() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-outline-variant">
-                <th className="text-left p-3 text-on-surface-variant font-medium">Producto</th>
-                <th className="text-center p-3 text-on-surface-variant font-medium">Unidad</th>
-                <th className="text-right p-3 text-on-surface-variant font-medium">Inicial</th>
-                <th className="text-right p-3 text-on-surface-variant font-medium">Agregada</th>
-                <th className="text-right p-3 text-on-surface-variant font-medium">Vendida</th>
-                <th className="text-right p-3 text-on-surface-variant font-medium">Esperado</th>
-                <th className="text-right p-3 text-on-surface-variant font-medium w-28">Físico</th>
-                <th className="text-right p-3 text-on-surface-variant font-medium">Diferencia</th>
+                <th className="text-left p-4 text-on-surface-variant font-medium">Producto</th>
+                <th className="text-center p-4 text-on-surface-variant font-medium">Unidad</th>
+                <th className="text-right p-4 text-on-surface-variant font-medium">Inicial</th>
+                <th className="text-right p-4 text-on-surface-variant font-medium">Agregada</th>
+                <th className="text-right p-4 text-on-surface-variant font-medium">Vendida</th>
+                <th className="text-right p-4 text-on-surface-variant font-medium">Esperado</th>
+                <th className="text-right p-4 text-on-surface-variant font-medium w-28">Físico</th>
+                <th className="text-right p-4 text-on-surface-variant font-medium">Diferencia</th>
               </tr>
             </thead>
             <tbody>
               {diferenciasStock.map((d) => (
                 <tr key={d.key} className="border-b border-outline-variant/50">
-                  <td className="p-3 font-medium text-on-surface">
+                  <td className="p-4 font-medium text-on-surface">
                     {productos.find((p) => p.id === d.productoId)?.nombre ?? `#${d.productoId}`}
                   </td>
-                  <td className="p-3 text-center">
+                  <td className="p-4 text-center">
                     <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                       d.unidad === "entero"
                         ? "bg-secondary-container text-on-secondary-container"
@@ -489,11 +490,11 @@ export default function CierreCaja() {
                       {d.unidad === "entero" ? "Entero" : "Porción"}
                     </span>
                   </td>
-                  <td className="p-3 text-right text-on-surface-variant">{d.cantidadInicial}</td>
-                  <td className="p-3 text-right text-on-surface-variant">{d.cantidadAgregada}</td>
-                  <td className="p-3 text-right text-error">{d.vendido}</td>
-                  <td className="p-3 text-right text-on-surface font-medium">{d.esperado}</td>
-                  <td className="p-3 text-right">
+                  <td className="p-4 text-right text-on-surface-variant">{d.cantidadInicial}</td>
+                  <td className="p-4 text-right text-on-surface-variant">{d.cantidadAgregada}</td>
+                  <td className="p-4 text-right text-error">{d.vendido}</td>
+                  <td className="p-4 text-right text-on-surface font-medium">{d.esperado}</td>
+                  <td className="p-4 text-right">
                     <input
                       type="number"
                       value={conteoFisico[d.key] ?? "0"}
@@ -508,8 +509,8 @@ export default function CierreCaja() {
                       className="w-20 px-2 py-1 text-right border border-outline-variant rounded-lg focus:outline-none focus:border-secondary bg-surface"
                     />
                   </td>
-                  <td className={`p-3 text-right font-medium ${d.diferencia === 0 ? "text-tertiary" : d.diferencia > 0 ? "text-tertiary" : "text-error"}`}>
-                    {d.diferencia === 0 ? "✓" : d.diferencia > 0 ? `+${d.diferencia}` : d.diferencia}
+                  <td className={`p-4 text-right font-medium ${d.diferencia === 0 ? "text-tertiary" : d.diferencia > 0 ? "text-tertiary" : "text-error"}`}>
+                    {d.diferencia === 0 ? <Check className="w-5 h-5 text-tertiary inline" /> : d.diferencia > 0 ? `+${d.diferencia}` : d.diferencia}
                   </td>
                 </tr>
               ))}
@@ -529,7 +530,7 @@ export default function CierreCaja() {
       )}
 
       <div className="flex gap-4">
-        <button onClick={() => navigate("/")} className="flex-1 py-3 border border-outline-variant text-on-surface-variant rounded-xl hover:bg-surface-container transition-colors">
+        <button onClick={() => navigate("/")} className="flex-1 py-3 border border-outline-variant text-on-surface-variant rounded-xl hover:bg-surface-container-high transition-colors">
           Volver
         </button>
         <button onClick={handleCerrar} disabled={!efectivoContado || procesando} className="flex-1 py-3 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 transition-colors">

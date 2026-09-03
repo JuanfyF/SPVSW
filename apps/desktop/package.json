@@ -31,6 +31,7 @@
     "bindings": "^1.5.0",
     "drizzle-orm": "^0.33.0",
     "file-uri-to-path": "^2.0.0",
+    "lucide-react": "^1.40.0",
     "papaparse": "^5.5.4",
     "pdfmake": "^0.3.11",
     "react": "^18.3.0",

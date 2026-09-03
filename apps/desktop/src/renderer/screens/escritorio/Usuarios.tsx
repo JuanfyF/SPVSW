@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
+import { Users } from "lucide-react";
 
 interface Usuario {
   id: number;
@@ -179,7 +180,7 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="p-6 ">
+    <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-on-surface">Usuarios</h1>
@@ -206,10 +207,10 @@ export default function Usuarios() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-outline-variant">
-              <th className="text-left px-6 py-4 text-sm font-medium text-on-surface-variant">Nombre</th>
-              <th className="text-left px-6 py-4 text-sm font-medium text-on-surface-variant">Rol</th>
-              <th className="text-left px-6 py-4 text-sm font-medium text-on-surface-variant">Estado</th>
-              <th className="text-right px-6 py-4 text-sm font-medium text-on-surface-variant">Acciones</th>
+              <th className="text-left p-4 text-on-surface-variant font-medium">Nombre</th>
+              <th className="text-left p-4 text-on-surface-variant font-medium">Rol</th>
+              <th className="text-left p-4 text-on-surface-variant font-medium">Estado</th>
+              <th className="text-right p-4 text-on-surface-variant font-medium">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -255,7 +256,7 @@ export default function Usuarios() {
                         <button
                           onClick={() => handleDesactivar(u)}
                           disabled={esRolAdmin(u.rol) && adminsActivos <= 1}
-                          className="px-3 py-1.5 text-sm text-error border border-error/30 rounded-lg hover:bg-error-container/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="px-3 py-1.5 text-sm text-error border border-error/30 rounded-lg hover:bg-error-container/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title={esRolAdmin(u.rol) && adminsActivos <= 1 ? "No se puede desactivar el último admin/cajero" : ""}
                         >
                           Desactivar
@@ -269,6 +270,7 @@ export default function Usuarios() {
             {usuarios.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-12 text-center text-on-surface-variant">
+                  <Users className="w-10 h-10 mx-auto mb-3 text-on-surface-variant/40" />
                   No hay usuarios registrados
                 </td>
               </tr>

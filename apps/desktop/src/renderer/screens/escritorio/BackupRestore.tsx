@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
+import { AlertTriangle } from "lucide-react";
 
 export default function BackupRestore() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ export default function BackupRestore() {
 
   if (usuario?.rol !== "propietario") {
     return (
-      <div className="p-6">
+      <div className="p-6 max-w-7xl mx-auto">
         <p className="text-error">Solo el propietario puede acceder a esta sección.</p>
         <button onClick={() => navigate("/")} className="mt-4 btn-primary">
           Volver
@@ -119,8 +120,8 @@ export default function BackupRestore() {
           </h2>
           <p className="text-sm text-on-surface-variant mb-4">
             Restaura la base de datos desde un archivo de backup anterior.
-            <strong className="text-error block mt-1">
-              ⚠️ Esto sobreescribirá todos los datos actuales.
+            <strong className="text-error block mt-1 flex items-center gap-1">
+              <AlertTriangle className="w-4 h-4" /> Esto sobreescribirá todos los datos actuales.
             </strong>
           </p>
           <button

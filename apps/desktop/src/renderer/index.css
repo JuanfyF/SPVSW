@@ -13,7 +13,7 @@
   input:focus-visible,
   textarea:focus-visible,
   select:focus-visible {
-    outline: 2px solid #C2185B;
+    outline: 2px solid #D4849E;
     outline-offset: 2px;
   }
 }
@@ -22,8 +22,8 @@
   .spinner {
     width: 24px;
     height: 24px;
-    border: 3px solid #E8DFD4;
-    border-top-color: #C2185B;
+    border: 3px solid #EDE5DA;
+    border-top-color: #D4849E;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
   }

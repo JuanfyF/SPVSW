@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { useAuthStore } from "../../../store/auth";
+import { Phone } from "lucide-react";
 
 interface Pedido {
   id: number;
@@ -204,7 +205,7 @@ export default function Detalle() {
           {pedido.telefono && !esPastelera && (
             <div className="flex justify-between">
               <span className="text-on-surface-variant">Teléfono:</span>
-              <span className="text-on-surface">📱 {pedido.telefono}</span>
+              <span className="text-on-surface flex items-center gap-1"><Phone className="w-4 h-4" /> {pedido.telefono}</span>
             </div>
           )}
           <div className="flex justify-between">

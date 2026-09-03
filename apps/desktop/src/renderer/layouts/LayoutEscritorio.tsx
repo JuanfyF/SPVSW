@@ -1,23 +1,35 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Cake,
+  ClipboardList,
+  Package,
+  TrendingDown,
+  Users,
+  BarChart3,
+  KeyRound,
+  HardDrive,
+} from "lucide-react";
 
 const menuItemsAdmin = [
-  { path: "/", label: "Dashboard", icon: "📊" },
-  { path: "/venta", label: "Venta", icon: "🛒" },
-  { path: "/productos", label: "Productos", icon: "🧁" },
-  { path: "/pedidos", label: "Pedidos", icon: "📋" },
-  { path: "/stock", label: "Stock", icon: "📦" },
-  { path: "/gastos", label: "Gastos", icon: "💸" },
-  { path: "/nomina", label: "Nómina", icon: "👥" },
-  { path: "/reportes", label: "Reportes", icon: "📈" },
-  { path: "/usuarios", label: "Usuarios", icon: "🔑" },
-  { path: "/backup", label: "Backup", icon: "💾" },
+  { path: "/", label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+  { path: "/venta", label: "Venta", icon: <ShoppingCart className="w-5 h-5" /> },
+  { path: "/productos", label: "Productos", icon: <Cake className="w-5 h-5" /> },
+  { path: "/pedidos", label: "Pedidos", icon: <ClipboardList className="w-5 h-5" /> },
+  { path: "/stock", label: "Stock", icon: <Package className="w-5 h-5" /> },
+  { path: "/gastos", label: "Gastos", icon: <TrendingDown className="w-5 h-5" /> },
+  { path: "/nomina", label: "Nómina", icon: <Users className="w-5 h-5" /> },
+  { path: "/reportes", label: "Reportes", icon: <BarChart3 className="w-5 h-5" /> },
+  { path: "/usuarios", label: "Usuarios", icon: <KeyRound className="w-5 h-5" /> },
+  { path: "/backup", label: "Backup", icon: <HardDrive className="w-5 h-5" /> },
 ];
 
 const menuItemsPastelera = [
-  { path: "/stock", label: "Stock", icon: "📦" },
-  { path: "/pedidos", label: "Pedidos", icon: "📋" },
+  { path: "/stock", label: "Stock", icon: <Package className="w-5 h-5" /> },
+  { path: "/pedidos", label: "Pedidos", icon: <ClipboardList className="w-5 h-5" /> },
 ];
 
 const rutasRestringidasPastelera = [
@@ -94,7 +106,7 @@ export default function LayoutEscritorio() {
                   : "text-on-surface-variant hover:bg-secondary-container/30"
               }`}
             >
-              <span className="text-xl">{item.icon}</span>
+              {item.icon}
               <span className="font-medium">{item.label}</span>
             </button>
           ))}

@@ -1,19 +1,25 @@
 import { useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
+import {
+  Home,
+  ClipboardList,
+  Package,
+  User,
+} from "lucide-react";
 
 const menuItemsAdmin = [
-  { path: "/movil", label: "Inicio", icon: "🏠" },
-  { path: "/movil/pedidos", label: "Pedidos", icon: "📋" },
-  { path: "/movil/stock", label: "Stock", icon: "📦" },
-  { path: "/movil/perfil", label: "Perfil", icon: "👤" },
+  { path: "/movil", label: "Inicio", icon: <Home className="w-5 h-5" /> },
+  { path: "/movil/pedidos", label: "Pedidos", icon: <ClipboardList className="w-5 h-5" /> },
+  { path: "/movil/stock", label: "Stock", icon: <Package className="w-5 h-5" /> },
+  { path: "/movil/perfil", label: "Perfil", icon: <User className="w-5 h-5" /> },
 ];
 
 const menuItemsPastelera = [
-  { path: "/movil", label: "Inicio", icon: "🏠" },
-  { path: "/movil/pedidos", label: "Pedidos", icon: "📋" },
-  { path: "/movil/stock", label: "Stock", icon: "📦" },
-  { path: "/movil/perfil", label: "Perfil", icon: "👤" },
+  { path: "/movil", label: "Inicio", icon: <Home className="w-5 h-5" /> },
+  { path: "/movil/pedidos", label: "Pedidos", icon: <ClipboardList className="w-5 h-5" /> },
+  { path: "/movil/stock", label: "Stock", icon: <Package className="w-5 h-5" /> },
+  { path: "/movil/perfil", label: "Perfil", icon: <User className="w-5 h-5" /> },
 ];
 
 export default function LayoutMovil() {
@@ -72,7 +78,7 @@ export default function LayoutMovil() {
                 : "text-on-surface-variant"
             }`}
           >
-            <span className="text-2xl">{item.icon}</span>
+            {item.icon}
             <span className="text-xs mt-1">{item.label}</span>
           </button>
         ))}

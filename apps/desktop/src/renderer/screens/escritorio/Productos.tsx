@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import ConfirmModal from "../../components/ConfirmModal";
+import { Cake } from "lucide-react";
 
 interface Producto {
   id: number;
@@ -204,7 +205,7 @@ export default function Productos() {
 
   if (error) {
     return (
-      <div className="p-6 ">
+      <div className="p-6">
         <div className="p-4 bg-error-container text-on-error-container rounded-xl">
           {error}
         </div>
@@ -213,7 +214,7 @@ export default function Productos() {
   }
 
   return (
-    <div className="p-6 ">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -257,6 +258,7 @@ export default function Productos() {
             {productosFiltrados.length === 0 ? (
               <tr>
                 <td colSpan={7} className="p-8 text-center text-on-surface-variant">
+                  <Cake className="w-10 h-10 mx-auto mb-3 text-on-surface-variant/40" />
                   {busqueda ? `No se encontraron productos para "${busqueda}"` : "No hay productos registrados"}
                 </td>
               </tr>

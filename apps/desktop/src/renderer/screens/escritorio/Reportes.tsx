@@ -215,7 +215,7 @@ export default function Reportes() {
   };
 
   return (
-    <div className="p-6 ">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-on-surface">Reportes</h1>
@@ -568,16 +568,16 @@ export default function Reportes() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-outline-variant">
-                      <th className="text-left p-3 text-on-surface-variant font-medium text-sm">Fecha</th>
-                      <th className="text-left p-3 text-on-surface-variant font-medium text-sm">Cajero</th>
-                      <th className="text-right p-3 text-on-surface-variant font-medium text-sm">Ventas</th>
-                      <th className="text-right p-3 text-on-surface-variant font-medium text-sm">Pedidos</th>
-                      <th className="text-right p-3 text-on-surface-variant font-medium text-sm">Gastos</th>
-                      <th className="text-right p-3 text-on-surface-variant font-medium text-sm">Devoluciones</th>
-                      <th className="text-right p-3 text-on-surface-variant font-medium text-sm">Esperado</th>
-                      <th className="text-right p-3 text-on-surface-variant font-medium text-sm">Contado</th>
-                      <th className="text-right p-3 text-on-surface-variant font-medium text-sm">Diferencia</th>
-                      <th className="text-center p-3 text-on-surface-variant font-medium text-sm">Estado</th>
+                      <th className="text-left p-4 text-on-surface-variant font-medium">Fecha</th>
+                      <th className="text-left p-4 text-on-surface-variant font-medium">Cajero</th>
+                      <th className="text-right p-4 text-on-surface-variant font-medium">Ventas</th>
+                      <th className="text-right p-4 text-on-surface-variant font-medium">Pedidos</th>
+                      <th className="text-right p-4 text-on-surface-variant font-medium">Gastos</th>
+                      <th className="text-right p-4 text-on-surface-variant font-medium">Devoluciones</th>
+                      <th className="text-right p-4 text-on-surface-variant font-medium">Esperado</th>
+                      <th className="text-right p-4 text-on-surface-variant font-medium">Contado</th>
+                      <th className="text-right p-4 text-on-surface-variant font-medium">Diferencia</th>
+                      <th className="text-center p-4 text-on-surface-variant font-medium">Estado</th>
                     </tr>
                   </thead>
                   <tbody>

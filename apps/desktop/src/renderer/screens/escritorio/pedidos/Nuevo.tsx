@@ -145,7 +145,7 @@ export default function Nuevo() {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto ">
+    <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-on-surface">Nuevo Pedido</h1>
@@ -177,7 +177,7 @@ export default function Nuevo() {
                   }
                 }}
                 maxLength={150}
-                className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${
                   errores.cliente ? "border-error" : "border-outline-variant"
                 }`}
               />
@@ -202,7 +202,7 @@ export default function Nuevo() {
                   }
                 }}
                 maxLength={15}
-                className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${
                   errores.telefono ? "border-error" : "border-outline-variant"
                 }`}
               />
@@ -230,7 +230,7 @@ export default function Nuevo() {
                   }
                 }}
                 min={formatearFecha(new Date())}
-                className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${
+                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${
                   errores.fechaEntrega ? "border-error" : "border-outline-variant"
                 }`}
               />
@@ -266,7 +266,7 @@ export default function Nuevo() {
                 min="0"
                 step="0.01"
                 max="999999"
-                className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface text-lg font-bold"
+                className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface text-lg font-bold"
               />
               <p className="text-xs text-on-surface-variant mt-1">
                 Total de productos: ${totalCalculado.toFixed(2)}
@@ -283,7 +283,7 @@ export default function Nuevo() {
                 min="0"
                 step="0.01"
                 max="999999"
-                className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
+                className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
               />
             </div>
             <div>
@@ -361,7 +361,7 @@ export default function Nuevo() {
                 <select
                   value={productoSeleccionado}
                   onChange={(e) => setProductoSeleccionado(e.target.value)}
-                  className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
+                  className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
                 >
                   <option value="">Seleccionar...</option>
                   {productos.map((p) => (
@@ -378,7 +378,7 @@ export default function Nuevo() {
                 <select
                   value={unidadProducto}
                   onChange={(e) => setUnidadProducto(e.target.value as "entero" | "porcion")}
-                  className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
+                  className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
                 >
                   <option value="entero">Entero</option>
                   <option value="porcion">Porción</option>
@@ -405,7 +405,7 @@ export default function Nuevo() {
               }}
               min="1"
               max="9999"
-              className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${
                 errores.cantidad ? "border-error" : "border-outline-variant"
               }`}
             />

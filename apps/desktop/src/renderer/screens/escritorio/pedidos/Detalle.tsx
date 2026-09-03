@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../../store/auth";
 import ConfirmModal from "../../../components/ConfirmModal";
+import { Phone } from "lucide-react";
 
 interface Pedido {
   id: number;
@@ -97,27 +98,6 @@ export default function Detalle() {
     if (!pedido || !sesionCaja) return;
     setAccionLoading(true);
     try {
-      // Verificar stock antes de entregar
-      const detallesConProducto = detalles.filter((d) => d.productoId !== null);
-      if (detallesConProducto.length > 0) {
-        const productos = await window.pos.productos.listar();
-        for (const detalle of detallesConProducto) {
-          const resultado = await window.pos.stock.verificarDisponibilidad(
-            detalle.productoId!,
-            sesionCaja.id,
-            detalle.unidad,
-            detalle.cantidad
-          );
-          if (!resultado.suficiente) {
-            const producto = productos.find((p) => p.id === detalle.productoId);
-            throw new Error(
-              `Stock insuficiente para "${producto?.nombre ?? `#${detalle.productoId}`}": ` +
-              `disponible ${resultado.disponible}, solicitado ${detalle.cantidad}`
-            );
-          }
-        }
-      }
-
       await window.pos.pedidos.entregar(
         pedido.id,
         sesionCaja.id,
@@ -248,7 +228,7 @@ export default function Detalle() {
             {esAdmin && pedido.telefono && (
               <div>
                 <p className="text-sm text-on-surface-variant">Teléfono</p>
-                <p className="font-medium text-on-surface">📱 {pedido.telefono}</p>
+                <p className="font-medium text-on-surface flex items-center gap-1"><Phone className="w-4 h-4" /> {pedido.telefono}</p>
               </div>
             )}
             <div>

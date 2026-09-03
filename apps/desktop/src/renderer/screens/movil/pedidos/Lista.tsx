@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/auth";
+import { ClipboardList } from "lucide-react";
 
 interface Pedido {
   id: number;
@@ -103,7 +104,7 @@ export default function Lista() {
       {/* Lista */}
       {pedidosFiltrados.length === 0 ? (
         <div className="text-center py-12">
-          <span className="text-4xl">📋</span>
+          <ClipboardList className="w-10 h-10 text-on-surface-variant" />
           <p className="mt-4 text-on-surface-variant">No hay pedidos</p>
         </div>
       ) : (

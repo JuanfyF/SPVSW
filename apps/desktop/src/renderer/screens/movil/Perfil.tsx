@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
+import { User } from "lucide-react";
 
 export default function Perfil() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export default function Perfil() {
       <div className="bg-surface-container-lowest p-6 rounded-xl mb-6">
         <div className="flex items-center gap-4 mb-4">
           <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center">
-            <span className="text-3xl text-secondary">👤</span>
+            <User className="w-8 h-8 text-secondary" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-on-surface">

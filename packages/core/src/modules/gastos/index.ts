@@ -11,6 +11,10 @@ import {
   categoriasGasto,
   sesionesCaja,
   usuarios,
+  ventas,
+  pedidos,
+  adelantosSueldo,
+  devolucionesAnticipo,
   eq,
   and,
   sql,
@@ -51,6 +55,41 @@ export function crearServicioGastos(db: PosDatabase) {
         .limit(1);
       if (existeUsuario.length === 0)
         throw new Error("Usuario no encontrado");
+
+      // Verificar que haya saldo disponible en la caja
+      const ventasResult = await db
+        .select({ total: sql<number>`coalesce(sum(${ventas.total}), 0)` })
+        .from(ventas)
+        .where(eq(ventas.sesionCajaId, validados.sesionCajaId));
+      const anticiposResult = await db
+        .select({ total: sql<number>`coalesce(sum(${pedidos.anticipo}), 0)` })
+        .from(pedidos)
+        .where(eq(pedidos.sesionCajaAnticipoId, validados.sesionCajaId));
+      const gastosResult = await db
+        .select({ total: sql<number>`coalesce(sum(${gastos.monto}), 0)` })
+        .from(gastos)
+        .where(eq(gastos.sesionCajaId, validados.sesionCajaId));
+      const adelantosResult = await db
+        .select({ total: sql<number>`coalesce(sum(${adelantosSueldo.monto}), 0)` })
+        .from(adelantosSueldo)
+        .where(eq(adelantosSueldo.sesionCajaId, validados.sesionCajaId));
+      const devolucionesResult = await db
+        .select({ total: sql<number>`coalesce(sum(${devolucionesAnticipo.monto}), 0)` })
+        .from(devolucionesAnticipo)
+        .where(eq(devolucionesAnticipo.sesionCajaId, validados.sesionCajaId));
+
+      const efectivoEsperado =
+        (ventasResult[0]?.total ?? 0) +
+        (anticiposResult[0]?.total ?? 0) -
+        (gastosResult[0]?.total ?? 0) -
+        (adelantosResult[0]?.total ?? 0) -
+        (devolucionesResult[0]?.total ?? 0);
+
+      if (validados.monto > efectivoEsperado) {
+        throw new Error(
+          `Saldo insuficiente en caja. Disponible: $${efectivoEsperado.toFixed(2)}, gasto: $${validados.monto.toFixed(2)}`
+        );
+      }
 
       const resultado = await db
         .insert(gastos)

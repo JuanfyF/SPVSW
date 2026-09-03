@@ -6,6 +6,7 @@ import {
   ListarPedidosFechaSchema,
   formatearFecha,
 } from "@pos/shared";
+import { ClipboardList, Phone } from "lucide-react";
 
 interface Pedido {
   id: number;
@@ -122,7 +123,7 @@ export default function Lista() {
 
   if (error) {
     return (
-      <div className="p-6 ">
+      <div className="p-6">
         <div className="p-4 bg-error-container text-on-error-container rounded-xl">
           {error}
         </div>
@@ -131,7 +132,7 @@ export default function Lista() {
   }
 
   return (
-    <div className="p-6 ">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -240,7 +241,7 @@ export default function Lista() {
       {/* Lista de pedidos */}
       {pedidosFiltrados.length === 0 ? (
         <div className="text-center py-12">
-          <span className="text-4xl">📋</span>
+          <ClipboardList className="w-10 h-10 text-on-surface-variant" />
           <p className="mt-4 text-on-surface-variant">No hay pedidos para mostrar</p>
         </div>
       ) : (
@@ -298,8 +299,8 @@ export default function Lista() {
               </div>
 
               {pedido.telefono && (
-                <p className="mt-3 text-sm text-on-surface-variant">
-                  📱 {pedido.telefono}
+                <p className="mt-3 text-sm text-on-surface-variant flex items-center gap-1">
+                  <Phone className="w-4 h-4" /> {pedido.telefono}
                 </p>
               )}
             </div>

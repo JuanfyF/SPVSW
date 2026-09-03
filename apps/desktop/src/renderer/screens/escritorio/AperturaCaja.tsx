@@ -3,6 +3,7 @@ import { formatearFecha, formatearHora } from "@pos/shared";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
+import { CircleDollarSign } from "lucide-react";
 
 interface Producto {
   id: number;
@@ -264,7 +265,7 @@ export default function AperturaCaja() {
 
   // Paso 1: Abrir caja
   return (
-    <div className="p-6 ">
+    <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-on-surface">Apertura de Caja</h1>
         <p className="text-on-surface-variant">
@@ -281,7 +282,7 @@ export default function AperturaCaja() {
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
           <div className="text-center mb-6">
             <div className="w-20 h-20 bg-tertiary-fixed rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-4xl">💰</span>
+              <CircleDollarSign className="w-10 h-10 text-on-tertiary" />
             </div>
             <h2 className="text-xl font-semibold text-on-surface">Abrir Caja</h2>
             <p className="text-on-surface-variant mt-2">

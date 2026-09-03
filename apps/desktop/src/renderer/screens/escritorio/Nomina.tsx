@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { formatearFecha } from "@pos/shared";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
+import { Banknote, AlertTriangle } from "lucide-react";
 
 interface Empleado {
   id: number;
@@ -263,7 +264,7 @@ export default function Nomina() {
 
   if (error) {
     return (
-      <div className="p-6 ">
+      <div className="p-6">
         <div className="p-4 bg-error-container text-on-error-container rounded-xl">
           {error}
         </div>
@@ -272,7 +273,7 @@ export default function Nomina() {
   }
 
   return (
-    <div className="p-6 ">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-on-surface">Nómina</h1>
@@ -312,7 +313,7 @@ export default function Nomina() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-3xl">💵</span>
+                <Banknote className="w-8 h-8 text-tertiary" />
                 <span className="text-sm text-tertiary font-medium">Adelantos</span>
               </div>
               <p className="text-3xl font-bold text-tertiary">
@@ -325,7 +326,7 @@ export default function Nomina() {
 
             <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-3xl">⚠️</span>
+                <AlertTriangle className="w-8 h-8 text-error" />
                 <span className="text-sm text-error font-medium">Multas</span>
               </div>
               <p className="text-3xl font-bold text-error">

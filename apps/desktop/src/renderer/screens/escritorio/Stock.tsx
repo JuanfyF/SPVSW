@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "../../store/auth";
+import { Package } from "lucide-react";
 
 interface Producto {
   id: number;
@@ -134,7 +135,7 @@ export default function Stock() {
 
   if (error && stock.length === 0) {
     return (
-      <div className="p-6 ">
+    <div className="p-6">
         <div className="p-4 bg-error-container text-on-error-container rounded-xl">
           {error}
         </div>
@@ -143,11 +144,11 @@ export default function Stock() {
   }
 
   return (
-    <div className="p-6 ">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface">Stock</h1>
+          <h1 className="text-headline-lg font-bold text-on-surface">Stock</h1>
           <p className="text-on-surface-variant">
             {sesionCaja ? `Sesión: ${sesionCaja.fecha}` : "Sin sesión activa"}
           </p>
@@ -189,6 +190,7 @@ export default function Stock() {
             {productosFiltrados.length === 0 ? (
               <tr>
                 <td colSpan={7} className="p-8 text-center text-on-surface-variant">
+                  <Package className="w-10 h-10 mx-auto mb-3 text-on-surface-variant/40" />
                   {busqueda ? `No se encontraron productos para "${busqueda}"` : "No hay productos registrados"}
                 </td>
               </tr>

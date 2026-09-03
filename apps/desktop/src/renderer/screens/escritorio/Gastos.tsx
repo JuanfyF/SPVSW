@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { formatearFecha } from "@pos/shared";
 import { useAuthStore } from "../../store/auth";
+import { TrendingDown } from "lucide-react";
 
 interface CategoriaGasto {
   id: number;
@@ -74,6 +75,14 @@ export default function Gastos() {
       if (isNaN(montoNum) || montoNum <= 0)
         throw new Error("El monto debe ser un número positivo");
 
+      // Verificar que haya saldo disponible en la caja
+      const efectivoEsperado = await window.pos.caja.calcularEfectivoEsperado(sesionCaja.id);
+      if (montoNum > efectivoEsperado) {
+        throw new Error(
+          `Saldo insuficiente en caja. Disponible: $${efectivoEsperado.toFixed(2)}, gasto: $${montoNum.toFixed(2)}`
+        );
+      }
+
       await window.pos.gastos.crear({
         fecha: formatearFecha(new Date()),
         sesionCajaId: sesionCaja.id,
@@ -121,7 +130,7 @@ export default function Gastos() {
 
   if (error) {
     return (
-      <div className="p-6 ">
+      <div className="p-6">
         <div className="p-4 bg-error-container text-on-error-container rounded-xl">
           {error}
         </div>
@@ -130,7 +139,7 @@ export default function Gastos() {
   }
 
   return (
-    <div className="p-6 ">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -150,7 +159,7 @@ export default function Gastos() {
       {/* Lista de gastos */}
       {gastos.length === 0 ? (
         <div className="text-center py-12">
-          <span className="text-4xl">💸</span>
+          <TrendingDown className="w-10 h-10 text-on-surface-variant" />
           <p className="mt-4 text-on-surface-variant">No hay gastos registrados</p>
         </div>
       ) : (
