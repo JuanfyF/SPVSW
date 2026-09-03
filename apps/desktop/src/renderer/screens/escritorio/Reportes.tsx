@@ -9,6 +9,7 @@ import {
   generarPdf,
   formatearFecha,
 } from "@pos/shared";
+import { Search } from "lucide-react";
 
 interface ResumenDiario {
   fecha: string;
@@ -218,7 +219,7 @@ export default function Reportes() {
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-on-surface">Reportes</h1>
+        <h1 className=" text-headline-lg  font-bold text-on-surface">Reportes</h1>
         <p className="text-on-surface-variant">Análisis de ventas y operaciones</p>
       </div>
 
@@ -330,8 +331,8 @@ export default function Reportes() {
 
           {resumenDiario && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-                <h3 className="text-sm text-on-surface-variant mb-2">Ventas</h3>
+              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+                <h3 className="text-label-md text-on-surface-variant mb-2">Ventas</h3>
                 <p className="text-3xl font-bold text-on-surface">
                   ${resumenDiario.ventas.total.toFixed(2)}
                 </p>
@@ -341,8 +342,8 @@ export default function Reportes() {
                 </div>
               </div>
 
-              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-                <h3 className="text-sm text-on-surface-variant mb-2">Gastos</h3>
+              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+                <h3 className="text-label-md text-on-surface-variant mb-2">Gastos</h3>
                 <p className="text-3xl font-bold text-error">
                   ${resumenDiario.gastos.total.toFixed(2)}
                 </p>
@@ -352,9 +353,9 @@ export default function Reportes() {
                 </div>
                 {resumenDiario.gastos.porCategoria && resumenDiario.gastos.porCategoria.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-outline-variant">
-                    <p className="text-xs font-medium text-on-surface-variant mb-1">Por categoría:</p>
+                    <p className="text-caption font-medium text-on-surface-variant mb-1">Por categoría:</p>
                     {resumenDiario.gastos.porCategoria.map((cat) => (
-                      <div key={cat.categoriaId} className="flex justify-between text-xs text-on-surface-variant">
+                      <div key={cat.categoriaId} className="flex justify-between text-caption text-on-surface-variant">
                         <span>{cat.categoriaNombre} ({cat.cantidad})</span>
                         <span>${cat.total.toFixed(2)}</span>
                       </div>
@@ -363,15 +364,15 @@ export default function Reportes() {
                 )}
               </div>
 
-              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-                <h3 className="text-sm text-on-surface-variant mb-2">Adelantos</h3>
+              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+                <h3 className="text-label-md text-on-surface-variant mb-2">Adelantos</h3>
                 <p className="text-3xl font-bold text-error">
                   ${resumenDiario.adelantos.total.toFixed(2)}
                 </p>
               </div>
 
-              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-                <h3 className="text-sm text-on-surface-variant mb-2">Ingreso Neto</h3>
+              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+                <h3 className="text-label-md text-on-surface-variant mb-2">Ingreso Neto</h3>
                 <p
                   className={`text-3xl font-bold ${
                     resumenDiario.consolidado.ingresoNeto >= 0
@@ -436,23 +437,37 @@ export default function Reportes() {
           </div>
 
           {resumenRango && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-                <h3 className="text-sm text-on-surface-variant mb-2">Total Ventas</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+                <h3 className="text-label-md text-on-surface-variant mb-2">Total Ventas</h3>
                 <p className="text-3xl font-bold text-on-surface">
                   ${resumenRango.ventas.total.toFixed(2)}
                 </p>
               </div>
 
-              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-                <h3 className="text-sm text-on-surface-variant mb-2">Total Gastos</h3>
+              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+                <h3 className="text-label-md text-on-surface-variant mb-2">Pedidos (Anticipos)</h3>
+                <p className="text-3xl font-bold text-on-surface">
+                  ${resumenRango.pedidos?.total?.toFixed(2) ?? "0.00"}
+                </p>
+              </div>
+
+              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+                <h3 className="text-label-md text-on-surface-variant mb-2">Total Gastos</h3>
                 <p className="text-3xl font-bold text-error">
                   ${resumenRango.gastos.total.toFixed(2)}
                 </p>
               </div>
 
-              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-                <h3 className="text-sm text-on-surface-variant mb-2">Ingreso Neto</h3>
+              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+                <h3 className="text-label-md text-on-surface-variant mb-2">Adelantos</h3>
+                <p className="text-3xl font-bold text-on-surface">
+                  ${resumenRango.adelantos?.total?.toFixed(2) ?? "0.00"}
+                </p>
+              </div>
+
+              <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+                <h3 className="text-label-md text-on-surface-variant mb-2">Ingreso Neto</h3>
                 <p
                   className={`text-3xl font-bold ${
                     resumenRango.consolidado.ingresoNeto >= 0
@@ -538,25 +553,25 @@ export default function Reportes() {
               {/* Totales del rango */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant">
-                  <p className="text-sm text-on-surface-variant">Ventas Totales</p>
+                  <p className="text-label-md text-on-surface-variant">Ventas Totales</p>
                   <p className="text-xl font-bold text-on-surface">
                     ${(cierresFiltrados.totales.ventasEfectivo + cierresFiltrados.totales.ventasTransferencia).toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant">
-                  <p className="text-sm text-on-surface-variant">Gastos</p>
+                  <p className="text-label-md text-on-surface-variant">Gastos</p>
                   <p className="text-xl font-bold text-error">
                     ${cierresFiltrados.totales.gastosCaja.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant">
-                  <p className="text-sm text-on-surface-variant">Efectivo Esperado</p>
+                  <p className="text-label-md text-on-surface-variant">Efectivo Esperado</p>
                   <p className="text-xl font-bold text-on-surface">
                     ${cierresFiltrados.totales.efectivoEsperado.toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant">
-                  <p className="text-sm text-on-surface-variant">Diferencia Total</p>
+                  <p className="text-label-md text-on-surface-variant">Diferencia Total</p>
                   <p className={`text-xl font-bold ${cierresFiltrados.totales.diferenciaEfectivo !== 0 ? "text-error" : "text-tertiary"}`}>
                     ${cierresFiltrados.totales.diferenciaEfectivo.toFixed(2)}
                   </p>
@@ -564,7 +579,7 @@ export default function Reportes() {
               </div>
 
               {/* Tabla de cierres */}
-              <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant overflow-x-auto">
+              <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant overflow-x-auto hover:shadow-md transition-shadow">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-outline-variant">
@@ -583,8 +598,11 @@ export default function Reportes() {
                   <tbody>
                     {cierresFiltrados.cierres.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="p-8 text-center text-on-surface-variant">
-                          No hay cierres en el rango seleccionado
+                        <td colSpan={10} className="p-8 text-center">
+                          <Search className="w-10 h-10 mx-auto mb-2 text-on-surface-variant/40" />
+                          <p className="text-on-surface-variant">
+                            No hay cierres en el rango seleccionado
+                          </p>
                         </td>
                       </tr>
                     ) : (
@@ -616,7 +634,7 @@ export default function Reportes() {
                             {c.diferenciaEfectivo != null ? `$${c.diferenciaEfectivo.toFixed(2)}` : "-"}
                           </td>
                           <td className="p-3 text-center">
-                            <span className={`text-xs px-2 py-1 rounded-full ${
+                            <span className={`text-caption px-2 py-1 rounded-full ${
                               c.estadoRevision === "revisada"
                                 ? "bg-tertiary/20 text-tertiary"
                                 : "bg-surface-container-high text-on-surface-variant"
@@ -654,7 +672,7 @@ export default function Reportes() {
               Descargar PDF
             </button>
           </div>
-          <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
           <table className="w-full">
             <thead>
               <tr className="border-b border-outline-variant">
@@ -687,7 +705,7 @@ export default function Reportes() {
                     {new Date(pedido.fechaEntrega).toLocaleDateString("es-EC")}
                   </td>
                   <td className="p-4">
-                    <span className="px-2 py-1 rounded-full text-xs bg-surface-container text-on-surface">
+                    <span className="px-2 py-1 rounded-full text-caption bg-surface-container text-on-surface">
                       {pedido.estado}
                     </span>
                   </td>
@@ -753,7 +771,7 @@ export default function Reportes() {
             </button>
           </div>
 
-          <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-outline-variant">

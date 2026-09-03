@@ -256,6 +256,22 @@ export default function VentaMostrador() {
     const esCortesia = total === 0;
 
     try {
+      // Verificar stock antes de confirmar la venta
+      for (const item of carrito) {
+        const resultado = await window.pos.stock.verificarDisponibilidad(
+          item.productoId,
+          sesionCaja!.id,
+          item.unidad,
+          item.cantidad
+        );
+        if (!resultado.suficiente) {
+          throw new Error(
+            `Stock insuficiente para "${item.nombre}": ` +
+            `disponible ${resultado.disponible}, solicitado ${item.cantidad}`
+          );
+        }
+      }
+
       await window.pos.ventas.crear({
         sesionCajaId: sesionCaja!.id,
         total,
@@ -315,30 +331,30 @@ export default function VentaMostrador() {
                   >
                     <h3 className="font-medium text-on-surface mb-1">{producto.nombre}</h3>
                     {producto.categoria && (
-                      <p className="text-sm text-on-surface-variant mb-1">{producto.categoria}</p>
+                      <p className="text-label-md text-on-surface-variant mb-1">{producto.categoria}</p>
                     )}
                     {sesionCaja && Object.keys(stockDisponible).length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-3">
                         {stockEntero !== Infinity && (
-                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${
+                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-label-md font-bold ${
                             stockEntero === 0
                               ? "bg-error-container text-on-error-container"
                               : stockEntero <= 3
                                 ? "bg-surface-container-high text-tertiary"
                                 : "bg-tertiary-fixed text-tertiary"
                           }`}>
-                            <span className="text-xs opacity-70">Ent:</span> {stockEntero}
+                            <span className="text-caption opacity-70">Ent:</span> {stockEntero}
                           </span>
                         )}
                         {stockPorcion !== Infinity && (
-                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold ${
+                          <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-label-md font-bold ${
                             stockPorcion === 0
                               ? "bg-error-container text-on-error-container"
                               : stockPorcion <= 3
                                 ? "bg-surface-container-high text-tertiary"
                                 : "bg-secondary-fixed text-secondary"
                           }`}>
-                            <span className="text-xs opacity-70">Porc:</span> {stockPorcion}
+                            <span className="text-caption opacity-70">Porc:</span> {stockPorcion}
                           </span>
                         )}
                       </div>
@@ -348,7 +364,7 @@ export default function VentaMostrador() {
                         <button
                           onClick={() => agregarAlCarrito(producto, "entero")}
                           disabled={stockEntero !== Infinity && stockEntero <= 0}
-                          className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-label-md disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Entero ${producto.precioEntero.toFixed(2)}
                         </button>
@@ -358,14 +374,14 @@ export default function VentaMostrador() {
                           <button
                             onClick={() => agregarAlCarrito(producto, "porcion")}
                             disabled={stockPorcion !== Infinity && stockPorcion <= 0}
-                            className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-label-md disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Porción (servir) ${producto.precioPorcion.toFixed(2)}
                           </button>
                           <button
                             onClick={() => agregarAlCarrito(producto, "porcion_llevar")}
                             disabled={stockPorcion !== Infinity && stockPorcion <= 0}
-                            className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-label-md disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             Porción (llevar) ${(producto.precioPorcion + RECARGO_LLEVAR).toFixed(2)}
                           </button>
@@ -374,7 +390,7 @@ export default function VentaMostrador() {
                       <button
                         onClick={() => agregarCortesia(producto)}
                         disabled={!tieneStock(producto)}
-                        className="w-full py-2 bg-tertiary-fixed/30 text-tertiary rounded-xl hover:bg-tertiary-fixed/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-2 bg-tertiary-fixed/30 text-tertiary rounded-xl hover:bg-tertiary-fixed/50 transition-colors text-label-md disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Cortesía (gratis)
                       </button>
@@ -408,7 +424,7 @@ export default function VentaMostrador() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <p className="font-medium text-on-surface">{item.nombre}</p>
-                      <p className="text-sm text-on-surface-variant">
+                      <p className="text-label-md text-on-surface-variant">
                         {item.unidad === "entero" ? "Entero" : item.unidad === "porcion_llevar" ? "Porción (llevar)" : "Porción (servir)"} • $
                         {item.precioUnitario.toFixed(2)}
                       </p>
@@ -447,7 +463,7 @@ export default function VentaMostrador() {
         {/* Método de pago y total */}
         <div className="p-4 border-t border-outline-variant">
           <div className="mb-4">
-            <p className="text-sm text-on-surface-variant mb-2">Método de pago</p>
+            <p className="text-label-md text-on-surface-variant mb-2">Método de pago</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setMetodoPago("efectivo")}
@@ -480,7 +496,7 @@ export default function VentaMostrador() {
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-error-container text-on-error-container rounded-xl text-center text-sm">
+            <div className="mb-4 p-3 bg-error-container text-on-error-container rounded-xl text-center text-label-md">
               {error}
             </div>
           )}

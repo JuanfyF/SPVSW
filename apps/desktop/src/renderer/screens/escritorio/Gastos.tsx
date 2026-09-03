@@ -143,7 +143,7 @@ export default function Gastos() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface">Gastos</h1>
+          <h1 className="text-headline-lg font-bold text-on-surface">Gastos</h1>
           <p className="text-on-surface-variant">
             Total: ${totalGastos.toFixed(2)} • {gastos.length} gastos registrados
           </p>
@@ -163,7 +163,7 @@ export default function Gastos() {
           <p className="mt-4 text-on-surface-variant">No hay gastos registrados</p>
         </div>
       ) : (
-        <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant overflow-x-auto">
+        <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant overflow-x-auto hover:shadow-md transition-shadow">
           <table className="w-full">
             <thead>
               <tr className="border-b border-outline-variant">
@@ -186,7 +186,7 @@ export default function Gastos() {
                 <tr key={gasto.id} className="border-b border-outline-variant/50">
                   <td className="p-4">
                     <p className="font-medium text-on-surface">{gasto.descripcion}</p>
-                    <p className="text-sm text-on-surface-variant">
+                    <p className="text-label-md text-on-surface-variant">
                       {new Date(gasto.fecha).toLocaleDateString("es-EC")}
                     </p>
                   </td>
@@ -195,7 +195,7 @@ export default function Gastos() {
                   </td>
                   <td className="p-4">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs ${
+                      className={`px-2 py-1 rounded-full text-caption ${
                         gasto.origen === "caja"
                           ? "bg-surface-container text-on-surface"
                           : "bg-tertiary-fixed text-tertiary"
@@ -230,12 +230,12 @@ export default function Gastos() {
             <div className="space-y-4 mb-4">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm text-on-surface-variant">
+                  <label className="block text-label-md text-on-surface-variant">
                     Categoría *
                   </label>
                   <button
                     onClick={() => setModalCategoria(true)}
-                    className="text-xs text-secondary hover:text-secondary/80"
+                    className="text-caption text-secondary hover:text-secondary/80"
                   >
                     + Nueva
                   </button>
@@ -255,7 +255,7 @@ export default function Gastos() {
               </div>
 
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Descripción *
                 </label>
                 <input
@@ -273,12 +273,12 @@ export default function Gastos() {
                   className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${errores.descripcion ? "border-error" : "border-outline-variant"}`}
                 />
                 {errores.descripcion && (
-                  <p className="text-error text-xs mt-1">{errores.descripcion}</p>
+                  <p className="text-error text-caption mt-1">{errores.descripcion}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Monto *
                 </label>
                 <input
@@ -299,12 +299,12 @@ export default function Gastos() {
                   className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${errores.monto ? "border-error" : "border-outline-variant"}`}
                 />
                 {errores.monto && (
-                  <p className="text-error text-xs mt-1">{errores.monto}</p>
+                  <p className="text-error text-caption mt-1">{errores.monto}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Origen
                 </label>
                 <div className="flex gap-2">
@@ -389,7 +389,7 @@ export default function Gastos() {
               autoFocus
             />
             {errores.nuevaCategoria && (
-              <p className="text-error text-xs mt-1 mb-2">{errores.nuevaCategoria}</p>
+              <p className="text-error text-caption mt-1 mb-2">{errores.nuevaCategoria}</p>
             )}
             <div className="flex gap-4">
               <button

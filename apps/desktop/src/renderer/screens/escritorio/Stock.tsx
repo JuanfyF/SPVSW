@@ -173,7 +173,7 @@ export default function Stock() {
       </div>
 
       {/* Lista de productos */}
-      <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant overflow-x-auto">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant overflow-x-auto hover:shadow-md transition-shadow">
         <table className="w-full">
           <thead>
             <tr className="border-b border-outline-variant">
@@ -241,11 +241,11 @@ export default function Stock() {
                       {idx === 0 && (
                         <td className="p-4" rowSpan={rows.length}>
                           <p className="font-medium text-on-surface">{producto.nombre}</p>
-                          <p className="text-xs text-on-surface-variant">{producto.categoria || "-"}</p>
+                          <p className="text-caption text-on-surface-variant">{producto.categoria || "-"}</p>
                         </td>
                       )}
                       <td className="p-4 text-center">
-                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        <span className={`text-caption font-medium px-2 py-1 rounded-full ${
                           row.unidad === "entero"
                             ? "bg-secondary-container text-on-secondary-container"
                             : "bg-tertiary-container text-on-tertiary-container"
@@ -267,7 +267,7 @@ export default function Stock() {
                               setUnidadReposicion(row.unidad as "entero" | "porcion");
                               setModalReposicion(true);
                             }}
-                            className="px-2 py-1 text-xs bg-surface-container text-on-surface rounded-lg hover:bg-surface-container-high transition-colors whitespace-nowrap"
+                            className="px-2 py-1 text-caption bg-surface-container text-on-surface rounded-lg hover:bg-surface-container-high transition-colors whitespace-nowrap"
                           >
                             +Repo
                           </button>
@@ -293,11 +293,11 @@ export default function Stock() {
             {productoReposicion && (
               <div className="mb-4 p-4 bg-surface-container rounded-xl">
                 <p className="font-medium text-on-surface">{productoReposicion.nombre}</p>
-                <p className="text-sm text-on-surface-variant">Unidad: {unidadReposicion === "entero" ? "Entero" : "Porción"}</p>
+                <p className="text-label-md text-on-surface-variant">Unidad: {unidadReposicion === "entero" ? "Entero" : "Porción"}</p>
               </div>
             )}
             <div className="mb-4">
-              <label className="block text-sm text-on-surface-variant mb-2">Cantidad a agregar</label>
+              <label className="block text-label-md text-on-surface-variant mb-2">Cantidad a agregar</label>
               <input
                 type="number"
                 value={cantidadReposicion}

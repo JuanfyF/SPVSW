@@ -177,6 +177,12 @@ export function formatearReporteRango(reporte: any): DatosExportacion {
         Total: reporte.ventas.total,
       },
       {
+        Concepto: "Pedidos (Anticipos)",
+        Efectivo: reporte.pedidos?.efectivo ?? 0,
+        Transferencia: reporte.pedidos?.transferencia ?? 0,
+        Total: reporte.pedidos?.total ?? 0,
+      },
+      {
         Concepto: "Gastos (Caja)",
         Efectivo: reporte.gastos.caja,
         Transferencia: 0,
@@ -188,10 +194,32 @@ export function formatearReporteRango(reporte: any): DatosExportacion {
         Transferencia: 0,
         Total: reporte.gastos.pedidos,
       },
+      {
+        Concepto: "Adelantos",
+        Efectivo: reporte.adelantos?.efectivo ?? 0,
+        Transferencia: reporte.adelantos?.transferencia ?? 0,
+        Total: reporte.adelantos?.total ?? 0,
+      },
+      {
+        Concepto: "Devoluciones",
+        Efectivo: reporte.devoluciones?.efectivo ?? 0,
+        Transferencia: reporte.devoluciones?.transferencia ?? 0,
+        Total: reporte.devoluciones?.total ?? 0,
+      },
     ],
     totales: {
-      Efectivo: reporte.ventas.efectivo - reporte.gastos.caja - reporte.gastos.pedidos,
-      Transferencia: reporte.ventas.transferencia,
+      Efectivo:
+        reporte.ventas.efectivo +
+        (reporte.pedidos?.efectivo ?? 0) -
+        reporte.gastos.caja -
+        reporte.gastos.pedidos -
+        (reporte.adelantos?.efectivo ?? 0) -
+        (reporte.devoluciones?.efectivo ?? 0),
+      Transferencia:
+        reporte.ventas.transferencia +
+        (reporte.pedidos?.transferencia ?? 0) -
+        (reporte.adelantos?.transferencia ?? 0) -
+        (reporte.devoluciones?.transferencia ?? 0),
       Total: reporte.consolidado?.ingresoNeto ?? (reporte.ventas.total - reporte.gastos.total),
     },
   };
@@ -269,6 +297,43 @@ export function formatearReporteProductos(productos: any[]): DatosExportacion {
       Producto: p.nombre,
       "Unidades Vendidas": p.cantidad,
     })),
+  };
+}
+
+export function formatearReporteNomina(resumenGlobal: {
+  totalSalarios: number;
+  totalAdelantos: number;
+  totalMultas: number;
+  totalDescuentos: number;
+  netoGlobal: number;
+  mes: string;
+  empleados: Array<{
+    nombre: string;
+    salario: number;
+    adelantos: number;
+    multas: number;
+    neto: number;
+  }>;
+}): DatosExportacion {
+  const filas: FilaReporte[] = resumenGlobal.empleados.map((emp) => ({
+    Empleado: emp.nombre,
+    Salario: emp.salario,
+    Adelantos: emp.adelantos > 0 ? -emp.adelantos : 0,
+    Multas: emp.multas > 0 ? -emp.multas : 0,
+    "Neto a Pagar": emp.neto,
+  }));
+
+  return {
+    titulo: `Reporte de Nómina — ${resumenGlobal.mes}`,
+    filtros: { fecha: resumenGlobal.mes },
+    columnas: ["Empleado", "Salario", "Adelantos", "Multas", "Neto a Pagar"],
+    filas,
+    totales: {
+      Salario: resumenGlobal.totalSalarios,
+      Adelantos: -resumenGlobal.totalAdelantos,
+      Multas: -resumenGlobal.totalMultas,
+      "Neto a Pagar": resumenGlobal.netoGlobal,
+    },
   };
 }
 

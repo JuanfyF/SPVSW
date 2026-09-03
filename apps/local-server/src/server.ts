@@ -6,9 +6,16 @@ import {
   crearServicioPedidos,
   crearServicioProductos,
   crearServicioCaja,
+  crearServicioGastos,
+  crearServicioNomina,
+  crearServicioVentas,
 } from "@pos/core";
 import { stockRoutes, stockAdminRoutes } from "./routes/stock.routes";
 import { pedidosRoutes, pedidosAdminRoutes } from "./routes/pedidos.routes";
+import { gastosRoutes } from "./routes/gastos.routes";
+import { nominaRoutes } from "./routes/nomina.routes";
+import { ventasRoutes } from "./routes/ventas.routes";
+import { cajaRoutes } from "./routes/caja.routes";
 import {
   authMiddleware,
   crearSesion,
@@ -51,6 +58,10 @@ export function startLocalServer(opciones: OpcionesServidor) {
     stock: crearServicioStock(opciones.db),
     pedidos: crearServicioPedidos(opciones.db),
     productos: crearServicioProductos(opciones.db),
+    gastos: crearServicioGastos(opciones.db),
+    nomina: crearServicioNomina(opciones.db),
+    ventas: crearServicioVentas(opciones.db),
+    caja: crearServicioCaja(opciones.db),
   };
 
   // ─── Login ────────────────────────────────────────────
@@ -128,6 +139,18 @@ export function startLocalServer(opciones: OpcionesServidor) {
       res.status(500).json({ error: "Error al obtener productos" });
     }
   });
+
+  // ─── Gastos: propietario y cajero ─────────────────────
+  app.use("/api/gastos", gastosRoutes(servicios.gastos));
+
+  // ─── Nómina: solo propietario ─────────────────────────
+  app.use("/api/nomina", nominaRoutes(servicios.nomina));
+
+  // ─── Ventas: propietario y cajero ─────────────────────
+  app.use("/api/ventas", ventasRoutes(servicios.ventas));
+
+  // ─── Caja: propietario y cajero ───────────────────────
+  app.use("/api/caja", cajaRoutes(servicios.caja));
 
   // ─── Escuchar solo en LAN ─────────────────────────────
   const server = app.listen(opciones.port, "0.0.0.0", () => {

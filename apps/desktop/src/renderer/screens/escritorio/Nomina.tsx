@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { formatearFecha } from "@pos/shared";
+import { formatearFecha, formatearReporteNomina, generarPdf } from "@pos/shared";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Banknote, AlertTriangle } from "lucide-react";
@@ -237,6 +237,24 @@ export default function Nomina() {
   } | null>(null);
   const [cargandoResumen, setCargandoResumen] = useState(false);
 
+  // Resumen global
+  const [resumenGlobal, setResumenGlobal] = useState<{
+    totalSalarios: number;
+    totalAdelantos: number;
+    totalMultas: number;
+    totalDescuentos: number;
+    netoGlobal: number;
+    empleados: Array<{
+      id: number;
+      nombre: string;
+      salario: number;
+      adelantos: number;
+      multas: number;
+      neto: number;
+    }>;
+  } | null>(null);
+  const [cargandoGlobal, setCargandoGlobal] = useState(false);
+
   const calcularResumenMensual = async () => {
     if (!empleadoSeleccionado || !mesResumen) return;
     setCargandoResumen(true);
@@ -252,6 +270,58 @@ export default function Nomina() {
     } finally {
       setCargandoResumen(false);
     }
+  };
+
+  const calcularResumenGlobal = async () => {
+    if (!mesResumen || empleados.length === 0) return;
+    setCargandoGlobal(true);
+    try {
+      const empleadosConDescuentos = await Promise.all(
+        empleados.map(async (emp) => {
+          try {
+            const resumen = await window.pos.nomina.calcularDescuentosMes(emp.id, mesResumen);
+            return {
+              id: emp.id,
+              nombre: emp.nombre,
+              salario: resumen.salario,
+              adelantos: resumen.adelantosMes,
+              multas: resumen.multasMes,
+              neto: resumen.neto,
+            };
+          } catch {
+            return { id: emp.id, nombre: emp.nombre, salario: 0, adelantos: 0, multas: 0, neto: 0 };
+          }
+        })
+      );
+
+      const totalSalarios = empleadosConDescuentos.reduce((sum, e) => sum + e.salario, 0);
+      const totalAdelantosGlobal = empleadosConDescuentos.reduce((sum, e) => sum + e.adelantos, 0);
+      const totalMultasGlobal = empleadosConDescuentos.reduce((sum, e) => sum + e.multas, 0);
+      const totalDescuentosGlobal = totalAdelantosGlobal + totalMultasGlobal;
+
+      setResumenGlobal({
+        totalSalarios,
+        totalAdelantos: totalAdelantosGlobal,
+        totalMultas: totalMultasGlobal,
+        totalDescuentos: totalDescuentosGlobal,
+        netoGlobal: totalSalarios - totalDescuentosGlobal,
+        empleados: empleadosConDescuentos,
+      });
+    } catch (err: any) {
+      console.error("Error al calcular resumen global:", err);
+      setResumenGlobal(null);
+    } finally {
+      setCargandoGlobal(false);
+    }
+  };
+
+  const exportarPdfGlobal = async () => {
+    if (!resumenGlobal || !mesResumen) return;
+    const datos = formatearReporteNomina({
+      ...resumenGlobal,
+      mes: mesResumen,
+    });
+    await generarPdf(datos);
   };
 
   if (loading) {
@@ -276,19 +346,19 @@ export default function Nomina() {
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-on-surface">Nómina</h1>
+        <h1 className="text-headline-lg font-bold text-on-surface">Nómina</h1>
         <p className="text-on-surface-variant">Gestión de adelantos y multas</p>
       </div>
 
       {/* Selector de empleado */}
-      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6">
+      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-on-surface">
+          <h2 className="text-headline-md font-semibold text-on-surface">
             Seleccionar Empleado
           </h2>
           <button
             onClick={() => { setModalCrear(true); cargarUsuarios(); }}
-            className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors text-sm"
+            className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors text-label-md"
           >
             + Crear Empleado
           </button>
@@ -307,45 +377,142 @@ export default function Nomina() {
         </select>
       </div>
 
+      {/* Resumen Global */}
+      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
+        <h2 className="text-headline-md font-semibold text-on-surface mb-4">
+          Resumen Global del Mes
+        </h2>
+        <div className="flex gap-4 items-end mb-4">
+          <div className="flex-1">
+            <label className="block text-label-md text-on-surface-variant mb-1">
+              Mes (YYYY-MM)
+            </label>
+            <input
+              type="month"
+              value={mesResumen}
+              onChange={(e) => setMesResumen(e.target.value)}
+              className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
+            />
+          </div>
+          <button
+            onClick={calcularResumenGlobal}
+            disabled={!mesResumen || cargandoGlobal}
+            className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 transition-colors"
+          >
+            {cargandoGlobal ? "Calculando..." : "Calcular Global"}
+          </button>
+          {resumenGlobal && (
+            <button
+              onClick={() => exportarPdfGlobal()}
+              className="px-4 py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors"
+            >
+              Descargar PDF
+            </button>
+          )}
+        </div>
+
+        {resumenGlobal && (
+          <div className="p-4 bg-surface-container rounded-xl">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <p className="text-label-md text-on-surface-variant">Total Salarios</p>
+                <p className="text-headline-md font-bold text-on-surface">
+                  ${resumenGlobal.totalSalarios.toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p className="text-label-md text-on-surface-variant">Total Adelantos</p>
+                <p className="text-headline-md font-bold text-tertiary">
+                  -${resumenGlobal.totalAdelantos.toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p className="text-label-md text-on-surface-variant">Total Multas</p>
+                <p className="text-headline-md font-bold text-error">
+                  -${resumenGlobal.totalMultas.toFixed(2)}
+                </p>
+              </div>
+              <div>
+                <p className="text-label-md text-on-surface-variant">Neto Global</p>
+                <p className={`text-headline-md font-bold ${resumenGlobal.netoGlobal >= 0 ? "text-tertiary" : "text-error"}`}>
+                  ${resumenGlobal.netoGlobal.toFixed(2)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-outline-variant">
+              <p className="text-caption text-on-surface-variant">
+                Total descuentos: ${resumenGlobal.totalDescuentos.toFixed(2)} • {empleados.length} empleados
+              </p>
+            </div>
+
+            {/* Desglose por empleado */}
+            <div className="mt-4 space-y-2">
+              <p className="text-label-md font-medium text-on-surface-variant">Desglose por empleado:</p>
+              {resumenGlobal.empleados.map((emp) => (
+                <div key={emp.id} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
+                  <div>
+                    <p className="font-medium text-on-surface">{emp.nombre}</p>
+                    <p className="text-caption text-on-surface-variant">
+                      Salario: ${emp.salario.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="flex gap-4 text-caption">
+                    {emp.adelantos > 0 && (
+                      <span className="text-tertiary">Adelantos: -${emp.adelantos.toFixed(2)}</span>
+                    )}
+                    {emp.multas > 0 && (
+                      <span className="text-error">Multas: -${emp.multas.toFixed(2)}</span>
+                    )}
+                    <span className={`font-medium ${emp.neto >= 0 ? "text-on-surface" : "text-error"}`}>
+                      Neto: ${emp.neto.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {empleadoSeleccionado && (
         <>
           {/* Resumen */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
+            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
                 <Banknote className="w-8 h-8 text-tertiary" />
-                <span className="text-sm text-tertiary font-medium">Adelantos</span>
+                <span className="text-label-md text-tertiary font-medium">Adelantos</span>
               </div>
               <p className="text-3xl font-bold text-tertiary">
                 ${totalAdelantos.toFixed(2)}
               </p>
-              <p className="mt-2 text-sm text-on-surface-variant">
+              <p className="mt-2 text-label-md text-on-surface-variant">
                 {adelantos.length} adelantos registrados
               </p>
             </div>
 
-            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
+            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
                 <AlertTriangle className="w-8 h-8 text-error" />
-                <span className="text-sm text-error font-medium">Multas</span>
+                <span className="text-label-md text-error font-medium">Multas</span>
               </div>
               <p className="text-3xl font-bold text-error">
                 ${totalMultas.toFixed(2)}
               </p>
-              <p className="mt-2 text-sm text-on-surface-variant">
+              <p className="mt-2 text-label-md text-on-surface-variant">
                 {multas.length} multas registradas
               </p>
             </div>
           </div>
 
           {/* Resumen mensual */}
-          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6">
-            <h2 className="text-lg font-semibold text-on-surface mb-4">
+          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
+            <h2 className="text-headline-md font-semibold text-on-surface mb-4">
               Resumen Mensual
             </h2>
             <div className="flex gap-4 items-end mb-4">
               <div className="flex-1">
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Mes (YYYY-MM)
                 </label>
                 <input
@@ -368,32 +535,32 @@ export default function Nomina() {
               <div className="p-4 bg-surface-container rounded-xl">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm text-on-surface-variant">Salario</p>
-                    <p className="text-lg font-bold text-on-surface">
+                    <p className="text-label-md text-on-surface-variant">Salario</p>
+                    <p className="text-headline-md font-bold text-on-surface">
                       ${resumenMensual.salario.toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-on-surface-variant">Adelantos</p>
-                    <p className="text-lg font-bold text-tertiary">
+                    <p className="text-label-md text-on-surface-variant">Adelantos</p>
+                    <p className="text-headline-md font-bold text-tertiary">
                       -${resumenMensual.adelantosMes.toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-on-surface-variant">Multas</p>
-                    <p className="text-lg font-bold text-error">
+                    <p className="text-label-md text-on-surface-variant">Multas</p>
+                    <p className="text-headline-md font-bold text-error">
                       -${resumenMensual.multasMes.toFixed(2)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-on-surface-variant">Neto a pagar</p>
-                    <p className={`text-lg font-bold ${resumenMensual.neto >= 0 ? "text-tertiary" : "text-error"}`}>
+                    <p className="text-label-md text-on-surface-variant">Neto a pagar</p>
+                    <p className={`text-headline-md font-bold ${resumenMensual.neto >= 0 ? "text-tertiary" : "text-error"}`}>
                       ${resumenMensual.neto.toFixed(2)}
                     </p>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-outline-variant">
-                  <p className="text-xs text-on-surface-variant">
+                  <p className="text-caption text-on-surface-variant">
                     Total descuentos: ${resumenMensual.totalDescuentos.toFixed(2)}
                   </p>
                 </div>
@@ -420,14 +587,17 @@ export default function Nomina() {
           {/* Historial */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Adelantos */}
-            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-              <h2 className="text-lg font-semibold text-on-surface mb-4">
+            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+              <h2 className="text-headline-md font-semibold text-on-surface mb-4">
                 Historial de Adelantos
               </h2>
               {adelantos.length === 0 ? (
-                <p className="text-on-surface-variant text-center py-4">
-                  No hay adelantos registrados
-                </p>
+                <div className="flex flex-col items-center py-4">
+                  <Banknote className="w-10 h-10 mb-2 text-on-surface-variant/40" />
+                  <p className="text-on-surface-variant text-center">
+                    No hay adelantos registrados
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {adelantos.map((adelanto) => (
@@ -440,17 +610,17 @@ export default function Nomina() {
                           <p className="font-medium text-on-surface">
                             ${adelanto.monto.toFixed(2)}
                           </p>
-                          <p className="text-sm text-on-surface-variant">
+                          <p className="text-label-md text-on-surface-variant">
                             {new Date(adelanto.fecha).toLocaleDateString("es-EC")} •{" "}
                             {adelanto.metodoPago}
                           </p>
                         </div>
-                        <span className="text-sm text-on-surface-variant">
+                        <span className="text-label-md text-on-surface-variant">
                           Desc: {adelanto.mesADescontar}
                         </span>
                       </div>
                       {adelanto.descripcion && (
-                        <p className="mt-2 text-sm text-on-surface-variant">
+                        <p className="mt-2 text-label-md text-on-surface-variant">
                           {adelanto.descripcion}
                         </p>
                       )}
@@ -461,14 +631,17 @@ export default function Nomina() {
             </div>
 
             {/* Multas */}
-            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-              <h2 className="text-lg font-semibold text-on-surface mb-4">
+            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+              <h2 className="text-headline-md font-semibold text-on-surface mb-4">
                 Historial de Multas
               </h2>
               {multas.length === 0 ? (
-                <p className="text-on-surface-variant text-center py-4">
-                  No hay multas registradas
-                </p>
+                <div className="flex flex-col items-center py-4">
+                  <AlertTriangle className="w-10 h-10 mb-2 text-on-surface-variant/40" />
+                  <p className="text-on-surface-variant text-center">
+                    No hay multas registradas
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-3">
                   {multas.map((multa) => (
@@ -481,15 +654,15 @@ export default function Nomina() {
                           <p className="font-medium text-error">
                             ${multa.monto.toFixed(2)}
                           </p>
-                          <p className="text-sm text-on-surface-variant">
+                          <p className="text-label-md text-on-surface-variant">
                             {new Date(multa.fecha).toLocaleDateString("es-EC")}
                           </p>
                         </div>
-                        <span className="text-sm text-on-surface-variant">
+                        <span className="text-label-md text-on-surface-variant">
                           Desc: {multa.mesADescontar}
                         </span>
                       </div>
-                      <p className="mt-2 text-sm text-on-surface">{multa.motivo}</p>
+                      <p className="mt-2 text-label-md text-on-surface">{multa.motivo}</p>
                     </div>
                   ))}
                 </div>
@@ -514,7 +687,7 @@ export default function Nomina() {
 
             <div className="space-y-4 mb-4">
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Monto *
                 </label>
                 <input
@@ -534,11 +707,11 @@ export default function Nomina() {
                   step="0.01"
                   className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${errores.montoAdelanto ? "border-error" : "border-outline-variant"}`}
                 />
-                {errores.montoAdelanto && <p className="text-error text-xs mt-1">{errores.montoAdelanto}</p>}
+                {errores.montoAdelanto && <p className="text-error text-caption mt-1">{errores.montoAdelanto}</p>}
               </div>
 
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Método de pago
                 </label>
                 <div className="flex gap-2">
@@ -566,7 +739,7 @@ export default function Nomina() {
               </div>
 
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Mes a descontar (YYYY-MM) *
                 </label>
                 <input
@@ -582,11 +755,11 @@ export default function Nomina() {
                   }}
                   className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${errores.mesADescontarAdelanto ? "border-error" : "border-outline-variant"}`}
                 />
-                {errores.mesADescontarAdelanto && <p className="text-error text-xs mt-1">{errores.mesADescontarAdelanto}</p>}
+                {errores.mesADescontarAdelanto && <p className="text-error text-caption mt-1">{errores.mesADescontarAdelanto}</p>}
               </div>
 
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Descripción
                 </label>
                 <input
@@ -643,7 +816,7 @@ export default function Nomina() {
 
             <div className="space-y-4 mb-4">
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Monto *
                 </label>
                 <input
@@ -663,11 +836,11 @@ export default function Nomina() {
                   step="0.01"
                   className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${errores.montoMulta ? "border-error" : "border-outline-variant"}`}
                 />
-                {errores.montoMulta && <p className="text-error text-xs mt-1">{errores.montoMulta}</p>}
+                {errores.montoMulta && <p className="text-error text-caption mt-1">{errores.montoMulta}</p>}
               </div>
 
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Motivo *
                 </label>
                 <textarea
@@ -684,11 +857,11 @@ export default function Nomina() {
                   maxLength={255}
                   className={`w-full px-4 py-2 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${errores.motivoMulta ? "border-error" : "border-outline-variant"}`}
                 />
-                {errores.motivoMulta && <p className="text-error text-xs mt-1">{errores.motivoMulta}</p>}
+                {errores.motivoMulta && <p className="text-error text-caption mt-1">{errores.motivoMulta}</p>}
               </div>
 
               <div>
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Mes a descontar (YYYY-MM) *
                 </label>
                 <input
@@ -741,7 +914,7 @@ export default function Nomina() {
             <h2 className="text-xl font-bold text-on-surface mb-4">Nuevo Empleado</h2>
 
             <div className="mb-3">
-              <label className="block text-sm text-on-surface-variant mb-1">Vincular a usuario (opcional)</label>
+              <label className="block text-label-md text-on-surface-variant mb-1">Vincular a usuario (opcional)</label>
               <select
                 value={usuarioSeleccionado}
                 onChange={(e) => {
@@ -761,7 +934,7 @@ export default function Nomina() {
             </div>
 
             <div className="mb-3">
-              <label className="block text-sm text-on-surface-variant mb-1">Nombre *</label>
+              <label className="block text-label-md text-on-surface-variant mb-1">Nombre *</label>
               <input
                 type="text"
                 value={nombre}
@@ -772,7 +945,7 @@ export default function Nomina() {
             </div>
 
             <div className="mb-3">
-              <label className="block text-sm text-on-surface-variant mb-1">Cargo *</label>
+              <label className="block text-label-md text-on-surface-variant mb-1">Cargo *</label>
               <select
                 value={cargo}
                 onChange={(e) => setCargo(e.target.value)}
@@ -786,7 +959,7 @@ export default function Nomina() {
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm text-on-surface-variant mb-1">Salario mensual</label>
+              <label className="block text-label-md text-on-surface-variant mb-1">Salario mensual</label>
               <input
                 type="number"
                 value={salario}
@@ -805,7 +978,7 @@ export default function Nomina() {
                 step="0.01"
                 className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-secondary bg-surface ${errores.salario ? "border-error" : "border-outline-variant"}`}
               />
-              {errores.salario && <p className="text-error text-xs mt-1">{errores.salario}</p>}
+              {errores.salario && <p className="text-error text-caption mt-1">{errores.salario}</p>}
             </div>
 
             {modalError && (

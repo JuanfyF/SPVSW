@@ -12,6 +12,7 @@ import {
   Package,
   BarChart3,
   Search,
+  Users,
 } from "lucide-react";
 
 interface ResumenDiario {
@@ -70,6 +71,16 @@ export default function Dashboard() {
     diferenciaEfectivo: number;
     tieneDiferenciaStock: boolean;
   }>>([]);
+  const [resumenNomina, setResumenNomina] = useState<{
+    totalAdelantos: number;
+    totalMultas: number;
+    empleados: Array<{
+      id: number;
+      nombre: string;
+      adelantos: number;
+      multas: number;
+    }>;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const cargarDatosRef = useRef<(() => Promise<void>) | null>(null);
@@ -113,6 +124,36 @@ export default function Dashboard() {
           (c) => c.estadoRevision === "pendiente_revision"
         );
         setCierresPendientes(pendientes);
+      } catch {
+        // Silenciar: no es crítico si falla
+      }
+
+      // Cargar resumen de nómina del mes
+      try {
+        const empleados = await window.pos.nomina.listarEmpleadosActivos();
+        const mesActual = hoy!.substring(0, 7); // "YYYY-MM"
+        const empleadosConDescuentos = await Promise.all(
+          empleados.map(async (emp) => {
+            try {
+              const descuentos = await window.pos.nomina.calcularDescuentosMes(emp.id, mesActual);
+              return {
+                id: emp.id,
+                nombre: emp.nombre,
+                adelantos: descuentos.adelantosMes,
+                multas: descuentos.multasMes,
+              };
+            } catch {
+              return { id: emp.id, nombre: emp.nombre, adelantos: 0, multas: 0 };
+            }
+          })
+        );
+        const totalAdelantos = empleadosConDescuentos.reduce((sum, e) => sum + e.adelantos, 0);
+        const totalMultas = empleadosConDescuentos.reduce((sum, e) => sum + e.multas, 0);
+        setResumenNomina({
+          totalAdelantos,
+          totalMultas,
+          empleados: empleadosConDescuentos,
+        });
       } catch {
         // Silenciar: no es crítico si falla
       }
@@ -362,9 +403,12 @@ export default function Dashboard() {
       <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
         <h2 className="text-headline-md font-semibold text-on-surface mb-4">Pedidos Pendientes</h2>
         {pedidosPendientes === 0 ? (
-          <p className="text-on-surface-variant text-center py-4">
-            No hay pedidos pendientes
-          </p>
+          <div className="flex flex-col items-center py-4">
+            <ClipboardList className="w-10 h-10 mb-2 text-on-surface-variant/40" />
+            <p className="text-on-surface-variant text-center">
+              No hay pedidos pendientes
+            </p>
+          </div>
         ) : (
           <div className="text-center py-4">
             <p className="text-4xl font-bold text-secondary">{pedidosPendientes}</p>
@@ -447,6 +491,51 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Resumen de nómina del mes */}
+      {resumenNomina && resumenNomina.empleados.length > 0 && (
+        <div className="mt-6 bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
+          <div className="flex items-center gap-3 mb-4">
+            <Users className="w-6 h-6 text-secondary" />
+            <h2 className="text-headline-md font-semibold text-on-surface">Nómina del Mes</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="p-3 bg-surface-container rounded-xl">
+              <p className="text-caption text-on-surface-variant">Adelantos</p>
+              <p className="text-headline-md font-bold text-on-surface">
+                ${resumenNomina.totalAdelantos.toFixed(2)}
+              </p>
+            </div>
+            <div className="p-3 bg-surface-container rounded-xl">
+              <p className="text-caption text-on-surface-variant">Multas</p>
+              <p className="text-headline-md font-bold text-error">
+                ${resumenNomina.totalMultas.toFixed(2)}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {resumenNomina.empleados.map((emp) => (
+              <div key={emp.id} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
+                <p className="font-medium text-on-surface">{emp.nombre}</p>
+                <div className="flex gap-4 text-caption">
+                  {emp.adelantos > 0 && (
+                    <span className="text-on-surface-variant">Adelantos: ${emp.adelantos.toFixed(2)}</span>
+                  )}
+                  {emp.multas > 0 && (
+                    <span className="text-error">Multas: ${emp.multas.toFixed(2)}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => navigate("/nomina")}
+            className="mt-4 px-4 py-2 text-on-surface-variant hover:text-on-surface transition-colors"
+          >
+            Ver nómina completa →
+          </button>
         </div>
       )}
     </div>

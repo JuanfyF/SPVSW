@@ -296,6 +296,43 @@ export function crearServicioReportes(db: PosDatabase) {
         .where(and(gte(gastos.fecha, validados.fechaInicio), lte(gastos.fecha, validados.fechaFin)))
         .groupBy(gastos.origen);
 
+      // Pedidos en el rango (anticipos)
+      const pedidosRango = await db
+        .select({
+          metodoPago: pedidos.metodoPagoAnticipo,
+          total: sql<number>`sum(${pedidos.anticipo})`,
+          cantidad: sql<number>`count(*)`,
+        })
+        .from(pedidos)
+        .where(and(gte(pedidos.fechaPedido, validados.fechaInicio), lte(pedidos.fechaPedido, validados.fechaFin)))
+        .groupBy(pedidos.metodoPagoAnticipo);
+
+      // Adelantos en el rango
+      const adelantosRango = await db
+        .select({
+          metodoPago: adelantosSueldo.metodoPago,
+          total: sql<number>`sum(${adelantosSueldo.monto})`,
+        })
+        .from(adelantosSueldo)
+        .where(and(gte(adelantosSueldo.fecha, validados.fechaInicio), lte(adelantosSueldo.fecha, validados.fechaFin)))
+        .groupBy(adelantosSueldo.metodoPago);
+
+      // Devoluciones en el rango
+      const devolucionesRango = await db
+        .select({
+          metodoDevolucion: devolucionesAnticipo.metodoDevolucion,
+          total: sql<number>`sum(${devolucionesAnticipo.monto})`,
+        })
+        .from(devolucionesAnticipo)
+        .where(and(gte(devolucionesAnticipo.fecha, validados.fechaInicio), lte(devolucionesAnticipo.fecha, validados.fechaFin)))
+        .groupBy(devolucionesAnticipo.metodoDevolucion);
+
+      // Multas en el rango
+      const multasRango = await db
+        .select({ total: sql<number>`sum(${multasEmpleado.monto})` })
+        .from(multasEmpleado)
+        .where(and(gte(multasEmpleado.fecha, validados.fechaInicio), lte(multasEmpleado.fecha, validados.fechaFin)));
+
       const ventasEfectivo =
         ventasRango.find((v) => v.metodoPago === "efectivo")?.total ?? 0;
       const ventasTransferencia =
@@ -304,6 +341,22 @@ export function crearServicioReportes(db: PosDatabase) {
         gastosRango.find((g) => g.origen === "caja")?.total ?? 0;
       const gastosPedidos =
         gastosRango.find((g) => g.origen === "pedidos")?.total ?? 0;
+      const pedidosEfectivo =
+        pedidosRango.find((p) => p.metodoPago === "efectivo")?.total ?? 0;
+      const pedidosTransferencia =
+        pedidosRango.find((p) => p.metodoPago === "transferencia")?.total ?? 0;
+      const pedidosEfectivoCantidad =
+        pedidosRango.find((p) => p.metodoPago === "efectivo")?.cantidad ?? 0;
+      const pedidosTransferenciaCantidad =
+        pedidosRango.find((p) => p.metodoPago === "transferencia")?.cantidad ?? 0;
+      const adelantosEfectivo =
+        adelantosRango.find((a) => a.metodoPago === "efectivo")?.total ?? 0;
+      const adelantosTransferencia =
+        adelantosRango.find((a) => a.metodoPago === "transferencia")?.total ?? 0;
+      const devolucionesEfectivo =
+        devolucionesRango.find((d) => d.metodoDevolucion === "efectivo")?.total ?? 0;
+      const devolucionesTransferencia =
+        devolucionesRango.find((d) => d.metodoDevolucion === "transferencia")?.total ?? 0;
 
       return {
         fechaInicio: validados.fechaInicio,
@@ -313,19 +366,54 @@ export function crearServicioReportes(db: PosDatabase) {
           transferencia: ventasTransferencia,
           total: ventasEfectivo + ventasTransferencia,
         },
+        pedidos: {
+          efectivo: pedidosEfectivo,
+          transferencia: pedidosTransferencia,
+          total: pedidosEfectivo + pedidosTransferencia,
+          cantidadEfectivo: pedidosEfectivoCantidad,
+          cantidadTransferencia: pedidosTransferenciaCantidad,
+          cantidadTotal: pedidosEfectivoCantidad + pedidosTransferenciaCantidad,
+        },
         gastos: {
           caja: gastosCaja,
           pedidos: gastosPedidos,
           total: gastosCaja + gastosPedidos,
         },
+        adelantos: {
+          efectivo: adelantosEfectivo,
+          transferencia: adelantosTransferencia,
+          total: adelantosEfectivo + adelantosTransferencia,
+        },
+        devoluciones: {
+          efectivo: devolucionesEfectivo,
+          transferencia: devolucionesTransferencia,
+          total: devolucionesEfectivo + devolucionesTransferencia,
+        },
+        multas: multasRango[0]?.total ?? 0,
         consolidado: {
-          ingresosBrutos: ventasEfectivo + ventasTransferencia,
-          egresosTotales: gastosCaja + gastosPedidos,
+          ingresosBrutos:
+            ventasEfectivo +
+            ventasTransferencia +
+            pedidosEfectivo +
+            pedidosTransferencia,
+          egresosTotales:
+            gastosCaja +
+            gastosPedidos +
+            adelantosEfectivo +
+            adelantosTransferencia +
+            devolucionesEfectivo +
+            devolucionesTransferencia,
           ingresoNeto:
             ventasEfectivo +
-            ventasTransferencia -
+            ventasTransferencia +
+            pedidosEfectivo +
+            pedidosTransferencia -
             gastosCaja -
-            gastosPedidos,
+            gastosPedidos -
+            adelantosEfectivo -
+            adelantosTransferencia -
+            devolucionesEfectivo -
+            devolucionesTransferencia,
         },
       };
     },

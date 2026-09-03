@@ -136,7 +136,7 @@ export default function Lista() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface">Pedidos</h1>
+          <h1 className="text-headline-lg font-bold text-on-surface">Pedidos</h1>
           <p className="text-on-surface-variant">{pedidosFiltrados.length} pedidos {filtroFecha === "hoy" ? "de hoy" : filtroFecha === "rango" ? "en rango" : "activos"}</p>
         </div>
         <button
@@ -185,7 +185,7 @@ export default function Lista() {
         {filtroFecha === "rango" && (
           <>
             <div>
-              <label className="block text-sm text-on-surface-variant mb-1">Desde</label>
+              <label className="block text-label-md text-on-surface-variant mb-1">Desde</label>
               <input
                 type="date"
                 value={fechaInicio}
@@ -194,7 +194,7 @@ export default function Lista() {
               />
             </div>
             <div>
-              <label className="block text-sm text-on-surface-variant mb-1">Hasta</label>
+              <label className="block text-label-md text-on-surface-variant mb-1">Hasta</label>
               <input
                 type="date"
                 value={fechaFin}
@@ -250,15 +250,15 @@ export default function Lista() {
             <div
               key={pedido.id}
               onClick={() => navigate(`/pedidos/${pedido.id}`)}
-              className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant cursor-pointer hover:border-secondary/50 transition-all"
+              className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant cursor-pointer hover:border-secondary/50 hover:shadow-md transition-shadow"
             >
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <p className="text-sm text-on-surface-variant">#{pedido.id}</p>
+                  <p className="text-label-md text-on-surface-variant">#{pedido.id}</p>
                   <p className="font-medium text-on-surface">{pedido.cliente}</p>
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  className={`px-3 py-1 rounded-full text-caption font-medium ${
                     coloresEstado[pedido.estado] || "bg-surface-container text-on-surface-variant"
                   }`}
                 >
@@ -266,7 +266,7 @@ export default function Lista() {
                 </span>
               </div>
 
-              <div className="space-y-2 text-sm">
+              <div className="space-y-2 text-label-md">
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant">Entrega:</span>
                   <span className="text-on-surface">
@@ -283,7 +283,7 @@ export default function Lista() {
                   <span className="text-on-surface-variant">Saldo:</span>
                   <div className="flex items-center gap-2">
                     {pedido.saldoPendiente <= 0 && (
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-tertiary-container text-on-tertiary-container">
+                      <span className="text-caption font-medium px-2 py-1 rounded-full bg-tertiary-container text-on-tertiary-container">
                         Pago completo
                       </span>
                     )}
@@ -299,7 +299,7 @@ export default function Lista() {
               </div>
 
               {pedido.telefono && (
-                <p className="mt-3 text-sm text-on-surface-variant flex items-center gap-1">
+                <p className="mt-3 text-label-md text-on-surface-variant flex items-center gap-1">
                   <Phone className="w-4 h-4" /> {pedido.telefono}
                 </p>
               )}

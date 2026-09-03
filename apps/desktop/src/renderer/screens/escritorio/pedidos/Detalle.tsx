@@ -191,7 +191,7 @@ export default function Detalle() {
           >
             ← Volver a pedidos
           </button>
-          <h1 className="text-2xl font-bold text-on-surface">
+          <h1 className="text-headline-lg font-bold text-on-surface">
             Pedido #{pedido.id}
           </h1>
           <p className="text-on-surface-variant">
@@ -199,7 +199,7 @@ export default function Detalle() {
           </p>
         </div>
         <span
-          className={`px-3 py-1 rounded-full text-sm font-medium ${
+          className={`px-3 py-1 rounded-full text-label-md font-medium ${
             coloresEstado[pedido.estado] || "bg-surface-container text-on-surface-variant"
           }`}
         >
@@ -216,30 +216,30 @@ export default function Detalle() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Datos del cliente */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <h2 className="text-lg font-semibold text-on-surface mb-4">
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <h2 className="text-headline-md font-semibold text-on-surface mb-4">
             Datos del Cliente
           </h2>
           <div className="space-y-3">
             <div>
-              <p className="text-sm text-on-surface-variant">Nombre</p>
+              <p className="text-label-md text-on-surface-variant">Nombre</p>
               <p className="font-medium text-on-surface">{pedido.cliente}</p>
             </div>
             {esAdmin && pedido.telefono && (
               <div>
-                <p className="text-sm text-on-surface-variant">Teléfono</p>
+                <p className="text-label-md text-on-surface-variant">Teléfono</p>
                 <p className="font-medium text-on-surface flex items-center gap-1"><Phone className="w-4 h-4" /> {pedido.telefono}</p>
               </div>
             )}
             <div>
-              <p className="text-sm text-on-surface-variant">Fecha de entrega</p>
+              <p className="text-label-md text-on-surface-variant">Fecha de entrega</p>
               <p className="font-medium text-on-surface">
                 {formatearFecha(pedido.fechaEntrega)}
               </p>
             </div>
             {pedido.notas && (
               <div>
-                <p className="text-sm text-on-surface-variant">Notas</p>
+                <p className="text-label-md text-on-surface-variant">Notas</p>
                 <p className="text-on-surface">{pedido.notas}</p>
               </div>
             )}
@@ -248,8 +248,8 @@ export default function Detalle() {
 
         {/* Resumen de pago — solo admin */}
         {esAdmin && (
-          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-            <h2 className="text-lg font-semibold text-on-surface mb-4">
+          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+            <h2 className="text-headline-md font-semibold text-on-surface mb-4">
               Resumen de Pago
             </h2>
             <div className="space-y-3">
@@ -269,7 +269,7 @@ export default function Detalle() {
                 <span className="text-on-surface font-medium">Saldo pendiente:</span>
                 <div className="flex items-center gap-2">
                   {pedido.saldoPendiente <= 0 && (
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-tertiary-container text-on-tertiary-container">
+                    <span className="text-caption font-medium px-2 py-1 rounded-full bg-tertiary-container text-on-tertiary-container">
                       Pago completo
                     </span>
                   )}
@@ -280,7 +280,7 @@ export default function Detalle() {
                   >
                     ${pedido.saldoPendiente.toFixed(2)}
                     {pedido.metodoPagoSaldo && (
-                      <span className="text-sm font-normal ml-1">({pedido.metodoPagoSaldo})</span>
+                      <span className="text-label-md font-normal ml-1">({pedido.metodoPagoSaldo})</span>
                     )}
                   </span>
                 </div>
@@ -291,8 +291,8 @@ export default function Detalle() {
       </div>
 
       {/* Detalles del pedido */}
-      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6">
-        <h2 className="text-lg font-semibold text-on-surface mb-4">
+      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
+        <h2 className="text-headline-md font-semibold text-on-surface mb-4">
           Productos
         </h2>
         <div className="space-y-3">
@@ -307,7 +307,7 @@ export default function Detalle() {
                     ? `Producto #${detalle.productoId}`
                     : detalle.descripcionPersonalizada || "Personalizado"}
                 </p>
-                <p className="text-sm text-on-surface-variant">
+                <p className="text-label-md text-on-surface-variant">
                   {detalle.cantidad} x ${detalle.precioUnitario.toFixed(2)}
                 </p>
               </div>
@@ -321,8 +321,8 @@ export default function Detalle() {
 
       {/* Acciones — solo admin */}
       {esAdmin && pedido.estado !== "entregado" && pedido.estado !== "cancelado" && (
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <h2 className="text-lg font-semibold text-on-surface mb-4">Acciones</h2>
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <h2 className="text-headline-md font-semibold text-on-surface mb-4">Acciones</h2>
           <div className="flex gap-4">
             {pedido.estado === "pendiente" && (
               <button
@@ -375,8 +375,8 @@ export default function Detalle() {
 
       {/* Deshacer entrega — solo admin */}
       {esAdmin && pedido.estado === "entregado" && (
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <h2 className="text-lg font-semibold text-on-surface mb-4">Acciones</h2>
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <h2 className="text-headline-md font-semibold text-on-surface mb-4">Acciones</h2>
           <button
             onClick={() => setModalDeshacer(true)}
             disabled={accionLoading}
@@ -396,7 +396,7 @@ export default function Detalle() {
           tabIndex={0}
         >
           <div className="bg-surface-container-lowest rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold text-on-surface mb-4">
+            <h2 className="text-headline-lg font-bold text-on-surface mb-4">
               Entregar Pedido
             </h2>
 
@@ -405,7 +405,7 @@ export default function Detalle() {
                 <p className="text-on-surface-variant mb-2">
                   Saldo pendiente: ${pedido.saldoPendiente.toFixed(2)}
                 </p>
-                <p className="text-sm text-on-surface-variant mb-2">
+                <p className="text-label-md text-on-surface-variant mb-2">
                   Selecciona método de pago para el saldo:
                 </p>
                 <div className="flex gap-2">
@@ -461,12 +461,12 @@ export default function Detalle() {
           tabIndex={0}
         >
           <div className="bg-surface-container-lowest rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold text-error mb-4">
+            <h2 className="text-headline-lg font-bold text-error mb-4">
               Cancelar Pedido
             </h2>
 
             <div className="mb-4">
-              <label className="block text-sm text-on-surface-variant mb-1">
+              <label className="block text-label-md text-on-surface-variant mb-1">
                 Motivo de cancelación *
               </label>
               <textarea
@@ -477,13 +477,13 @@ export default function Detalle() {
                 className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
               />
               {modalError && (
-                <p className="text-sm text-error mt-1">{modalError}</p>
+                <p className="text-label-md text-error mt-1">{modalError}</p>
               )}
             </div>
 
             {pedido.anticipo > 0 && (
               <div className="mb-4">
-                <p className="text-sm text-on-surface-variant mb-2">
+                <p className="text-label-md text-on-surface-variant mb-2">
                   Devolver anticipo de ${pedido.anticipo.toFixed(2)} via:
                 </p>
                 <div className="flex gap-2">
@@ -543,7 +543,7 @@ export default function Detalle() {
           tabIndex={0}
         >
           <div className="bg-surface-container-lowest rounded-2xl p-6 w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold text-on-surface mb-4">
+            <h2 className="text-headline-lg font-bold text-on-surface mb-4">
               Deshacer Entrega
             </h2>
             <p className="text-on-surface-variant mb-4">

@@ -148,20 +148,20 @@ export default function Nuevo() {
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-on-surface">Nuevo Pedido</h1>
+        <h1 className="text-headline-lg font-bold text-on-surface">Nuevo Pedido</h1>
         <p className="text-on-surface-variant">Crea un nuevo pedido para un cliente</p>
       </div>
 
       {/* Formulario */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Datos del cliente */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <h2 className="text-lg font-semibold text-on-surface mb-4">
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <h2 className="text-headline-md font-semibold text-on-surface mb-4">
             Datos del Cliente
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-on-surface-variant mb-1">
+              <label className="block text-label-md text-on-surface-variant mb-1">
                 Nombre *
               </label>
               <input
@@ -182,11 +182,11 @@ export default function Nuevo() {
                 }`}
               />
               {errores.cliente && (
-                <p className="text-error text-xs mt-1">{errores.cliente}</p>
+                <p className="text-error text-caption mt-1">{errores.cliente}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm text-on-surface-variant mb-1">
+              <label className="block text-label-md text-on-surface-variant mb-1">
                 Teléfono
               </label>
               <input
@@ -207,11 +207,11 @@ export default function Nuevo() {
                 }`}
               />
               {errores.telefono && (
-                <p className="text-error text-xs mt-1">{errores.telefono}</p>
+                <p className="text-error text-caption mt-1">{errores.telefono}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm text-on-surface-variant mb-1">
+              <label className="block text-label-md text-on-surface-variant mb-1">
                 Fecha de entrega *
               </label>
               <input
@@ -235,11 +235,11 @@ export default function Nuevo() {
                 }`}
               />
               {errores.fechaEntrega && (
-                <p className="text-error text-xs mt-1">{errores.fechaEntrega}</p>
+                <p className="text-error text-caption mt-1">{errores.fechaEntrega}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm text-on-surface-variant mb-1">Hora de entrega *</label>
+              <label className="block text-label-md text-on-surface-variant mb-1">Hora de entrega *</label>
               <input
                 type="time"
                 value={horaEntrega}
@@ -251,11 +251,11 @@ export default function Nuevo() {
         </div>
 
         {/* Anticipo y Total */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <h2 className="text-lg font-semibold text-on-surface mb-4">Anticipo</h2>
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
+          <h2 className="text-headline-md font-semibold text-on-surface mb-4">Anticipo</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm text-on-surface-variant mb-1">
+              <label className="block text-label-md text-on-surface-variant mb-1">
                 Total a cobrar
               </label>
               <input
@@ -266,14 +266,14 @@ export default function Nuevo() {
                 min="0"
                 step="0.01"
                 max="999999"
-                className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface text-lg font-bold"
+                className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface text-headline-md font-bold"
               />
-              <p className="text-xs text-on-surface-variant mt-1">
+              <p className="text-caption text-on-surface-variant mt-1">
                 Total de productos: ${totalCalculado.toFixed(2)}
               </p>
             </div>
             <div>
-              <label className="block text-sm text-on-surface-variant mb-1">
+              <label className="block text-label-md text-on-surface-variant mb-1">
                 Monto del anticipo
               </label>
               <input
@@ -287,7 +287,7 @@ export default function Nuevo() {
               />
             </div>
             <div>
-              <label className="block text-sm text-on-surface-variant mb-1">
+              <label className="block text-label-md text-on-surface-variant mb-1">
                 Método de pago
               </label>
               <div className="flex gap-2">
@@ -318,14 +318,14 @@ export default function Nuevo() {
       </div>
 
       {/* Agregar productos */}
-      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6">
-        <h2 className="text-lg font-semibold text-on-surface mb-4">
+      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
+        <h2 className="text-headline-md font-semibold text-on-surface mb-4">
           Agregar Productos
         </h2>
 
         <div className="flex items-end gap-4 mb-4">
           <div className="flex-1">
-            <label className="block text-sm text-on-surface-variant mb-1">
+            <label className="block text-label-md text-on-surface-variant mb-1">
               Tipo
             </label>
             <div className="flex gap-2">
@@ -355,7 +355,7 @@ export default function Nuevo() {
           {!esPersonalizado && (
             <>
               <div className="flex-1">
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Producto
                 </label>
                 <select
@@ -372,7 +372,7 @@ export default function Nuevo() {
                 </select>
               </div>
               <div className="w-36">
-                <label className="block text-sm text-on-surface-variant mb-1">
+                <label className="block text-label-md text-on-surface-variant mb-1">
                   Unidad
                 </label>
                 <select
@@ -388,7 +388,7 @@ export default function Nuevo() {
           )}
 
           <div className="w-24">
-            <label className="block text-sm text-on-surface-variant mb-1">
+            <label className="block text-label-md text-on-surface-variant mb-1">
               Cantidad
             </label>
             <input
@@ -410,7 +410,7 @@ export default function Nuevo() {
               }`}
             />
             {errores.cantidad && (
-              <p className="text-error text-xs mt-1">{errores.cantidad}</p>
+              <p className="text-error text-caption mt-1">{errores.cantidad}</p>
             )}
           </div>
 
@@ -424,7 +424,7 @@ export default function Nuevo() {
 
         {/* Descripción - fila completa */}
         <div className="mb-4">
-          <label className="block text-sm text-on-surface-variant mb-1">
+          <label className="block text-label-md text-on-surface-variant mb-1">
             {esPersonalizado ? "Descripción del personalizado" : "Descripción (opcional)"}
           </label>
               <textarea
@@ -433,7 +433,7 @@ export default function Nuevo() {
                 placeholder={esPersonalizado ? "Ej: Torta 3 pisos, diseño floral" : "Detalles del producto..."}
                 rows={3}
                 maxLength={500}
-                className="w-full px-4 py-3 text-lg border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface resize-y"
+                className="w-full px-4 py-3 text-headline-md border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface resize-y"
               />
         </div>
 
@@ -452,11 +452,11 @@ export default function Nuevo() {
                       : detalle.descripcionPersonalizada}
                   </p>
                   {detalle.descripcionPersonalizada && (
-                    <p className="text-sm text-on-surface-variant italic">
+                    <p className="text-label-md text-on-surface-variant italic">
                       {detalle.descripcionPersonalizada}
                     </p>
                   )}
-                  <p className="text-sm text-on-surface-variant">
+                  <p className="text-label-md text-on-surface-variant">
                     {detalle.cantidad} x ${detalle.precioUnitario.toFixed(2)} ({detalle.unidad})
                   </p>
                 </div>
@@ -476,8 +476,8 @@ export default function Nuevo() {
       </div>
 
       {/* Resumen */}
-      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6">
-        <h2 className="text-lg font-semibold text-on-surface mb-4">Resumen del Pedido</h2>
+      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
+        <h2 className="text-headline-md font-semibold text-on-surface mb-4">Resumen del Pedido</h2>
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-on-surface-variant">Total:</span>

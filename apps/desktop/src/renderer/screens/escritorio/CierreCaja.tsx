@@ -271,7 +271,7 @@ export default function CierreCaja() {
 
       {/* Resumen financiero */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
           <h2 className="text-headline-md font-semibold text-on-surface mb-4">Ingresos</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
@@ -321,7 +321,7 @@ export default function CierreCaja() {
           </div>
         </div>
 
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
           <h2 className="text-headline-md font-semibold text-on-surface mb-4">Egresos</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
@@ -335,7 +335,7 @@ export default function CierreCaja() {
             {gastosDetalle.length > 0 && (
               <div className="pt-2 border-t border-outline-variant">
                 {gastosDetalle.map((g) => (
-                  <div key={g.id} className="flex justify-between text-sm py-1">
+                  <div key={g.id} className="flex justify-between text-label-md py-1">
                     <span className="text-on-surface-variant truncate mr-2">{g.descripcion}</span>
                     <span className="whitespace-nowrap text-error">${g.monto.toFixed(2)}</span>
                   </div>
@@ -359,50 +359,50 @@ export default function CierreCaja() {
       </div>
 
       {/* Conciliación de efectivo */}
-      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6">
+      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
         <h2 className="text-headline-md font-semibold text-on-surface mb-4">Conciliación de Efectivo</h2>
         
         {/* Resumen detallado de efectivo */}
         <div className="bg-surface-container rounded-xl p-4 mb-4">
           <h3 className="text-label-md font-medium text-on-surface-variant mb-3">Resumen del Flujo de Efectivo</h3>
           <div className="space-y-2">
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-label-md">
               <span className="text-on-surface-variant">+ Ventas en efectivo (mostrador):</span>
               <span className="font-medium text-tertiary">${resumen?.ventas.efectivo.toFixed(2) ?? "0.00"}</span>
             </div>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-label-md">
               <span className="text-on-surface-variant">+ Anticipos pedidos en efectivo:</span>
               <span className="font-medium text-tertiary">${resumen?.anticipos.efectivo.toFixed(2) ?? "0.00"}</span>
             </div>
             {(resumen?.pedidos.efectivo ?? 0) > 0 && (
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-label-md">
                 <span className="text-on-surface-variant">+ Cobro pedidos entregados (efectivo):</span>
                 <span className="font-medium text-tertiary">${resumen?.pedidos.efectivo.toFixed(2) ?? "0.00"}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm border-t border-outline-variant pt-2">
+            <div className="flex justify-between text-label-md border-t border-outline-variant pt-2">
               <span className="text-on-surface font-medium">Total ingresos efectivo:</span>
               <span className="font-bold text-tertiary">${((resumen?.ventas.efectivo ?? 0) + (resumen?.anticipos.efectivo ?? 0) + (resumen?.pedidos.efectivo ?? 0)).toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-sm mt-2">
+            <div className="flex justify-between text-label-md mt-2">
               <span className="text-on-surface-variant">- Gastos de caja:</span>
               <span className="font-medium text-error">${resumen?.gastos.caja.toFixed(2) ?? "0.00"}</span>
             </div>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-label-md">
               <span className="text-on-surface-variant">- Gastos de pedidos:</span>
               <span className="font-medium text-error">${resumen?.gastos.pedidos.toFixed(2) ?? "0.00"}</span>
             </div>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-label-md">
               <span className="text-on-surface-variant">- Adelantos en efectivo:</span>
               <span className="font-medium text-error">${resumen?.adelantos.efectivo.toFixed(2) ?? "0.00"}</span>
             </div>
             {devolucionesEfectivo > 0 && (
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-label-md">
                 <span className="text-on-surface-variant">- Devoluciones de anticipo (efectivo):</span>
                 <span className="font-medium text-error">${devolucionesEfectivo.toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm border-t border-outline-variant pt-2">
+            <div className="flex justify-between text-label-md border-t border-outline-variant pt-2">
               <span className="text-on-surface font-medium">Total egresos efectivo:</span>
               <span className="font-bold text-error">${((resumen?.gastos.caja ?? 0) + (resumen?.gastos.pedidos ?? 0) + (resumen?.adelantos.efectivo ?? 0) + devolucionesEfectivo).toFixed(2)}</span>
             </div>
@@ -412,11 +412,11 @@ export default function CierreCaja() {
         <div className="space-y-4">
           <div className="flex justify-between items-center p-4 bg-surface-container rounded-xl">
             <span className="text-on-surface">Efectivo esperado en caja:</span>
-            <span className="text-2xl font-bold text-on-surface">${efectivoEsperado.toFixed(2)}</span>
+            <span className="text-headline-lg font-bold text-on-surface">${efectivoEsperado.toFixed(2)}</span>
           </div>
 
           <div>
-            <label className="block text-sm text-on-surface-variant mb-1">Efectivo contado a mano *</label>
+            <label className="block text-label-md text-on-surface-variant mb-1">Efectivo contado a mano *</label>
             <input
               type="number"
               value={efectivoContado}
@@ -433,10 +433,10 @@ export default function CierreCaja() {
               min="0"
               max="999999"
               step="0.01"
-              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-secondary bg-surface text-lg ${errores.efectivoContado ? "border-error" : "border-outline-variant"}`}
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-secondary bg-surface text-headline-md ${errores.efectivoContado ? "border-error" : "border-outline-variant"}`}
               placeholder="0.00"
             />
-            {errores.efectivoContado && <p className="text-error text-xs mt-1">{errores.efectivoContado}</p>}
+            {errores.efectivoContado && <p className="text-error text-caption mt-1">{errores.efectivoContado}</p>}
           </div>
 
           {efectivoContado && (
@@ -445,7 +445,7 @@ export default function CierreCaja() {
                 <span className={`font-medium ${diferencia === 0 ? "text-tertiary" : diferencia > 0 ? "text-tertiary" : "text-error"}`}>
                   {diferencia === 0 ? "Cuadra perfecto" : diferencia > 0 ? "Sobrante" : "Faltante"}
                 </span>
-                <span className={`text-2xl font-bold ${diferencia === 0 ? "text-tertiary" : diferencia > 0 ? "text-tertiary" : "text-error"}`}>
+                <span className={`text-headline-lg font-bold ${diferencia === 0 ? "text-tertiary" : diferencia > 0 ? "text-tertiary" : "text-error"}`}>
                   ${Math.abs(diferencia).toFixed(2)}
                 </span>
               </div>
@@ -456,9 +456,9 @@ export default function CierreCaja() {
 
       {/* Conteo físico de stock */}
       {diferenciasStock.length > 0 && (
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 overflow-x-auto">
+        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 overflow-x-auto hover:shadow-md transition-shadow">
           <h2 className="text-headline-md font-semibold text-on-surface mb-2">Conteo Físico de Stock</h2>
-          <p className="text-sm text-on-surface-variant mb-4">
+          <p className="text-label-md text-on-surface-variant mb-4">
             Cuenta cuántos productos quedan en la vitrina. El sistema calcula lo esperado automáticamente.
           </p>
 
@@ -482,7 +482,7 @@ export default function CierreCaja() {
                     {productos.find((p) => p.id === d.productoId)?.nombre ?? `#${d.productoId}`}
                   </td>
                   <td className="p-4 text-center">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    <span className={`text-caption font-medium px-2 py-1 rounded-full ${
                       d.unidad === "entero"
                         ? "bg-secondary-container text-on-secondary-container"
                         : "bg-tertiary-container text-on-tertiary-container"
@@ -518,7 +518,7 @@ export default function CierreCaja() {
           </table>
 
           {hayDiferenciasStock && (
-            <div className="mt-4 p-3 bg-error-container/30 text-error rounded-xl text-center text-sm">
+            <div className="mt-4 p-3 bg-error-container/30 text-error rounded-xl text-center text-label-md">
               Hay diferencias en el conteo de stock. Se registrarán en el cierre.
             </div>
           )}

@@ -241,7 +241,7 @@ export default function Productos() {
       </div>
 
       {/* Tabla */}
-      <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant overflow-x-auto">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant overflow-x-auto hover:shadow-md transition-shadow">
         <table className="w-full">
           <thead className="bg-surface-container">
             <tr>
