@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { formatearFecha, formatearReporteNomina, generarPdf } from "@pos/shared";
+import { formatearFecha, generarPdfNomina } from "@pos/shared";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Banknote, AlertTriangle } from "lucide-react";
@@ -226,8 +226,8 @@ export default function Nomina() {
   const totalAdelantos = adelantos.reduce((sum, a) => sum + a.monto, 0);
   const totalMultas = multas.reduce((sum, m) => sum + m.monto, 0);
 
-  // Resumen mensual
-  const [mesResumen, setMesResumen] = useState("");
+  // Resumen mensual (por empleado)
+  const [mesResumenIndividual, setMesResumenIndividual] = useState("");
   const [resumenMensual, setResumenMensual] = useState<{
     salario: number;
     adelantosMes: number;
@@ -237,7 +237,8 @@ export default function Nomina() {
   } | null>(null);
   const [cargandoResumen, setCargandoResumen] = useState(false);
 
-  // Resumen global
+  // Resumen global (todos los empleados)
+  const [mesResumenGlobal, setMesResumenGlobal] = useState("");
   const [resumenGlobal, setResumenGlobal] = useState<{
     totalSalarios: number;
     totalAdelantos: number;
@@ -256,12 +257,12 @@ export default function Nomina() {
   const [cargandoGlobal, setCargandoGlobal] = useState(false);
 
   const calcularResumenMensual = async () => {
-    if (!empleadoSeleccionado || !mesResumen) return;
+    if (!empleadoSeleccionado || !mesResumenIndividual) return;
     setCargandoResumen(true);
     try {
       const resumen = await window.pos.nomina.calcularDescuentosMes(
         parseInt(empleadoSeleccionado, 10),
-        mesResumen
+        mesResumenIndividual
       );
       setResumenMensual(resumen);
     } catch (err: any) {
@@ -273,13 +274,13 @@ export default function Nomina() {
   };
 
   const calcularResumenGlobal = async () => {
-    if (!mesResumen || empleados.length === 0) return;
+    if (!mesResumenGlobal || empleados.length === 0) return;
     setCargandoGlobal(true);
     try {
       const empleadosConDescuentos = await Promise.all(
         empleados.map(async (emp) => {
           try {
-            const resumen = await window.pos.nomina.calcularDescuentosMes(emp.id, mesResumen);
+            const resumen = await window.pos.nomina.calcularDescuentosMes(emp.id, mesResumenGlobal);
             return {
               id: emp.id,
               nombre: emp.nombre,
@@ -316,12 +317,19 @@ export default function Nomina() {
   };
 
   const exportarPdfGlobal = async () => {
-    if (!resumenGlobal || !mesResumen) return;
-    const datos = formatearReporteNomina({
-      ...resumenGlobal,
-      mes: mesResumen,
-    });
-    await generarPdf(datos);
+    if (!resumenGlobal || !mesResumenGlobal) return;
+    try {
+      await generarPdfNomina({
+        mes: mesResumenGlobal,
+        totalAdelantos: resumenGlobal.totalAdelantos,
+        totalMultas: resumenGlobal.totalMultas,
+        netoGlobal: resumenGlobal.netoGlobal,
+        empleados: resumenGlobal.empleados,
+      });
+    } catch (err: any) {
+      console.error("Error al exportar PDF global:", err);
+      alert("Error al generar el PDF. Intente de nuevo.");
+    }
   };
 
   if (loading) {
@@ -389,14 +397,14 @@ export default function Nomina() {
             </label>
             <input
               type="month"
-              value={mesResumen}
-              onChange={(e) => setMesResumen(e.target.value)}
+              value={mesResumenGlobal}
+              onChange={(e) => setMesResumenGlobal(e.target.value)}
               className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
             />
           </div>
           <button
             onClick={calcularResumenGlobal}
-            disabled={!mesResumen || cargandoGlobal}
+            disabled={!mesResumenGlobal || cargandoGlobal}
             className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 transition-colors"
           >
             {cargandoGlobal ? "Calculando..." : "Calcular Global"}
@@ -517,14 +525,14 @@ export default function Nomina() {
                 </label>
                 <input
                   type="month"
-                  value={mesResumen}
-                  onChange={(e) => setMesResumen(e.target.value)}
+                  value={mesResumenIndividual}
+                  onChange={(e) => setMesResumenIndividual(e.target.value)}
                   className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
                 />
               </div>
               <button
                 onClick={calcularResumenMensual}
-                disabled={!mesResumen || cargandoResumen}
+                disabled={!mesResumenIndividual || cargandoResumen}
                 className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 transition-colors"
               >
                 {cargandoResumen ? "Calculando..." : "Calcular"}
@@ -676,8 +684,8 @@ export default function Nomina() {
       {modalAdelanto && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={(e) => { if (e.target === e.currentTarget) { setModalAdelanto(false); setErrores(prev => { const { montoAdelanto, mesADescontarAdelanto, ...rest } = prev; return rest; }); } }}
-          onKeyDown={(e) => { if (e.key === "Escape") { setModalAdelanto(false); setErrores(prev => { const { montoAdelanto, mesADescontarAdelanto, ...rest } = prev; return rest; }); } }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setModalAdelanto(false); setMesADescontarAdelanto(""); setErrores(prev => { const { montoAdelanto, mesADescontarAdelanto, ...rest } = prev; return rest; }); } }}
+          onKeyDown={(e) => { if (e.key === "Escape") { setModalAdelanto(false); setMesADescontarAdelanto(""); setErrores(prev => { const { montoAdelanto, mesADescontarAdelanto, ...rest } = prev; return rest; }); } }}
           tabIndex={0}
         >
           <div className="bg-surface-container-lowest rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -807,8 +815,8 @@ export default function Nomina() {
       {modalMulta && (
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={(e) => { if (e.target === e.currentTarget) { setModalMulta(false); setErrores(prev => { const { montoMulta, motivoMulta, ...rest } = prev; return rest; }); } }}
-          onKeyDown={(e) => { if (e.key === "Escape") { setModalMulta(false); setErrores(prev => { const { montoMulta, motivoMulta, ...rest } = prev; return rest; }); } }}
+          onClick={(e) => { if (e.target === e.currentTarget) { setModalMulta(false); setMesADescontarMulta(""); setErrores(prev => { const { montoMulta, motivoMulta, ...rest } = prev; return rest; }); } }}
+          onKeyDown={(e) => { if (e.key === "Escape") { setModalMulta(false); setMesADescontarMulta(""); setErrores(prev => { const { montoMulta, motivoMulta, ...rest } = prev; return rest; }); } }}
           tabIndex={0}
         >
           <div className="bg-surface-container-lowest rounded-2xl p-6 w-full max-w-md shadow-xl">
@@ -1009,7 +1017,7 @@ export default function Nomina() {
       <ConfirmModal
         open={modalConfirmarAdelanto}
         titulo="Registrar Adelanto"
-        mensaje={`¿Registrar adelanto de $${parseFloat(montoAdelanto).toFixed(2)}?\n\nEmpleado: ${empleados.find(e => e.id === parseInt(empleadoSeleccionado))?.nombre}\nMes a descontar: ${mesADescontarAdelanto}\nMétodo: ${metodoPagoAdelanto}`}
+        mensaje={`¿Registrar adelanto de $${(parseFloat(montoAdelanto) || 0).toFixed(2)}?\n\nEmpleado: ${empleados.find(e => e.id === parseInt(empleadoSeleccionado))?.nombre}\nMes a descontar: ${mesADescontarAdelanto}\nMétodo: ${metodoPagoAdelanto}`}
         textoConfirmar="Registrar Adelanto"
         textoCancelar="Cancelar"
         variante="advertencia"
@@ -1021,7 +1029,7 @@ export default function Nomina() {
       <ConfirmModal
         open={modalConfirmarMulta}
         titulo="Registrar Multa"
-        mensaje={`¿ Registrar multa de $${parseFloat(montoMulta).toFixed(2)}?\n\nEmpleado: ${empleados.find(e => e.id === parseInt(empleadoSeleccionado))?.nombre}\nMotivo: ${motivoMulta}\nMes a descontar: ${mesADescontarMulta}`}
+        mensaje={`¿ Registrar multa de $${(parseFloat(montoMulta) || 0).toFixed(2)}?\n\nEmpleado: ${empleados.find(e => e.id === parseInt(empleadoSeleccionado))?.nombre}\nMotivo: ${motivoMulta}\nMes a descontar: ${mesADescontarMulta}`}
         textoConfirmar="Registrar Multa"
         textoCancelar="Cancelar"
         variante="peligro"

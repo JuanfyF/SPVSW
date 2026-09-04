@@ -49,9 +49,24 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
     async (req: Request, res: Response) => {
       try {
         const usuario = (req as any).usuario;
+        const { sesionCajaId } = req.body;
+        if (!sesionCajaId) {
+          return res.status(400).json({ error: "sesionCajaId es requerido" });
+        }
+
+        // Verificar que la sesión pertenezca al usuario (excepto propietario)
+        if (usuario.rol !== "propietario") {
+          const sesion = await caja.obtenerSesionAbierta(usuario.usuarioId);
+          if (!sesion || sesion.id !== sesionCajaId) {
+            return res.status(403).json({ error: "No tienes permiso para cerrar esta sesión" });
+          }
+        }
+
         const cierre = await caja.cerrar({
-          ...req.body,
-          usuarioId: usuario.usuarioId,
+          sesionCajaId,
+          efectivoContado: req.body.efectivoContado,
+          tieneDiferenciaStock: req.body.tieneDiferenciaStock,
+          conteoStock: req.body.conteoStock,
         });
         res.json({ cierre });
       } catch (error: any) {

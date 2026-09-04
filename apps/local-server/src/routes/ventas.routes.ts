@@ -29,52 +29,7 @@ export function ventasRoutes(ventas: ReturnType<typeof crearServicioVentas>): Ro
     }
   );
 
-  // GET /api/ventas/:id — Obtener venta por ID
-  router.get(
-    "/:id",
-    requerirRol("propietario", "cajero"),
-    async (req: Request, res: Response) => {
-      try {
-        const venta = await ventas.obtenerPorId(parseInt(req.params.id, 10));
-        if (!venta) {
-          return res.status(404).json({ error: "Venta no encontrada" });
-        }
-        res.json({ venta });
-      } catch (error) {
-        res.status(500).json({ error: "Error al obtener venta" });
-      }
-    }
-  );
-
-  // GET /api/ventas/:id/detalle — Obtener detalle de venta
-  router.get(
-    "/:id/detalle",
-    requerirRol("propietario", "cajero"),
-    async (req: Request, res: Response) => {
-      try {
-        const detalle = await ventas.obtenerDetalle(parseInt(req.params.id, 10));
-        res.json({ detalle });
-      } catch (error) {
-        res.status(500).json({ error: "Error al obtener detalle" });
-      }
-    }
-  );
-
-  // POST /api/ventas — Crear venta
-  router.post(
-    "/",
-    requerirRol("propietario", "cajero"),
-    async (req: Request, res: Response) => {
-      try {
-        const venta = await ventas.crear(req.body);
-        res.json({ venta });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al crear venta" });
-      }
-    }
-  );
-
-  // GET /api/ventas/stock/verificar — Verificar stock
+  // GET /api/ventas/stock/verificar — Verificar stock (ANTES de /:id para evitar conflicto)
   router.get(
     "/stock/verificar",
     requerirRol("propietario", "cajero"),
@@ -93,6 +48,51 @@ export function ventasRoutes(ventas: ReturnType<typeof crearServicioVentas>): Ro
         res.json(resultado);
       } catch (error) {
         res.status(500).json({ error: "Error al verificar stock" });
+      }
+    }
+  );
+
+  // GET /api/ventas/:id — Obtener venta por ID
+  router.get(
+    "/:id",
+    requerirRol("propietario", "cajero"),
+    async (req: Request, res: Response) => {
+      try {
+        const venta = await ventas.obtenerPorId(parseInt(req.params.id as string, 10));
+        if (!venta) {
+          return res.status(404).json({ error: "Venta no encontrada" });
+        }
+        res.json({ venta });
+      } catch (error) {
+        res.status(500).json({ error: "Error al obtener venta" });
+      }
+    }
+  );
+
+  // GET /api/ventas/:id/detalle — Obtener detalle de venta
+  router.get(
+    "/:id/detalle",
+    requerirRol("propietario", "cajero"),
+    async (req: Request, res: Response) => {
+      try {
+        const detalle = await ventas.obtenerDetalle(parseInt(req.params.id as string, 10));
+        res.json({ detalle });
+      } catch (error) {
+        res.status(500).json({ error: "Error al obtener detalle" });
+      }
+    }
+  );
+
+  // POST /api/ventas — Crear venta
+  router.post(
+    "/",
+    requerirRol("propietario", "cajero"),
+    async (req: Request, res: Response) => {
+      try {
+        const venta = await ventas.crear(req.body);
+        res.json({ venta });
+      } catch (error: any) {
+        res.status(500).json({ error: error.message || "Error al crear venta" });
       }
     }
   );

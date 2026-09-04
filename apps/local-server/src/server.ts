@@ -107,8 +107,7 @@ export function startLocalServer(opciones: OpcionesServidor) {
   app.get("/auth/sesion-activa", authMiddleware(servicios.auth), async (req, res) => {
     try {
       const usuario = (req as any).usuario as { usuarioId: number; nombre: string; rol: string };
-      const cajaSvc = crearServicioCaja(opciones.db);
-      const sesionAbierta = await cajaSvc.obtenerSesionAbierta(usuario.usuarioId);
+      const sesionAbierta = await servicios.caja.obtenerSesionAbierta(usuario.usuarioId);
       res.json({ usuario: { id: usuario.usuarioId, nombre: usuario.nombre, rol: usuario.rol }, sesionAbierta });
     } catch (error) {
       res.json({ usuario: (req as any).usuario, sesionAbierta: null });

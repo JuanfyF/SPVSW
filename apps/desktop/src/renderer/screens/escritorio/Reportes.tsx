@@ -6,7 +6,11 @@ import {
   formatearReporteProductos,
   formatearReporteCierres,
   generarCsv,
-  generarPdf,
+  generarPdfDiario,
+  generarPdfRango,
+  generarPdfPedidos,
+  generarPdfCierresHistorial,
+  generarPdfProductosTop,
   formatearFecha,
 } from "@pos/shared";
 import { Search } from "lucide-react";
@@ -207,11 +211,59 @@ export default function Reportes() {
     descargarCsv(csv, `cierres-${fechaInicio}-${fechaFin}.csv`);
   };
 
-  const exportarPdf = async (datos: any) => {
+  const exportarPdfDiario = async () => {
+    if (!resumenDiario) return;
     try {
-      await generarPdf(datos);
+      await generarPdfDiario(resumenDiario);
     } catch (err) {
-      console.error("Error al generar PDF:", err);
+      console.error("Error al generar PDF diario:", err);
+    }
+  };
+
+  const exportarPdfRango = async () => {
+    if (!resumenRango) return;
+    try {
+      await generarPdfRango(resumenRango);
+    } catch (err) {
+      console.error("Error al generar PDF rango:", err);
+    }
+  };
+
+  const exportarPdfCierres = async () => {
+    if (!cierresFiltrados) return;
+    try {
+      await generarPdfCierresHistorial(cierresFiltrados);
+    } catch (err) {
+      console.error("Error al generar PDF cierres:", err);
+    }
+  };
+
+  const exportarPdfPedidos = async () => {
+    if (pedidosPendientes.length === 0) return;
+    try {
+      await generarPdfPedidos({
+        pedidos: pedidosPendientes.map(p => ({
+          id: p.id,
+          cliente: p.cliente,
+          fechaEntrega: p.fechaEntrega,
+          estado: p.estado,
+          descripcion: p.descripcion,
+          notas: p.notas,
+          totalEstimado: p.totalEstimado,
+          saldoPendiente: p.saldoPendiente,
+        })),
+      });
+    } catch (err) {
+      console.error("Error al generar PDF pedidos:", err);
+    }
+  };
+
+  const exportarPdfProductos = async () => {
+    if (productosMasVendidos.length === 0) return;
+    try {
+      await generarPdfProductosTop({ productos: productosMasVendidos, fechaInicio, fechaFin });
+    } catch (err) {
+      console.error("Error al generar PDF productos:", err);
     }
   };
 
@@ -321,7 +373,7 @@ export default function Reportes() {
               Descargar CSV
             </button>
             <button
-              onClick={() => resumenDiario && exportarPdf(formatearReporteDiario(resumenDiario))}
+              onClick={() => exportarPdfDiario()}
               disabled={!resumenDiario}
               className="px-4 py-2 bg-primary text-on-primary rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
@@ -428,7 +480,7 @@ export default function Reportes() {
               Descargar CSV
             </button>
             <button
-              onClick={() => resumenRango && exportarPdf(formatearReporteRango(resumenRango))}
+              onClick={() => exportarPdfRango()}
               disabled={!resumenRango}
               className="px-4 py-2 bg-primary text-on-primary rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
@@ -540,7 +592,7 @@ export default function Reportes() {
               Descargar CSV
             </button>
             <button
-              onClick={() => cierresFiltrados && exportarPdf(formatearReporteCierres(cierresFiltrados))}
+              onClick={() => exportarPdfCierres()}
               disabled={!cierresFiltrados}
               className="px-4 py-2 bg-primary text-on-primary rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
@@ -665,7 +717,7 @@ export default function Reportes() {
               Descargar CSV
             </button>
             <button
-              onClick={() => pedidosPendientes.length > 0 && exportarPdf(formatearReportePedidos(pedidosPendientes))}
+              onClick={() => exportarPdfPedidos()}
               disabled={pedidosPendientes.length === 0}
               className="px-4 py-2 bg-primary text-on-primary rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
@@ -763,7 +815,7 @@ export default function Reportes() {
               Descargar CSV
             </button>
             <button
-              onClick={() => productosMasVendidos.length > 0 && exportarPdf(formatearReporteProductos(productosMasVendidos))}
+              onClick={() => exportarPdfProductos()}
               disabled={productosMasVendidos.length === 0}
               className="px-4 py-2 bg-primary text-on-primary rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >

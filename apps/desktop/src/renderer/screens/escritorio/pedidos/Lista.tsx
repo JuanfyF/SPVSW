@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  formatearReportePedidos,
-  generarPdf,
+  generarPdfPedidos,
   ListarPedidosFechaSchema,
   formatearFecha,
 } from "@pos/shared";
@@ -18,6 +17,8 @@ interface Pedido {
   anticipo: number;
   totalEstimado: number;
   saldoPendiente: number;
+  descripcion?: string | null;
+  notas?: string | null;
 }
 
 const estados = [
@@ -78,7 +79,27 @@ export default function Lista() {
       } else {
         data = await window.pos.pedidos.listarTodos();
       }
-      setPedidos(data);
+
+      // Cargar detalles para cada pedido (descripción)
+      if (data.length > 0) {
+        const pedidosConDescripcion = await Promise.all(
+          data.map(async (p) => {
+            try {
+              const detalles = await window.pos.pedidos.obtenerDetalle(p.id) as any[];
+              const descripcion = detalles
+                .map((d: any) => d.descripcionPersonalizada || d.nombre || "")
+                .filter(Boolean)
+                .join(" | ");
+              return { ...p, descripcion };
+            } catch {
+              return p;
+            }
+          })
+        );
+        setPedidos(pedidosConDescripcion);
+      } else {
+        setPedidos(data);
+      }
     } catch (err) {
       console.error("Error al cargar pedidos:", err);
       setError("Error al cargar pedidos");
@@ -106,8 +127,18 @@ export default function Lista() {
   const exportarPdf = async () => {
     if (pedidosFiltrados.length === 0) return;
     try {
-      const datos = formatearReportePedidos(pedidosFiltrados);
-      await generarPdf(datos);
+      await generarPdfPedidos({
+        pedidos: pedidosFiltrados.map(p => ({
+          id: p.id,
+          cliente: p.cliente,
+          fechaEntrega: p.fechaEntrega,
+          estado: p.estado,
+          descripcion: p.descripcion,
+          notas: p.notas,
+          totalEstimado: p.totalEstimado,
+          saldoPendiente: p.saldoPendiente,
+        })),
+      });
     } catch (err) {
       console.error("Error al generar PDF:", err);
     }

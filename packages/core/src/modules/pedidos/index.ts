@@ -10,6 +10,7 @@ import {
   PosDatabase,
   pedidos,
   pedidoDetalle,
+  productos,
   devolucionesAnticipo,
   sesionesCaja,
   eq,
@@ -339,13 +340,24 @@ export function crearServicioPedidos(db: PosDatabase) {
     },
 
     /**
-     * Obtiene el detalle de un pedido.
+     * Obtiene el detalle de un pedido con nombre del producto.
      */
     async obtenerDetalle(pedidoId: number) {
       IdSchema.parse(pedidoId);
       return db
-        .select()
+        .select({
+          id: pedidoDetalle.id,
+          pedidoId: pedidoDetalle.pedidoId,
+          productoId: pedidoDetalle.productoId,
+          descripcionPersonalizada: pedidoDetalle.descripcionPersonalizada,
+          unidad: pedidoDetalle.unidad,
+          cantidad: pedidoDetalle.cantidad,
+          precioUnitario: pedidoDetalle.precioUnitario,
+          subtotal: pedidoDetalle.subtotal,
+          nombre: productos.nombre,
+        })
         .from(pedidoDetalle)
+        .leftJoin(productos, eq(pedidoDetalle.productoId, productos.id))
         .where(eq(pedidoDetalle.pedidoId, pedidoId));
     },
 

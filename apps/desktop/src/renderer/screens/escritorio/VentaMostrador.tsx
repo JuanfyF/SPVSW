@@ -249,6 +249,11 @@ export default function VentaMostrador() {
   };
 
   const confirmarCobrar = async () => {
+    if (!sesionCaja) {
+      setError("Sesión de caja no disponible");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -260,7 +265,7 @@ export default function VentaMostrador() {
       for (const item of carrito) {
         const resultado = await window.pos.stock.verificarDisponibilidad(
           item.productoId,
-          sesionCaja!.id,
+          sesionCaja.id,
           item.unidad,
           item.cantidad
         );
@@ -273,7 +278,7 @@ export default function VentaMostrador() {
       }
 
       await window.pos.ventas.crear({
-        sesionCajaId: sesionCaja!.id,
+        sesionCajaId: sesionCaja.id,
         total,
         metodoPago: esCortesia ? "efectivo" : metodoPago,
         tipoOrigen: esCortesia ? "cortesia" : "mostrador",

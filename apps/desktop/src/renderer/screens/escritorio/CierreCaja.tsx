@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
-import { Check } from "lucide-react";
+import { generarPdfCierreCaja, type DatosCierreCaja } from "@pos/shared";
+import { Check, Download } from "lucide-react";
 
 interface Producto {
   id: number;
@@ -223,6 +224,98 @@ export default function CierreCaja() {
 
   const handleCerrar = async () => {
     setModalCerrar(true);
+  };
+
+  const exportarPdf = async () => {
+    if (!sesionCaja || !resumen) return;
+    try {
+      // Obtener ventas de la sesión para pedidos entregados
+      const ventasSesion = await window.pos.ventas.listarPorSesion(sesionCaja.id);
+
+      // Pedidos entregados hoy con sus pagos
+      const pedidosEntregadosMap = new Map<number, {
+        id: number;
+        cliente: string;
+        producto: string;
+        cantidad: number;
+        total: number;
+        cobradoEfectivo: number;
+        cobradoTransferencia: number;
+        saldoPendiente: number;
+      }>();
+
+      // Procesar ventas de tipo "pedido" (saldos cobrados al entregar)
+      for (const v of ventasSesion.filter((v: any) => v.tipoOrigen === "pedido")) {
+        const pedido = (await window.pos.pedidos.obtenerResumen(v.pedidoId)) as any;
+        if (pedido) {
+          const existente = pedidosEntregadosMap.get(pedido.id);
+          if (existente) {
+            existente.cobradoEfectivo += v.metodoPago === "efectivo" ? v.total : 0;
+            existente.cobradoTransferencia += v.metodoPago === "transferencia" ? v.total : 0;
+          } else {
+            const detalles = pedido.detalles || [];
+            const productoPrincipal = detalles.length > 0 ? detalles[0].descripcion : "Pedido";
+            pedidosEntregadosMap.set(pedido.id, {
+              id: pedido.id,
+              cliente: pedido.cliente,
+              producto: productoPrincipal,
+              cantidad: detalles.length,
+              total: pedido.totalEstimado,
+              cobradoEfectivo: v.metodoPago === "efectivo" ? v.total : 0,
+              cobradoTransferencia: v.metodoPago === "transferencia" ? v.total : 0,
+              saldoPendiente: pedido.saldoPendiente,
+            });
+          }
+        }
+      }
+
+      const pedidosEntregados = Array.from(pedidosEntregadosMap.values());
+
+      // Calcular transferencia esperada
+      const transferenciaEsperada =
+        (resumen?.ventas.transferencia ?? 0) +
+        (resumen?.anticipos.transferencia ?? 0) +
+        (resumen?.pedidos.transferencia ?? 0) -
+        (resumen?.adelantos.transferencia ?? 0);
+
+      const datos: DatosCierreCaja = {
+        sesionId: sesionCaja.id,
+        fechaApertura: sesionCaja.fechaApertura,
+        fechaCierre: new Date().toLocaleString("es-EC"),
+        cajeroNombre: usuario?.nombre || "N/A",
+        ventas: resumen.ventas,
+        anticipos: resumen.anticipos,
+        pedidos: resumen.pedidos,
+        gastos: {
+          caja: resumen.gastos.caja,
+          pedidos: resumen.gastos.pedidos,
+          total: resumen.gastos.total,
+          porCategoria: gastosDetalle.reduce((acc: any[], g: any) => {
+            const existente = acc.find(a => a.categoriaNombre === g.categoriaNombre);
+            if (existente) {
+              existente.cantidad++;
+              existente.total += g.monto;
+            } else {
+              acc.push({ categoriaNombre: g.categoriaNombre || "Sin categoría", cantidad: 1, total: g.monto });
+            }
+            return acc;
+          }, []),
+        },
+        adelantos: resumen.adelantos,
+        devoluciones: { efectivo: devolucionesEfectivo, transferencia: 0, total: devolucionesEfectivo },
+        pedidosEntregados,
+        efectivoEsperado,
+        efectivoContado: parseFloat(efectivoContado) || 0,
+        diferenciaEfectivo: diferencia,
+        transferenciaEsperada,
+        transferenciaRecibida: (resumen?.ventas.transferencia ?? 0) + (resumen?.anticipos.transferencia ?? 0) + (resumen?.pedidos.transferencia ?? 0),
+      };
+
+      await generarPdfCierreCaja(datos);
+    } catch (err: any) {
+      console.error("Error al exportar PDF:", err);
+      setError(err.message || "Error al generar el PDF");
+    }
   };
 
   const confirmarCerrar = async () => {
@@ -532,6 +625,10 @@ export default function CierreCaja() {
       <div className="flex gap-4">
         <button onClick={() => navigate("/")} className="flex-1 py-3 border border-outline-variant text-on-surface-variant rounded-xl hover:bg-surface-container-high transition-colors">
           Volver
+        </button>
+        <button onClick={exportarPdf} disabled={!resumen} className="flex-1 py-3 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors flex items-center justify-center gap-2">
+          <Download className="w-4 h-4" />
+          Descargar PDF
         </button>
         <button onClick={handleCerrar} disabled={!efectivoContado || procesando} className="flex-1 py-3 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 transition-colors">
           {procesando ? "Cerrando..." : "Cerrar Caja"}
