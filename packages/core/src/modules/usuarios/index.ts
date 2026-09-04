@@ -27,12 +27,18 @@ export function crearServicioUsuarios(db: PosDatabase) {
     },
 
     /**
-     * Obtiene un usuario por ID.
+     * Obtiene un usuario por ID (sin pinHash por seguridad).
      */
     async obtenerPorId(id: number) {
       IdSchema.parse(id);
       const resultado = await db
-        .select()
+        .select({
+          id: usuarios.id,
+          nombre: usuarios.nombre,
+          rol: usuarios.rol,
+          activo: usuarios.activo,
+          actualizadoEn: usuarios.actualizadoEn,
+        })
         .from(usuarios)
         .where(eq(usuarios.id, id))
         .limit(1);
@@ -41,7 +47,7 @@ export function crearServicioUsuarios(db: PosDatabase) {
     },
 
     /**
-     * Crea un nuevo usuario.
+     * Crea un nuevo usuario (retorna sin pinHash).
      */
     async crear(datos: CrearUsuarioInput) {
       const validados = CrearUsuarioSchema.parse(datos);
@@ -57,13 +63,13 @@ export function crearServicioUsuarios(db: PosDatabase) {
           rol: validados.rol,
           pinHash,
         })
-        .returning();
+        .returning({ id: usuarios.id, nombre: usuarios.nombre, rol: usuarios.rol, activo: usuarios.activo });
 
       return resultado[0];
     },
 
     /**
-     * Actualiza un usuario existente.
+     * Actualiza un usuario existente (retorna sin pinHash).
      */
     async actualizar(
       id: number,
@@ -78,7 +84,7 @@ export function crearServicioUsuarios(db: PosDatabase) {
           actualizadoEn: new Date().toISOString(),
         })
         .where(eq(usuarios.id, id))
-        .returning();
+        .returning({ id: usuarios.id, nombre: usuarios.nombre, rol: usuarios.rol, activo: usuarios.activo });
 
       return resultado[0] ?? null;
     },
@@ -116,7 +122,7 @@ export function crearServicioUsuarios(db: PosDatabase) {
     },
 
     /**
-     * Cambia el PIN de un usuario.
+     * Cambia el PIN de un usuario y limpia la bandera debeCambiarPin.
      */
     async cambiarPin(id: number, nuevoPin: string) {
       CambiarPinSchema.parse({ nuevoPin, confirmarPin: nuevoPin });
@@ -131,7 +137,7 @@ export function crearServicioUsuarios(db: PosDatabase) {
       const pinHash = await crearHashPin(nuevoPin);
       await db
         .update(usuarios)
-        .set({ pinHash })
+        .set({ pinHash, debeCambiarPin: false })
         .where(eq(usuarios.id, id));
     },
   };

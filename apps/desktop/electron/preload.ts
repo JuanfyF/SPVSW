@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("pos", {
     login: (pin: string, rol?: string) => ipcRenderer.invoke("auth:login", pin, rol),
     logout: () => ipcRenderer.invoke("auth:logout"),
     getUsuarioActual: () => ipcRenderer.invoke("auth:getUsuarioActual"),
+    restablecerPin: (usuarioId: number) => ipcRenderer.invoke("auth:restablecerPin", usuarioId),
   },
 
   // ============================================================
@@ -201,6 +202,12 @@ contextBridge.exposeInMainWorld("pos", {
     ipcRenderer.on("data:cambio", callback);
     return () => {
       ipcRenderer.removeListener("data:cambio", callback);
+    };
+  },
+  onSesionExpirada: (callback: () => void) => {
+    ipcRenderer.on("sesion:expirada", callback);
+    return () => {
+      ipcRenderer.removeListener("sesion:expirada", callback);
     };
   },
 });

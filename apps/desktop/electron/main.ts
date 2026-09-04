@@ -1,5 +1,7 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
+import { randomInt } from "node:crypto";
+import { crearMenuPrincipal, setVentanaPrincipal } from "./menu";
 
 // Desactivar aceleración de hardware y GPU
 process.env.ELECTRON_DISABLE_GPU = "1";
@@ -48,6 +50,19 @@ let servicios: {
 
 // Estado de autenticación
 let usuarioActual: { id: number; nombre: string; rol: string } | null = null;
+let timeoutSesion: ReturnType<typeof setTimeout> | null = null;
+const SESION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos de inactividad
+
+function reiniciarTimeoutSesion() {
+  if (timeoutSesion) clearTimeout(timeoutSesion);
+  if (usuarioActual) {
+    timeoutSesion = setTimeout(() => {
+      console.log("Sesión expirada por inactividad (15 min)");
+      usuarioActual = null;
+      mainWindow?.webContents.send("sesion:expirada");
+    }, SESION_TIMEOUT_MS);
+  }
+}
 
 function safeHandler<T extends (...args: any[]) => Promise<any>>(fn: T): T {
   return (async (...args: any[]) => {
@@ -64,6 +79,11 @@ function safeHandler<T extends (...args: any[]) => Promise<any>>(fn: T): T {
 function registrarHandlers() {
   if (!servicios) throw new Error("Servicios no inicializados");
 
+  // Resetear timeout de sesión en cada llamada IPC (actividad del usuario)
+  ipcMain.on("ipc-invoke", () => {
+    if (usuarioActual) reiniciarTimeoutSesion();
+  });
+
   // ============================================================
   // AUTH
   // ============================================================
@@ -76,6 +96,7 @@ function registrarHandlers() {
     }
 
     usuarioActual = usuario;
+    reiniciarTimeoutSesion();
 
     // Si hay sesión de caja abierta, devolverla junto con el usuario
     let sesionAbierta = null;
@@ -88,12 +109,20 @@ function registrarHandlers() {
 
   ipcMain.handle("auth:logout", async () => {
     usuarioActual = null;
+    if (timeoutSesion) {
+      clearTimeout(timeoutSesion);
+      timeoutSesion = null;
+    }
     return true;
   });
 
   ipcMain.handle("auth:getUsuarioActual", async () => {
     return usuarioActual;
   });
+
+  ipcMain.handle("auth:restablecerPin", safeHandler(async (_event, usuarioId: number) => {
+    return servicios!.auth.restablecerPin(usuarioId);
+  }));
 
   // ============================================================
   // USUARIOS
@@ -627,9 +656,26 @@ function registrarHandlers() {
     safeHandler(async (_event, rutaDestino: string) => {
       if (!db) throw new Error("Base de datos no inicializada");
       const fs = await import("fs");
+      const os = await import("os");
       const currentDbPath = path.join(app.getPath("userData"), "pos.sqlite");
       const walPath = currentDbPath + "-wal";
       const shmPath = currentDbPath + "-shm";
+
+      // Seguridad: validar que la ruta de destino esté en directorios permitidos
+      const rutaResuelta = path.resolve(rutaDestino);
+      const directoriosPermitidos = [
+        path.resolve(app.getPath("userData")),
+        path.resolve(app.getPath("desktop")),
+        path.resolve(app.getPath("documents")),
+        path.resolve(app.getPath("downloads")),
+        path.resolve(os.homedir()),
+      ];
+      const rutaPermitida = directoriosPermitidos.some((dir) =>
+        rutaResuelta.startsWith(dir + path.sep) || rutaResuelta === dir
+      );
+      if (!rutaPermitida) {
+        throw new Error("Ruta de backup no permitida. Use Documents, Desktop o Downloads.");
+      }
 
       // Forzar checkpoint para que todo esté en el archivo principal
       const { createDbWithSqlite: createDbFn } = await import("@pos/db");
@@ -637,17 +683,17 @@ function registrarHandlers() {
       tempSqlite.pragma("wal_checkpoint(TRUNCATE)");
       tempSqlite.close();
 
-      fs.copyFileSync(currentDbPath, rutaDestino);
+      fs.copyFileSync(currentDbPath, rutaResuelta);
 
       // Copiar WAL y SHM si existen
       if (fs.existsSync(walPath)) {
-        fs.copyFileSync(walPath, rutaDestino + "-wal");
+        fs.copyFileSync(walPath, rutaResuelta + "-wal");
       }
       if (fs.existsSync(shmPath)) {
-        fs.copyFileSync(shmPath, rutaDestino + "-shm");
+        fs.copyFileSync(shmPath, rutaResuelta + "-shm");
       }
 
-      return { ok: true, ruta: rutaDestino };
+      return { ok: true, ruta: rutaResuelta };
     })
   );
 
@@ -659,8 +705,23 @@ function registrarHandlers() {
       const walPath = currentDbPath + "-wal";
       const shmPath = currentDbPath + "-shm";
 
+      // Seguridad: validar que el backup esté en directorios permitidos
+      const rutaResuelta = path.resolve(rutaBackup);
+      const directoriosPermitidos = [
+        path.resolve(app.getPath("userData")),
+        path.resolve(app.getPath("desktop")),
+        path.resolve(app.getPath("documents")),
+        path.resolve(app.getPath("downloads")),
+      ];
+      const rutaPermitida = directoriosPermitidos.some((dir) =>
+        rutaResuelta.startsWith(dir + path.sep) || rutaResuelta === dir
+      );
+      if (!rutaPermitida) {
+        throw new Error("Ruta de backup no permitida. Use Documents, Desktop o Downloads.");
+      }
+
       // Verificar que el backup existe
-      if (!fs.existsSync(rutaBackup)) {
+      if (!fs.existsSync(rutaResuelta)) {
         throw new Error("El archivo de backup no existe");
       }
 
@@ -670,14 +731,14 @@ function registrarHandlers() {
       }
 
       // Restaurar archivos
-      fs.copyFileSync(rutaBackup, currentDbPath);
-      if (fs.existsSync(rutaBackup + "-wal")) {
-        fs.copyFileSync(rutaBackup + "-wal", walPath);
+      fs.copyFileSync(rutaResuelta, currentDbPath);
+      if (fs.existsSync(rutaResuelta + "-wal")) {
+        fs.copyFileSync(rutaResuelta + "-wal", walPath);
       } else if (fs.existsSync(walPath)) {
         fs.unlinkSync(walPath);
       }
-      if (fs.existsSync(rutaBackup + "-shm")) {
-        fs.copyFileSync(rutaBackup + "-shm", shmPath);
+      if (fs.existsSync(rutaResuelta + "-shm")) {
+        fs.copyFileSync(rutaResuelta + "-shm", shmPath);
       } else if (fs.existsSync(shmPath)) {
         fs.unlinkSync(shmPath);
       }
@@ -702,6 +763,8 @@ async function crearVentanaPrincipal() {
       nodeIntegration: false,
     },
   });
+
+  setVentanaPrincipal(mainWindow);
 
   if (process.env.NODE_ENV === "development") {
     await mainWindow.loadURL("http://localhost:5173");
@@ -755,13 +818,18 @@ app.whenReady().then(async () => {
   try {
     const existingUsers = await db.select().from(usuarios).limit(1);
     if (existingUsers.length === 0) {
-      const pinHash = await crearHashPin("123456");
+      // PIN aleatorio de 6 dígitos (seguridad: no hardcodear PINs por defecto)
+      const pinAleatorio = String(randomInt(100000, 999999));
+      const pinHash = await crearHashPin(pinAleatorio);
       await db.insert(usuarios).values({
         nombre: "Propietario",
         rol: "propietario",
         pinHash,
       });
-      console.log("Seed: usuario propietario creado");
+      console.log("=== USUARIO PROPIETARIO CREADO ===");
+      console.log(`PIN de acceso: ${pinAleatorio}`);
+      console.log("Guarde este PIN. Se recomienda cambiarlo después del primer inicio.");
+      console.log("===================================");
     }
   } catch (err) {
     console.error("Error al crear usuario propietario:", err);
@@ -769,6 +837,9 @@ app.whenReady().then(async () => {
 
   // Registrar handlers IPC
   registrarHandlers();
+
+  // Aplicar menú de la aplicación
+  crearMenuPrincipal();
 
   // Servidor local para pasteleras
   startLocalServer({ port: 3000, db });

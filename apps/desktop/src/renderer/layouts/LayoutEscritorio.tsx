@@ -12,6 +12,7 @@ import {
   BarChart3,
   KeyRound,
   HardDrive,
+  HelpCircle,
 } from "lucide-react";
 
 const menuItemsAdmin = [
@@ -25,11 +26,13 @@ const menuItemsAdmin = [
   { path: "/reportes", label: "Reportes", icon: <BarChart3 className="w-5 h-5" /> },
   { path: "/usuarios", label: "Usuarios", icon: <KeyRound className="w-5 h-5" /> },
   { path: "/backup", label: "Backup", icon: <HardDrive className="w-5 h-5" /> },
+  { path: "/ayuda", label: "Ayuda", icon: <HelpCircle className="w-5 h-5" /> },
 ];
 
 const menuItemsPastelera = [
   { path: "/stock", label: "Stock", icon: <Package className="w-5 h-5" /> },
   { path: "/pedidos", label: "Pedidos", icon: <ClipboardList className="w-5 h-5" /> },
+  { path: "/ayuda", label: "Ayuda", icon: <HelpCircle className="w-5 h-5" /> },
 ];
 
 const rutasRestringidasPastelera = [
@@ -59,11 +62,27 @@ export default function LayoutEscritorio() {
     }
   }, [usuario, navigate]);
 
+  // Redirigir a cambio de PIN forzado si el usuario tiene PIN temporal
+  useEffect(() => {
+    if (usuario?.debeCambiarPin && location.pathname !== "/cambiar-pin") {
+      navigate("/cambiar-pin", { replace: true });
+    }
+  }, [usuario, location.pathname, navigate]);
+
   useEffect(() => {
     if (usuario && !esAdmin && rutasRestringidasPastelera.includes(location.pathname)) {
       navigate("/stock", { replace: true });
     }
   }, [usuario, esAdmin, location.pathname, navigate]);
+
+  // Listener para sesión expirada por inactividad (15 min)
+  useEffect(() => {
+    const removeListener = window.pos.onSesionExpirada(() => {
+      logout();
+      navigate("/login", { replace: true });
+    });
+    return removeListener;
+  }, [logout, navigate]);
 
   if (!usuario) return null;
 

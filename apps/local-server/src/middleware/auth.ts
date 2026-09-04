@@ -20,11 +20,38 @@ export interface SesionUsuario {
   rol: "propietario" | "cajero" | "pastelera";
 }
 
-// Almacenamiento temporal de sesiones (en producción usar JWT)
-const sesiones = new Map<string, SesionUsuario>();
+interface SesionConTimestamp {
+  sesion: SesionUsuario;
+  creadoEn: number;
+}
+
+// Almacenamiento temporal de sesiones con timestamps para TTL
+const sesiones = new Map<string, SesionConTimestamp>();
+
+// TTL de sesiones: 4 horas (en ms)
+const SESION_TTL_MS = 4 * 60 * 60 * 1000;
+
+// Intervalo de limpieza: cada 10 minutos
+const LIMPIEZA_INTERVALO_MS = 10 * 60 * 1000;
+
+/**
+ * Limpia sesiones expiradas.
+ */
+function limpiarSesionesExpiradas() {
+  const ahora = Date.now();
+  for (const [token, datos] of sesiones.entries()) {
+    if (ahora - datos.creadoEn > SESION_TTL_MS) {
+      sesiones.delete(token);
+    }
+  }
+}
+
+// Iniciar limpieza periódica
+setInterval(limpiarSesionesExpiradas, LIMPIEZA_INTERVALO_MS);
 
 /**
  * Middleware que valida autenticación (token Bearer).
+ * Rechaza sesiones expiradas (TTL).
  */
 export function authMiddleware(auth: ReturnType<typeof crearServicioAuth>) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -38,13 +65,19 @@ export function authMiddleware(auth: ReturnType<typeof crearServicioAuth>) {
     }
 
     const token = authHeader.slice(7);
-    const sesion = sesiones.get(token);
+    const datos = sesiones.get(token);
 
-    if (!sesion) {
+    if (!datos) {
       return res.status(401).json({ error: "Sesión inválida o expirada" });
     }
 
-    (req as any).usuario = sesion;
+    // Verificar TTL
+    if (Date.now() - datos.creadoEn > SESION_TTL_MS) {
+      sesiones.delete(token);
+      return res.status(401).json({ error: "Sesión expirada" });
+    }
+
+    (req as any).usuario = datos.sesion;
     next();
   };
 }
@@ -79,7 +112,7 @@ export function requerirRol(...rolesPermitidos: string[]) {
  */
 export function crearSesion(usuario: SesionUsuario): string {
   const token = randomUUID();
-  sesiones.set(token, usuario);
+  sesiones.set(token, { sesion: usuario, creadoEn: Date.now() });
   return token;
 }
 
@@ -94,5 +127,5 @@ export function eliminarSesion(token: string): void {
  * Obtiene la información de una sesión.
  */
 export function obtenerSesion(token: string) {
-  return sesiones.get(token);
+  return sesiones.get(token)?.sesion;
 }

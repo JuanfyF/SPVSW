@@ -28,6 +28,7 @@ export const usuarios = sqliteTable("usuarios", {
   nombre: text("nombre").notNull(),
   rol: text("rol", { enum: ["propietario", "cajero", "pastelera"] }).notNull(),
   pinHash: text("pin_hash").notNull(), // PIN individual, nunca compartido
+  debeCambiarPin: integer("debe_cambiar_pin", { mode: "boolean" }).notNull().default(false),
   activo: integer("activo", { mode: "boolean" }).notNull().default(true),
   ...camposAuditoria,
 });
@@ -39,6 +40,16 @@ export const empleados = sqliteTable("empleados", {
   cargo: text("cargo").notNull(),
   salarioMensual: real("salario_mensual").notNull(),
   activo: integer("activo", { mode: "boolean" }).notNull().default(true),
+  ...camposAuditoria,
+});
+
+// Log de auditoría para resets de PIN
+export const pinResetLog = sqliteTable("pin_reset_log", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  usuarioId: integer("usuario_id").notNull().references(() => usuarios.id),
+  pinTemporalHash: text("pin_temporal_hash").notNull(), // hash del PIN temporal generado
+  expiracion: text("expiracion").notNull(), // ISO timestamp +24h
+  utilizado: integer("utilizado", { mode: "boolean" }).notNull().default(false),
   ...camposAuditoria,
 });
 

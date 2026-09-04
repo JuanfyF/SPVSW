@@ -33,6 +33,22 @@ export default function LayoutMovil() {
     }
   }, [usuario, navigate]);
 
+  // Redirigir a cambio de PIN forzado si el usuario tiene PIN temporal
+  useEffect(() => {
+    if (usuario?.debeCambiarPin && location.pathname !== "/cambiar-pin") {
+      navigate("/cambiar-pin", { replace: true });
+    }
+  }, [usuario, location.pathname, navigate]);
+
+  // Listener para sesión expirada por inactividad (15 min)
+  useEffect(() => {
+    const removeListener = window.pos.onSesionExpirada(() => {
+      logout();
+      navigate("/movil/login", { replace: true });
+    });
+    return removeListener;
+  }, [logout, navigate]);
+
   if (!usuario) return null;
 
   const menuItems = usuario.rol === "pastelera" ? menuItemsPastelera : menuItemsAdmin;

@@ -26,6 +26,8 @@ import CierreCaja from "./screens/escritorio/CierreCaja";
 import Reportes from "./screens/escritorio/Reportes";
 import Usuarios from "./screens/escritorio/Usuarios";
 import BackupRestore from "./screens/escritorio/BackupRestore";
+import Ayuda from "./screens/escritorio/Ayuda";
+import CambiarPinForzado from "./screens/CambiarPinForzado";
 
 // Pantallas móviles (7)
 import MenuMovil from "./screens/movil/Menu";
@@ -48,6 +50,10 @@ export const router: RouterType = createHashRouter([
   {
     path: "/pin",
     element: <PinVerificacion />,
+  },
+  {
+    path: "/cambiar-pin",
+    element: <CambiarPinForzado />,
   },
 
   // Rutas de escritorio (11 pantallas)
@@ -110,6 +116,10 @@ export const router: RouterType = createHashRouter([
       {
         path: "backup",
         element: <BackupRestore />,
+      },
+      {
+        path: "ayuda",
+        element: <Ayuda />,
       },
     ],
   },

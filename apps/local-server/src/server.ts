@@ -24,10 +24,8 @@ import {
 
 /**
  * IMPORTANTE (AGENT.md 5.1 — configuración de seguridad):
- * Este servidor debe escuchar SOLO en la interfaz de red local (LAN),
- * nunca en 0.0.0.0 expuesto a internet. Toda ruta valida el PIN/rol
- * antes de ejecutar cualquier acción — una pastelera nunca debe poder
- * alcanzar, ni por URL directa, una función de caja o ventas.
+ * Este servidor escucha SOLO en 127.0.0.1 (loopback).
+ * Toda ruta valida el PIN/rol antes de ejecutar cualquier acción.
  *
  * AGENT.md §2.7 — Roles en local-server:
  * - Pastelera: stock (merma, cortesía, reposición), pedidos (solo lectura producción)
@@ -39,13 +37,53 @@ interface OpcionesServidor {
   db: PosDatabase;
 }
 
+// ─── Rate limiting para login ──────────────────────────
+const intentosLogin = new Map<string, { count: number; resetAt: number }>();
+const MAX_INTENTOS = 5;
+const VENTANA_MS = 15 * 60 * 1000; // 15 minutos
+
+function verificarRateLimit(ip: string): { permitido: boolean; restantes: number } {
+  const ahora = Date.now();
+  const datos = intentosLogin.get(ip);
+
+  if (!datos || ahora > datos.resetAt) {
+    intentosLogin.set(ip, { count: 1, resetAt: ahora + VENTANA_MS });
+    return { permitido: true, restantes: MAX_INTENTOS - 1 };
+  }
+
+  if (datos.count >= MAX_INTENTOS) {
+    return { permitido: false, restantes: 0 };
+  }
+
+  datos.count++;
+  return { permitido: true, restantes: MAX_INTENTOS - datos.count };
+}
+
+// Limpiar entradas de rate limiting expiradas cada 5 minutos
+setInterval(() => {
+  const ahora = Date.now();
+  for (const [ip, datos] of intentosLogin.entries()) {
+    if (ahora > datos.resetAt) {
+      intentosLogin.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000);
+
 export function startLocalServer(opciones: OpcionesServidor) {
   const app = express();
   app.use(express.json());
 
-  // CORS para acceso desde navegador (shim del móvil)
+  // CORS restringido: solo localhost y rangos LAN privados
   app.use((_req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
+    const origin = _req.headers.origin || "";
+    const permitido =
+      origin === "http://localhost:5173" ||
+      origin === "http://127.0.0.1:5173" ||
+      /^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
+
+    if (permitido || !origin) {
+      res.header("Access-Control-Allow-Origin", origin || "http://localhost:5173");
+    }
     res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
     res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
     if (_req.method === "OPTIONS") return res.sendStatus(204);
@@ -64,9 +102,18 @@ export function startLocalServer(opciones: OpcionesServidor) {
     caja: crearServicioCaja(opciones.db),
   };
 
-  // ─── Login ────────────────────────────────────────────
+  // ─── Login (con rate limiting) ────────────────────────
   app.post("/auth/login", async (req, res) => {
     try {
+      const ip = req.ip || req.socket.remoteAddress || "unknown";
+      const { permitido, restantes } = verificarRateLimit(ip);
+
+      if (!permitido) {
+        return res.status(429).json({
+          error: "Demasiados intentos. Espere 15 minutos.",
+        });
+      }
+
       const { pin, rol } = req.body;
       if (!pin) {
         return res.status(400).json({ error: "PIN es requerido" });
@@ -74,7 +121,10 @@ export function startLocalServer(opciones: OpcionesServidor) {
 
       const usuario = await servicios.auth.login(pin);
       if (!usuario) {
-        return res.status(401).json({ error: "PIN incorrecto" });
+        return res.status(401).json({
+          error: "PIN incorrecto",
+          intentosRestantes: restantes,
+        });
       }
 
       // Filtrar por rol si se especifica (AGENT.md 5.1 — defensa en profundidad)
@@ -151,10 +201,9 @@ export function startLocalServer(opciones: OpcionesServidor) {
   // ─── Caja: propietario y cajero ───────────────────────
   app.use("/api/caja", cajaRoutes(servicios.caja));
 
-  // ─── Escuchar solo en LAN ─────────────────────────────
-  const server = app.listen(opciones.port, "0.0.0.0", () => {
-    console.log(`Servidor local escuchando en el puerto ${opciones.port}`);
-    console.log("IMPORTANTE: Solo accesible desde la red local (LAN)");
+  // ─── Escuchar solo en loopback (127.0.0.1) ────────────
+  const server = app.listen(opciones.port, "127.0.0.1", () => {
+    console.log(`Servidor local escuchando en http://127.0.0.1:${opciones.port}`);
   });
 
   server.on("error", (err: NodeJS.ErrnoException) => {

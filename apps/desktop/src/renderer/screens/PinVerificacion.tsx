@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
+import { KeyRound } from "lucide-react";
 
 export default function PinVerificacion() {
   const [pin, setPin] = useState("");
@@ -129,6 +130,14 @@ export default function PinVerificacion() {
           className="mt-6 w-full py-3 text-on-surface-variant hover:text-on-surface"
         >
           Cancelar
+        </button>
+
+        <button
+          onClick={() => navigate("/login")}
+          className="mt-2 w-full py-2 text-sm text-secondary hover:text-secondary/80 transition-colors flex items-center justify-center gap-2"
+        >
+          <KeyRound className="w-4 h-4" />
+          ¿Olvidaste tu PIN? Volver al login
         </button>
       </div>
     </div>

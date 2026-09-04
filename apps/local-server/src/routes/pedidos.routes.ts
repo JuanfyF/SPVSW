@@ -78,25 +78,36 @@ export function pedidosRoutes(
           ? {
               id: pedido.id,
               cliente: pedido.cliente,
-              telefono: pedido.telefono,
               fechaPedido: pedido.fechaPedido,
               fechaEntrega: pedido.fechaEntrega,
+              horaEntrega: pedido.horaEntrega,
               estado: pedido.estado,
               notas: pedido.notas,
             }
           : pedido;
 
+        // Pastelera: sin precioUnitario ni subtotal en detalles
+        const detallesLimpios = rol === "pastelera"
+          ? detalles.map((d) => ({
+              id: d.id,
+              productoId: d.productoId,
+              descripcionPersonalizada: d.descripcionPersonalizada,
+              unidad: d.unidad,
+              cantidad: d.cantidad,
+            }))
+          : detalles.map((d) => ({
+              id: d.id,
+              productoId: d.productoId,
+              descripcionPersonalizada: d.descripcionPersonalizada,
+              unidad: d.unidad,
+              cantidad: d.cantidad,
+              precioUnitario: d.precioUnitario,
+              subtotal: d.subtotal,
+            }));
+
         res.json({
           pedido: pedidoLimpio,
-          detalles: detalles.map((d) => ({
-            id: d.id,
-            productoId: d.productoId,
-            descripcionPersonalizada: d.descripcionPersonalizada,
-            unidad: d.unidad,
-            cantidad: d.cantidad,
-            precioUnitario: d.precioUnitario,
-            subtotal: d.subtotal,
-          })),
+          detalles: detallesLimpios,
         });
       } catch (error) {
         res.status(500).json({ error: "Error al obtener el pedido" });
@@ -147,12 +158,28 @@ export function pedidosAdminRoutes(
 ): Router {
   const router = Router();
 
+  // GET / — Lista de pedidos (pastelera ve campos limitados, sin datos financieros)
   router.get(
     "/",
     requerirRol("propietario", "cajero", "pastelera"),
     async (req: Request, res: Response) => {
       try {
         const activos = await pedidos.listarActivos();
+        const rol = (req as any).usuario?.rol;
+
+        // Pastelera: solo campos de producción, sin datos financieros
+        if (rol === "pastelera") {
+          const pedidosLimitados = activos.map((p) => ({
+            id: p.id,
+            cliente: p.cliente,
+            fechaEntrega: p.fechaEntrega,
+            horaEntrega: p.horaEntrega,
+            estado: p.estado,
+            notas: p.notas,
+          }));
+          return res.json({ pedidos: pedidosLimitados });
+        }
+
         res.json({ pedidos: activos });
       } catch (error: any) {
         res.status(500).json({ error: "Error al listar pedidos" });

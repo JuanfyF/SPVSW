@@ -9,11 +9,16 @@ export interface PosAPI {
   // ============================================================
   auth: {
     login: (pin: string, rol?: string) => Promise<{
-      usuario: { id: number; nombre: string; rol: string } | null;
+      usuario: { id: number; nombre: string; rol: string; debeCambiarPin?: boolean } | null;
       sesionAbierta: { id: number; usuarioId: number; fecha: string; horaApertura: string; estado: string } | null;
     }>;
     logout: () => Promise<boolean>;
     getUsuarioActual: () => Promise<{ id: number; nombre: string; rol: string } | null>;
+    restablecerPin: (usuarioId: number) => Promise<{
+      pinTemporal: string;
+      expiracion: string;
+      nombre: string;
+    }>;
   };
 
   // ============================================================
