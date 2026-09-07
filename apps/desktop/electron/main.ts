@@ -121,7 +121,8 @@ function registrarHandlers() {
   });
 
   ipcMain.handle("auth:restablecerPin", safeHandler(async (_event, usuarioId: number) => {
-    return servicios!.auth.restablecerPin(usuarioId);
+    if (!usuarioActual) throw new Error("No hay usuario logueado");
+    return servicios!.auth.restablecerPin(usuarioId, usuarioActual.id);
   }));
 
   // ============================================================

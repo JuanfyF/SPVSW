@@ -47,6 +47,7 @@ export const empleados = sqliteTable("empleados", {
 export const pinResetLog = sqliteTable("pin_reset_log", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   usuarioId: integer("usuario_id").notNull().references(() => usuarios.id),
+  resetadoPor: integer("resetado_por").references(() => usuarios.id), // quién ejecutó el reset
   pinTemporalHash: text("pin_temporal_hash").notNull(), // hash del PIN temporal generado
   expiracion: text("expiracion").notNull(), // ISO timestamp +24h
   utilizado: integer("utilizado", { mode: "boolean" }).notNull().default(false),

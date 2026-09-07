@@ -42,8 +42,9 @@ export default function LoginMovil() {
       } else {
         setError("PIN incorrecto o expirado");
       }
-    } catch (err) {
-      setError("Error al iniciar sesión");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err?.message || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }
@@ -71,8 +72,9 @@ export default function LoginMovil() {
     try {
       const lista = await window.pos.usuarios.listar();
       setUsuarios(lista.filter((u) => u.rol === "pastelera"));
-    } catch {
-      setErrorReset("Error al cargar usuarios");
+    } catch (err: any) {
+      console.error("Error cargando usuarios:", err);
+      setErrorReset(err?.message || "Error al cargar usuarios");
     }
   };
 
@@ -263,7 +265,7 @@ export default function LoginMovil() {
                   Usa este PIN para iniciar sesión. Cámbialo después.
                 </p>
                 <p className="text-on-surface-variant/60 text-xs text-center mb-4">
-                  Expira: {expiracion ? new Date(expiracion).toLocaleString("es-EC") : ""}
+                  Vence: {expiracion ? new Date(expiracion).toLocaleString("es-EC") : ""} (~24 horas)
                 </p>
 
                 <button

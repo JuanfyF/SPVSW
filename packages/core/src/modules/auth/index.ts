@@ -87,8 +87,10 @@ export function crearServicioAuth(db: PosDatabase) {
     /**
      * Restablece el PIN de un usuario. Genera un PIN temporal aleatorio,
      * lo almacena en la tabla de auditoría y retorna el PIN en texto plano.
+     * @param usuarioId - ID del usuario cuyo PIN se restablece
+     * @param actorId - ID del usuario que ejecuta la acción (quién restablece)
      */
-    async restablecerPin(usuarioId: number) {
+    async restablecerPin(usuarioId: number, actorId: number) {
       const usuario = await db
         .select()
         .from(usuarios)
@@ -106,6 +108,7 @@ export function crearServicioAuth(db: PosDatabase) {
       // Registrar en log de auditoría
       await db.insert(pinResetLog).values({
         usuarioId,
+        resetadoPor: actorId,
         pinTemporalHash,
         expiracion,
         utilizado: false,

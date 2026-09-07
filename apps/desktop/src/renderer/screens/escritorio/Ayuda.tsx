@@ -76,6 +76,49 @@ export default function Ayuda() {
         </div>
       </section>
 
+      {/* Recuperación de PIN */}
+      <section className="bg-surface-container-low rounded-2xl p-6 space-y-4">
+        <h2 className="text-lg font-bold text-on-surface">Recuperación de PIN</h2>
+
+        <div>
+          <h3 className="font-semibold text-on-surface mb-1">¿Qué es un PIN temporal?</h3>
+          <p className="text-on-surface-variant text-sm">
+            Cuando un propietario restablece el PIN de una empleada, se genera un PIN temporal
+            de 6 dígitos que dura 24 horas. La empleada debe usar ese PIN para entrar y
+            luego cambiarlo por uno nuevo.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-on-surface mb-1">Cómo restablecer el PIN de una empleada</h3>
+          <ol className="list-decimal list-inside text-on-surface-variant text-sm space-y-1">
+            <li>En la pantalla de login, haz clic en "¿Olvidaste tu PIN?"</li>
+            <li>Selecciona el nombre de la empleada</li>
+            <li>Haz clic en "Restablecer"</li>
+            <li>Copia el PIN temporal y compártelo con la empleada</li>
+            <li>La empleada usa ese PIN para entrar y debe cambiarlo inmediatamente</li>
+          </ol>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-on-surface mb-1">Qué ve la empleada al entrar con PIN temporal</h3>
+          <p className="text-on-surface-variant text-sm">
+            Al entrar con un PIN temporal, la empleada es redirigida automáticamente a una
+            pantalla donde debe crear un nuevo PIN. No puede cancelar ni saltarse este paso.
+            Una vez que cambia el PIN, accede normalmente al sistema.
+          </p>
+        </div>
+
+        <div>
+          <h3 className="font-semibold text-on-surface mb-1">Cuándo expira un PIN temporal</h3>
+          <p className="text-on-surface-variant text-sm">
+            Los PINs temporales expiran después de 24 horas. Si la empleada no entra antes
+            de que expire, el propietario debe generar uno nuevo. El sistema muestra cuándo
+            vence el PIN temporal en la pantalla de login.
+          </p>
+        </div>
+      </section>
+
       {/* Atajos de teclado */}
       <section className="bg-surface-container-low rounded-2xl p-6">
         <h2 className="text-lg font-bold text-on-surface mb-2">Atajos de teclado</h2>

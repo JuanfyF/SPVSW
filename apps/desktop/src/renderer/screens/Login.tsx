@@ -43,8 +43,9 @@ export default function Login() {
         setError("PIN incorrecto o expirado");
         setPin("");
       }
-    } catch (err) {
-      setError("Error al iniciar sesión");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err?.message || "Error al iniciar sesión");
     } finally {
       setLoading(false);
     }
@@ -94,8 +95,9 @@ export default function Login() {
     try {
       const lista = await window.pos.usuarios.listar();
       setUsuarios(lista);
-    } catch {
-      setErrorReset("Error al cargar usuarios");
+    } catch (err: any) {
+      console.error("Error cargando usuarios:", err);
+      setErrorReset(err?.message || "Error al cargar usuarios");
     }
   };
 
@@ -298,7 +300,7 @@ export default function Login() {
                   Usa este PIN para iniciar sesión. Cámbialo inmediatamente después.
                 </p>
                 <p className="text-on-surface-variant/60 text-xs text-center mb-6">
-                  Expira: {expiracion ? new Date(expiracion).toLocaleString("es-EC") : ""}
+                  Vence: {expiracion ? new Date(expiracion).toLocaleString("es-EC") : ""} (~24 horas)
                 </p>
 
                 <button
