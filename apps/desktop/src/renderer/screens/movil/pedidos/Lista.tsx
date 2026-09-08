@@ -132,7 +132,7 @@ export default function Lista() {
               <div className="flex justify-between text-sm">
                 <span className="text-on-surface-variant">
                   Entrega:{" "}
-                  {new Date(pedido.fechaEntrega).toLocaleDateString("es-EC", {
+                  {new Date(pedido.fechaEntrega + "T12:00:00").toLocaleDateString("es-EC", {
                     day: "2-digit",
                     month: "short",
                   })}

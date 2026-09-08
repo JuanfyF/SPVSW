@@ -81,6 +81,16 @@ export const OrigenGastoSchema = z.enum(["caja", "pedidos"]);
 // ESQUEMAS DE ENTRADA — AUTH
 // ============================================================
 
+const PINS_PROHIBIDOS = [
+  "0000", "1111", "1234", "1212", "2222", "3333", "4444", "5555",
+  "6666", "7777", "8888", "9999", "0001", "1000", "1122", "123456",
+  "000000", "111111", "12345678",
+];
+
+export function esPinDebil(pin: string): boolean {
+  return PINS_PROHIBIDOS.includes(pin);
+}
+
 export const LoginSchema = z.object({
   pin: z
     .string()
@@ -101,6 +111,9 @@ export const CrearUsuarioSchema = z.object({
     .min(4, "PIN debe tener al menos 4 dígitos")
     .max(6, "PIN no puede tener más de 6 dígitos")
     .regex(/^\d+$/, "PIN solo debe contener números"),
+}).refine((data) => !esPinDebil(data.pin), {
+  message: "PIN demasiado común. Elige un PIN más seguro.",
+  path: ["pin"],
 });
 
 export const ActualizarUsuarioSchema = z.object({
@@ -121,6 +134,9 @@ export const CambiarPinSchema = z.object({
 }).refine((data) => data.nuevoPin === data.confirmarPin, {
   message: "Los PINs no coinciden",
   path: ["confirmarPin"],
+}).refine((data) => !esPinDebil(data.nuevoPin), {
+  message: "PIN demasiado común. Elige un PIN más seguro.",
+  path: ["nuevoPin"],
 });
 
 // ============================================================
@@ -262,7 +278,7 @@ export const ConciliarStockSchema = z.object({
 export const CrearVentaDetalleSchema = z.object({
   productoId: z.number().int().positive(),
   unidad: UnidadSchema,
-  cantidad: z.number().int().positive(),
+  cantidad: z.number().int().min(0),
   precioUnitario: z.number().min(0, "Precio no puede ser negativo"),
   subtotal: z.number().min(0, "Subtotal no puede ser negativo"),
 });

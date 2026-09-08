@@ -45,53 +45,53 @@ describe("ServicioAuth", () => {
 
   describe("login", () => {
     it("debería retornar null si no hay usuarios", async () => {
-      const resultado = await servicio.login("123456");
+      const resultado = await servicio.login("384729");
       expect(resultado).toBeNull();
     });
 
     it("debería retornar null si el PIN es incorrecto", async () => {
-      const hash = await crearHashPin("123456");
+      const hash = await crearHashPin("384729");
       mockDb._pushWhereData([
         { id: 1, nombre: "Test", rol: "pastelera", pinHash: hash, activo: true },
       ]);
-      const resultado = await servicio.login("000000");
+      const resultado = await servicio.login("999988");
       expect(resultado).toBeNull();
     });
 
     it("debería retornar usuario si el PIN es correcto", async () => {
-      const hash = await crearHashPin("123456");
+      const hash = await crearHashPin("384729");
       mockDb._pushWhereData([
         { id: 1, nombre: "Test", rol: "pastelera", pinHash: hash, activo: true },
       ]);
-      const resultado = await servicio.login("123456");
+      const resultado = await servicio.login("384729");
       expect(resultado).not.toBeNull();
       expect(resultado).toEqual({ id: 1, nombre: "Test", rol: "pastelera" });
     });
 
     it("debería retornar solo id, nombre y rol (sin pinHash)", async () => {
-      const hash = await crearHashPin("123456");
+      const hash = await crearHashPin("384729");
       mockDb._pushWhereData([
         { id: 1, nombre: "Test", rol: "pastelera", pinHash: hash, activo: true },
       ]);
-      const resultado = await servicio.login("123456");
+      const resultado = await servicio.login("384729");
       expect(resultado).not.toHaveProperty("pinHash");
       expect(resultado).not.toHaveProperty("activo");
     });
 
     it("debería encontrar el usuario correcto entre múltiples", async () => {
-      const hashAdmin = await crearHashPin("111111");
-      const hashPastelera = await crearHashPin("222222");
+      const hashAdmin = await crearHashPin("334455");
+      const hashPastelera = await crearHashPin("667788");
       mockDb._pushWhereData([
         { id: 1, nombre: "Admin", rol: "administrador", pinHash: hashAdmin, activo: true },
         { id: 2, nombre: "Pastelera", rol: "pastelera", pinHash: hashPastelera, activo: true },
       ]);
-      const resultado = await servicio.login("222222");
+      const resultado = await servicio.login("667788");
       expect(resultado).toEqual({ id: 2, nombre: "Pastelera", rol: "pastelera" });
     });
 
     it("debería retornar null si el PIN no coincide con ningún usuario", async () => {
-      const hashAdmin = await crearHashPin("111111");
-      const hashPastelera = await crearHashPin("222222");
+      const hashAdmin = await crearHashPin("334455");
+      const hashPastelera = await crearHashPin("667788");
       mockDb._pushWhereData([
         { id: 1, nombre: "Admin", rol: "administrador", pinHash: hashAdmin, activo: true },
         { id: 2, nombre: "Pastelera", rol: "pastelera", pinHash: hashPastelera, activo: true },
@@ -109,7 +109,7 @@ describe("ServicioAuth", () => {
       const resultado = await servicio.crear({
         nombre: "Test User",
         rol: "pastelera",
-        pin: "123456",
+        pin: "384729",
       });
       expect(resultado).toBeDefined();
       expect(mockDb.insert).toHaveBeenCalled();
@@ -117,7 +117,7 @@ describe("ServicioAuth", () => {
 
     it("debería fallar con nombre vacío", async () => {
       await expect(
-        servicio.crear({ nombre: "", rol: "pastelera", pin: "123456" })
+        servicio.crear({ nombre: "", rol: "pastelera", pin: "384729" })
       ).rejects.toThrow();
     });
 

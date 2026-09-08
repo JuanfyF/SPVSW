@@ -10,7 +10,7 @@
  */
 
 import { PosDatabase, usuarios, pinResetLog, eq, sql } from "@pos/db";
-import { crearHashPin, verificarPin } from "@pos/shared";
+import { crearHashPin, verificarPin, esPinDebil } from "@pos/shared";
 import { CrearUsuarioInput, CrearUsuarioSchema, LoginSchema } from "@pos/shared";
 
 const PIN_TEMPORAL_EXPIRACION_MS = 24 * 60 * 60 * 1000; // 24 horas
@@ -19,7 +19,14 @@ const PIN_TEMPORALDigitos = 6;
 function generarPinAleatorio(): string {
   const min = Math.pow(10, PIN_TEMPORALDigitos - 1);
   const max = Math.pow(10, PIN_TEMPORALDigitos) - 1;
-  return String(Math.floor(Math.random() * (max - min + 1)) + min);
+  const range = max - min + 1;
+  let pin: string;
+  do {
+    const array = new Uint32Array(1);
+    crypto.getRandomValues(array);
+    pin = String((array[0] % range) + min);
+  } while (esPinDebil(pin));
+  return pin;
 }
 
 export function crearServicioAuth(db: PosDatabase) {

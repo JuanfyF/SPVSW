@@ -981,6 +981,8 @@ export interface PosAPI {
 
   // Eventos push del main process
   onCambio: (callback: () => void) => () => void;
+  onSesionExpirada: (callback: () => void) => () => void;
+  onUpdateProgress: (callback: (data: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => () => void;
 }
 
 declare global {

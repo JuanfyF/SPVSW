@@ -73,7 +73,7 @@ describe("ServicioUsuarios", () => {
       const resultado = await servicio.crear({
         nombre: "Nuevo",
         rol: "pastelera",
-        pin: "123456",
+        pin: "384729",
       });
       expect(resultado).toBeDefined();
       expect(mockDb.insert).toHaveBeenCalled();
@@ -84,15 +84,15 @@ describe("ServicioUsuarios", () => {
 
     it("debería hashear el PIN antes de guardar", async () => {
       mockDb.returning.mockResolvedValue([{ id: 1 }]);
-      await servicio.crear({ nombre: "Test", rol: "pastelera", pin: "123456" });
+      await servicio.crear({ nombre: "Test", rol: "pastelera", pin: "384729" });
       const valuesCall = mockDb.values.mock.calls[0][0];
-      expect(valuesCall.pinHash).not.toBe("123456");
+      expect(valuesCall.pinHash).not.toBe("384729");
       expect(valuesCall.pinHash).toBeTruthy();
     });
 
     it("debería fallar con nombre vacío", async () => {
       await expect(
-        servicio.crear({ nombre: "", rol: "pastelera", pin: "123456" })
+        servicio.crear({ nombre: "", rol: "pastelera", pin: "384729" })
       ).rejects.toThrow();
     });
 
@@ -110,7 +110,7 @@ describe("ServicioUsuarios", () => {
 
     it("debería fallar con rol inválido", async () => {
       await expect(
-        servicio.crear({ nombre: "Test", rol: "invalido" as any, pin: "123456" })
+        servicio.crear({ nombre: "Test", rol: "invalido" as any, pin: "384729" })
       ).rejects.toThrow();
     });
   });

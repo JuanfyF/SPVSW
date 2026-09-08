@@ -118,7 +118,7 @@ export default function Lista() {
   });
 
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString("es-EC", {
+    return new Date(fecha + "T12:00:00").toLocaleDateString("es-EC", {
       day: "2-digit",
       month: "short",
     });

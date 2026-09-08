@@ -19,7 +19,9 @@ export function crearMenuPrincipal() {
       submenu: [
         { role: "reload", label: "Recargar" },
         { role: "forceReload", label: "Forzar recarga" },
-        { role: "toggleDevTools", label: "Herramientas de desarrollo" },
+        ...(process.env.NODE_ENV !== "production"
+          ? [{ role: "toggleDevTools" as const, label: "Herramientas de desarrollo" }]
+          : []),
         { type: "separator" },
         { role: "resetZoom", label: "Restablecer zoom" },
         { role: "zoomIn", label: "Acercar" },

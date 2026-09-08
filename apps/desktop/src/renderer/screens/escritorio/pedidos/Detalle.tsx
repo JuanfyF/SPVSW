@@ -148,7 +148,7 @@ export default function Detalle() {
   };
 
   const formatearFecha = (fecha: string) => {
-    return new Date(fecha).toLocaleDateString("es-EC", {
+    return new Date(fecha + "T12:00:00").toLocaleDateString("es-EC", {
       weekday: "long",
       year: "numeric",
       month: "long",

@@ -754,7 +754,7 @@ export default function Reportes() {
                     {pedido.cliente}
                   </td>
                   <td className="p-4 text-on-surface">
-                    {new Date(pedido.fechaEntrega).toLocaleDateString("es-EC")}
+                    {new Date(pedido.fechaEntrega + "T12:00:00").toLocaleDateString("es-EC")}
                   </td>
                   <td className="p-4">
                     <span className="px-2 py-1 rounded-full text-caption bg-surface-container text-on-surface">

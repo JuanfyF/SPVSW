@@ -1450,3 +1450,160 @@ export async function generarPdfProductosTop(data: DatosProductosTop): Promise<v
   };
   pdfMake.createPdf(docDefinition).download(`Productos_Top_${now.toISOString().slice(0, 10)}.pdf`);
 }
+
+// ── PDF: Guía de Usuario ──────────────────────────────
+
+export async function generarGuiaUsuario(): Promise<void> {
+  const pdfMakeModule = await import("pdfmake/build/pdfmake");
+  const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
+  const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
+  const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
+  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
+
+  const h1 = (text: string) => ({ text, style: "h1", margin: [0, 15, 0, 8] as [number, number, number, number] });
+  const h2 = (text: string) => ({ text, style: "h2", margin: [0, 10, 0, 5] as [number, number, number, number] });
+  const p = (text: string) => ({ text, margin: [0, 0, 0, 5] as [number, number, number, number], fontSize: 10 });
+  const bullet = (text: string) => ({ text, margin: [15, 0, 0, 3] as [number, number, number, number], fontSize: 10, type: "bullet" });
+  const numbered = (text: string, n: number) => ({ text: `${n}. ${text}`, margin: [15, 0, 0, 3] as [number, number, number, number], fontSize: 10 });
+
+  const docDefinition: any = {
+    content: [
+      // Portada
+      { text: "Sweet Bakery", style: "title", margin: [0, 80, 0, 10] as [number, number, number, number] },
+      { text: "Guía de Usuario", style: "subtitle", margin: [0, 0, 0, 20] as [number, number, number, number] },
+      { text: "Sistema de Punto de Venta para Pastelería", fontSize: 12, color: "#666666", margin: [0, 0, 0, 5] as [number, number, number, number] },
+      { text: "Versión 1.0", fontSize: 10, color: "#888888" },
+
+      // Salto de página
+      { text: "", pageBreak: "before" },
+
+      // 1. Introducción
+      h1("1. Introducción"),
+      p("Sweet Bakery es un sistema de punto de venta diseñado específicamente para pastelerías artesanales. Permite gestionar ventas, pedidos, inventario, gastos y nómina de forma sencilla y confiable."),
+      p("Este sistema funciona sin conexión a internet. Los datos se almacenan localmente en su computadora."),
+
+      // 2. Primer Inicio de Sesión
+      h1("2. Primer Inicio de Sesión"),
+      p("Para acceder al sistema, ingrese su PIN de 6 dígitos en la pantalla de login."),
+      h2("Si es propietario o cajero:"),
+      p("Use la pantalla de escritorio. Ingrese su PIN con el teclado numérico o haciendo clic en los botones."),
+      h2("Si es pastelera:"),
+      p("Haga clic en '¿Eres pastelera? Accede aquí' en la pantalla de login. Use su PIN para entrar."),
+
+      // 3. Abrir Caja
+      h1("3. Abrir Caja"),
+      p("Antes de realizar cualquier venta, debe abrir la caja del día:"),
+      numbered("Ingrese a la sección 'Caja' en el menú lateral.", 1),
+      numbered("Haga clic en 'Abrir Caja'.", 2),
+      numbered("Ingrese el monto inicial de efectivo con el que comienza el día.", 3),
+      numbered("Confirme la apertura.", 4),
+      p("El sistema registrará la fecha y hora de apertura."),
+
+      // 4. Realizar Ventas
+      h1("4. Realizar Ventas"),
+      h2("Venta de Mostrador:"),
+      numbered("Vaya a 'Venta de Mostrador' en el menú.", 1),
+      numbered("Seleccione los productos que el cliente lleva.", 2),
+      numbered("Ingrese la cantidad de cada producto.", 3),
+      numbered("Confirme la venta.", 4),
+      numbered("Cobre al cliente (efectivo o transferencia).", 5),
+      p("El sistema descontará automáticamente del stock."),
+
+      // 5. Gestión de Pedidos
+      h1("5. Gestión de Pedidos"),
+      h2("Crear un Pedido:"),
+      numbered("Vaya a 'Pedidos' → 'Nuevo Pedido'.", 1),
+      numbered("Seleccione el cliente y los productos.", 2),
+      numbered("Ingrese el anticipo (obligatorio).", 3),
+      numbered("Confirme el pedido.", 4),
+      p("La pastelera verá el pedido en su pantalla y podrá actualizar su estado (en_proceso, listo)."),
+      h2("Entregar un Pedido:"),
+      numbered("Cuando el pedido esté listo, vaya a 'Pedidos'.", 1),
+      numbered("Busque el pedido y haga clic en 'Entregar'.", 2),
+      numbered("Cobre el saldo pendiente al cliente.", 3),
+
+      // 6. Control de Stock
+      h1("6. Control de Stock"),
+      p("El stock se gestiona por sesión de caja. Al abrir caja, registre el stock inicial de cada producto."),
+      h2("Registrar Reposición:"),
+      p("Vaya a 'Stock' y haga clic en 'Reponer'. Ingrese la cantidad agregada."),
+      h2("Registrar Merma:"),
+      p("Si un producto se dañó, regístrelo como merma con el motivo. Esto descuenta del stock."),
+      h2("Cortesía:"),
+      p("Si un producto se dio como cortesía, regístrelo. También descuenta del stock."),
+
+      // 7. Gastos
+      h1("7. Gastos"),
+      p("Para registrar un gasto operativo:"),
+      numbered("Vaya a 'Gastos' en el menú.", 1),
+      numbered("Haga clic en 'Nuevo Gasto'.", 2),
+      numbered("Seleccione la categoría (insumos, servicios, mantenimiento, otro).", 3),
+      numbered("Ingrese el monto y una descripción.", 4),
+      numbered("Indique el origen: 'Caja' (gasto general) o 'Pedidos' (gasto de un pedido específico).", 5),
+      numbered("Confirme.", 6),
+
+      // 8. Nómina
+      h1("8. Nómina"),
+      p("La nómina gestiona adelantos, multas y pagos a empleados."),
+      h2("Adelanto de Sueldo:"),
+      p("Registre un adelanto cuando un empleado reciba dinero por adelantado. Esto descuenta del pago mensual."),
+      h2("Multa:"),
+      p("Registre una multa como descuento contable. No mueve dinero de la caja, solo reduce el pago del empleado."),
+      h2("Pago Mensual:"),
+      p("Al final del mes, el sistema calcula: Salario - Adelantos del mes - Multas del mes = Neto a pagar."),
+
+      // 9. Reportes
+      h1("9. Reportes"),
+      p("Acceda a reportes desde el menú lateral:"),
+      bullet("Reporte Diario: Resumen del día actual (ventas, gastos, efectivo esperado)."),
+      bullet("Reporte por Fechas: Consulta histórica con filtros de fecha y cajero."),
+      bullet("Productos Más Vendidos: Análisis de popularidad de productos."),
+      p("Cada reporte se puede exportar como PDF o CSV."),
+
+      // 10. Cierre de Caja
+      h1("10. Cierre de Caja"),
+      p("Al finalizar la jornada, cierre la caja:"),
+      numbered("Vaya a 'Caja' → 'Cerrar Caja'.", 1),
+      numbered("El sistema mostrará un resumen: ventas, gastos, efectivo esperado.", 2),
+      numbered("Ingrese el efectivo contado físicamente.", 3),
+      numbered("El sistema calculará la diferencia (si la hay).", 4),
+      numbered("Confirme el cierre.", 5),
+      p("Si hay diferencia, quedará marcada como 'pendiente_revision'."),
+
+      // 11. Recuperación de PIN
+      h1("11. Recuperación de PIN"),
+      p("Si una empleada olvidó su PIN, el propietario puede restablecerlo:"),
+      numbered("En la pantalla de login, haga clic en '¿Olvidaste tu PIN?'.", 1),
+      numbered("Seleccione el nombre de la empleada.", 2),
+      numbered("Haga clic en 'Restablecer'.", 3),
+      numbered("Copia el PIN temporal y compártelo con la empleada.", 4),
+      p("El PIN temporal dura 24 horas. La empleada debe cambiarlo al entrar."),
+
+      // 12. Atajos de Teclado
+      h1("12. Atajos de Teclado"),
+      p("Atajos disponibles en la pantalla de login:"),
+      bullet("0-9: Ingresar dígito del PIN"),
+      bullet("Backspace: Borrar último dígito"),
+      bullet("Enter: Confirmar PIN"),
+      bullet("Esc: Cancelar"),
+    ],
+    styles: {
+      title: { fontSize: 28, bold: true, color: "#7D4A2E", alignment: "center" as const },
+      subtitle: { fontSize: 18, bold: true, color: "#D4849E", alignment: "center" as const },
+      h1: { fontSize: 16, bold: true, color: "#7D4A2E" },
+      h2: { fontSize: 13, bold: true, color: "#333333" },
+    },
+    defaultStyle: { fontSize: 10 },
+    pageSize: "A4",
+    pageOrientation: "portrait" as const,
+    footer: (currentPage: number, pageCount: number) => ({
+      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — Guía de Usuario`,
+      alignment: "center" as const,
+      fontSize: 8,
+      color: "#888888",
+      margin: [0, 10, 0, 0] as [number, number, number, number],
+    }),
+  };
+
+  pdfMake.createPdf(docDefinition).download("Guia_Usuario_Sweet_Bakery.pdf");
+}

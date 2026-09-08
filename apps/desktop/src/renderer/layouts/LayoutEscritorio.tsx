@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
 import {
@@ -14,6 +14,7 @@ import {
   HardDrive,
   HelpCircle,
 } from "lucide-react";
+import Onboarding, { shouldShowOnboarding } from "../components/Onboarding";
 
 const menuItemsAdmin = [
   { path: "/", label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -84,7 +85,13 @@ export default function LayoutEscritorio() {
     return removeListener;
   }, [logout, navigate]);
 
+  const [mostrarOnboarding, setMostrarOnboarding] = useState(() => shouldShowOnboarding());
+
   if (!usuario) return null;
+
+  if (mostrarOnboarding) {
+    return <Onboarding onComplete={() => setMostrarOnboarding(false)} />;
+  }
 
   const handleLogout = async () => {
     await window.pos.auth.logout();

@@ -3,8 +3,14 @@ productName: Sweet Bakery
 directories:
   output: release
   buildResources: build
-asar: false
+asar: true
+asarUnpack:
+  - "**/*.node"
 npmRebuild: false
+publish:
+  provider: github
+  owner: JuanfyF
+  repo: SPVSW
 files:
   - dist-electron/**/*
   - dist/**/*
@@ -35,5 +41,6 @@ mac:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  allowElevation: true
   installerIcon: public/icon.png
   uninstallerIcon: public/icon.png

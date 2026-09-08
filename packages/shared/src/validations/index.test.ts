@@ -17,7 +17,7 @@ describe("Validaciones Zod", () => {
       const resultado = CrearUsuarioSchema.safeParse({
         nombre: "Test User",
         rol: "pastelera",
-        pin: "123456",
+        pin: "384729",
       });
       expect(resultado.success).toBe(true);
     });
@@ -26,7 +26,7 @@ describe("Validaciones Zod", () => {
       const resultado = CrearUsuarioSchema.safeParse({
         nombre: "Test",
         rol: "pastelera",
-        pin: "1234",
+        pin: "3847",
       });
       expect(resultado.success).toBe(true);
     });
@@ -35,7 +35,7 @@ describe("Validaciones Zod", () => {
       const resultado = CrearUsuarioSchema.safeParse({
         nombre: "Test",
         rol: "pastelera",
-        pin: "123456",
+        pin: "384729",
       });
       expect(resultado.success).toBe(true);
     });
@@ -80,7 +80,7 @@ describe("Validaciones Zod", () => {
       const resultado = CrearUsuarioSchema.safeParse({
         nombre: "",
         rol: "pastelera",
-        pin: "123456",
+        pin: "384729",
       });
       expect(resultado.success).toBe(false);
     });
@@ -89,7 +89,7 @@ describe("Validaciones Zod", () => {
       const resultado = CrearUsuarioSchema.safeParse({
         nombre: "   ",
         rol: "pastelera",
-        pin: "123456",
+        pin: "384729",
       });
       expect(resultado.success).toBe(false);
     });
@@ -98,7 +98,7 @@ describe("Validaciones Zod", () => {
       const resultado = CrearUsuarioSchema.safeParse({
         nombre: "Test",
         rol: "invalido",
-        pin: "123456",
+        pin: "384729",
       });
       expect(resultado.success).toBe(false);
     });
@@ -107,7 +107,7 @@ describe("Validaciones Zod", () => {
       const resultado = CrearUsuarioSchema.safeParse({
         nombre: "Admin",
         rol: "propietario",
-        pin: "123456",
+        pin: "384729",
       });
       expect(resultado.success).toBe(true);
     });
@@ -116,7 +116,7 @@ describe("Validaciones Zod", () => {
       const resultado = CrearUsuarioSchema.safeParse({
         nombre: "Cajero",
         rol: "cajero",
-        pin: "123456",
+        pin: "384729",
       });
       expect(resultado.success).toBe(true);
     });

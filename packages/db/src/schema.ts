@@ -54,6 +54,16 @@ export const pinResetLog = sqliteTable("pin_reset_log", {
   ...camposAuditoria,
 });
 
+// Log de auditoría de seguridad
+export const auditLog = sqliteTable("audit_log", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  evento: text("evento").notNull(), // login_exitoso, login_fallido, permiso_denegado, pin_reset, backup, restore
+  usuarioId: integer("usuario_id").references(() => usuarios.id),
+  detalle: text("detalle"), // JSON adicional
+  origen: text("origen").notNull().default("desktop"), // 'desktop' o IP del cliente
+  createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
+});
+
 /* ============================================================
    2. PRODUCTOS
    ============================================================ */

@@ -210,4 +210,11 @@ contextBridge.exposeInMainWorld("pos", {
       ipcRenderer.removeListener("sesion:expirada", callback);
     };
   },
+  onUpdateProgress: (callback: (data: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on("update:progress", handler);
+    return () => {
+      ipcRenderer.removeListener("update:progress", handler);
+    };
+  },
 });

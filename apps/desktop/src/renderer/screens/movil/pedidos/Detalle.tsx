@@ -195,7 +195,7 @@ export default function Detalle() {
           <div className="flex justify-between">
             <span className="text-on-surface-variant">Entrega:</span>
             <span className="text-on-surface">
-              {new Date(pedido.fechaEntrega).toLocaleDateString("es-EC", {
+              {new Date(pedido.fechaEntrega + "T12:00:00").toLocaleDateString("es-EC", {
                 weekday: "long",
                 day: "numeric",
                 month: "long",

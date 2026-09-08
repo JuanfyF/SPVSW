@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain } from "electron";
 import path from "node:path";
 import { randomInt } from "node:crypto";
 import { crearMenuPrincipal, setVentanaPrincipal } from "./menu";
+import { setupAutoUpdater } from "./updater";
 
 // Desactivar aceleración de hardware y GPU
 process.env.ELECTRON_DISABLE_GPU = "1";
@@ -12,7 +13,7 @@ app.commandLine.appendSwitch("ozone-platform=x11");
 app.commandLine.appendSwitch("in-process-gpu");
 app.commandLine.appendSwitch("no-sandbox");
 import { createDb, createDbWithSqlite, migrate, eq } from "@pos/db";
-import { usuarios } from "@pos/db";
+import { usuarios, auditLog } from "@pos/db";
 import { crearHashPin } from "@pos/shared";
 import { startLocalServer } from "@pos/local-server";
 import {
@@ -76,6 +77,28 @@ function safeHandler<T extends (...args: any[]) => Promise<any>>(fn: T): T {
   }) as T;
 }
 
+function requireAuth(): void {
+  if (!usuarioActual) {
+    throw new Error("Sesión no válida. Inicie sesión nuevamente.");
+  }
+}
+
+function requireAdmin(): void {
+  requireAuth();
+  if (usuarioActual!.rol !== "propietario") {
+    // Log de auditoría para denegación de permisos
+    try {
+      db?.insert(auditLog).values({
+        evento: "permiso_denegado",
+        usuarioId: usuarioActual!.id,
+        detalle: JSON.stringify({ rol: usuarioActual!.rol }),
+        origen: "desktop",
+      });
+    } catch { /* audit logging es best-effort */ }
+    throw new Error("No tiene permisos para realizar esta acción.");
+  }
+}
+
 function registrarHandlers() {
   if (!servicios) throw new Error("Servicios no inicializados");
 
@@ -85,18 +108,80 @@ function registrarHandlers() {
   });
 
   // ============================================================
+  // RATE LIMITING — Desktop login
+  // ============================================================
+  const intentosLogin = new Map<string, { count: number; resetAt: number }>();
+  const MAX_INTENTOS = 5;
+  const VENTANA_MS = 15 * 60 * 1000; // 15 minutos
+
+  function verificarRateLimitDesktop(clave: string): { permitido: boolean; restantes: number } {
+    const ahora = Date.now();
+    const datos = intentosLogin.get(clave);
+
+    if (!datos || ahora > datos.resetAt) {
+      intentosLogin.set(clave, { count: 1, resetAt: ahora + VENTANA_MS });
+      return { permitido: true, restantes: MAX_INTENTOS - 1 };
+    }
+
+    if (datos.count >= MAX_INTENTOS) {
+      return { permitido: false, restantes: 0 };
+    }
+
+    datos.count++;
+    return { permitido: true, restantes: MAX_INTENTOS - datos.count };
+  }
+
+  // Limpiar entradas expiradas cada 5 minutos
+  setInterval(() => {
+    const ahora = Date.now();
+    for (const [clave, datos] of intentosLogin.entries()) {
+      if (ahora > datos.resetAt) {
+        intentosLogin.delete(clave);
+      }
+    }
+  }, 5 * 60 * 1000);
+
+  // ============================================================
   // AUTH
   // ============================================================
   ipcMain.handle("auth:login", async (_event, pin: string, rol?: string) => {
+    const { permitido, restantes } = verificarRateLimitDesktop("desktop");
+
+    if (!permitido) {
+      throw new Error("Demasiados intentos. Espere 15 minutos.");
+    }
+
     const usuario = await servicios!.auth.login(pin);
 
+    if (!usuario) {
+      // Log de intento fallido
+      try {
+        db?.insert(auditLog).values({
+          evento: "login_fallido",
+          detalle: JSON.stringify({ intentosRestantes: restantes }),
+          origen: "desktop",
+        });
+      } catch { /* audit logging es best-effort */ }
+      throw new Error(`PIN incorrecto. Intentos restantes: ${restantes}`);
+    }
+
     // Filtrar por rol si se especifica (AGENT.md 5.1 — defensa en profundidad)
-    if (rol && usuario && usuario.rol !== rol) {
+    if (rol && usuario.rol !== rol) {
       return { usuario: null, sesionAbierta: null };
     }
 
     usuarioActual = usuario;
     reiniciarTimeoutSesion();
+
+    // Log de login exitoso
+    try {
+      db?.insert(auditLog).values({
+        evento: "login_exitoso",
+        usuarioId: usuario.id,
+        detalle: JSON.stringify({ nombre: usuario.nombre, rol: usuario.rol }),
+        origen: "desktop",
+      });
+    } catch { /* audit logging es best-effort */ }
 
     // Si hay sesión de caja abierta, devolverla junto con el usuario
     let sesionAbierta = null;
@@ -122,38 +207,54 @@ function registrarHandlers() {
 
   ipcMain.handle("auth:restablecerPin", safeHandler(async (_event, usuarioId: number) => {
     if (!usuarioActual) throw new Error("No hay usuario logueado");
-    return servicios!.auth.restablecerPin(usuarioId, usuarioActual.id);
+    const resultado = await servicios!.auth.restablecerPin(usuarioId, usuarioActual.id);
+    // Log de auditoría
+    try {
+      db?.insert(auditLog).values({
+        evento: "pin_reset",
+        usuarioId: usuarioActual.id,
+        detalle: JSON.stringify({ usuarioResetId: usuarioId, nombre: resultado.nombre }),
+        origen: "desktop",
+      });
+    } catch { /* audit logging es best-effort */ }
+    return resultado;
   }));
 
   // ============================================================
   // USUARIOS
   // ============================================================
   ipcMain.handle("usuarios:listar", async () => {
+    requireAdmin();
     return servicios!.usuarios.listar();
   });
 
   ipcMain.handle("usuarios:obtenerPorId", async (_event, id: number) => {
+    requireAdmin();
     return servicios!.usuarios.obtenerPorId(id);
   });
 
   ipcMain.handle("usuarios:crear", safeHandler(async (_event, datos: unknown) => {
+    requireAdmin();
     return servicios!.usuarios.crear(datos as any);
   }));
 
   ipcMain.handle(
     "usuarios:actualizar",
     async (_event, id: number, datos: unknown) => {
+      requireAdmin();
       return servicios!.usuarios.actualizar(id, datos as any);
     }
   );
 
   ipcMain.handle("usuarios:desactivar", async (_event, id: number) => {
+    requireAdmin();
     return servicios!.usuarios.desactivar(id);
   });
 
   ipcMain.handle(
     "usuarios:cambiarPin",
     safeHandler(async (_event, id: number, nuevoPin: string) => {
+      requireAdmin();
       return servicios!.usuarios.cambiarPin(id, nuevoPin);
     })
   );
@@ -162,25 +263,30 @@ function registrarHandlers() {
   // EMPLEADOS
   // ============================================================
   ipcMain.handle("empleados:listar", async () => {
+    requireAuth();
     return servicios!.empleados.listar();
   });
 
   ipcMain.handle("empleados:obtenerPorId", async (_event, id: number) => {
+    requireAuth();
     return servicios!.empleados.obtenerPorId(id);
   });
 
   ipcMain.handle("empleados:crear", async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.empleados.crear(datos as any);
   });
 
   ipcMain.handle(
     "empleados:actualizar",
     async (_event, id: number, datos: unknown) => {
+      requireAuth();
       return servicios!.empleados.actualizar(id, datos as any);
     }
   );
 
   ipcMain.handle("empleados:desactivar", async (_event, id: number) => {
+    requireAuth();
     return servicios!.empleados.desactivar(id);
   });
 
@@ -188,29 +294,35 @@ function registrarHandlers() {
   // PRODUCTOS
   // ============================================================
   ipcMain.handle("productos:listar", async () => {
+    requireAuth();
     return servicios!.productos.listar();
   });
 
   ipcMain.handle("productos:obtenerPorId", async (_event, id: number) => {
+    requireAuth();
     return servicios!.productos.obtenerPorId(id);
   });
 
   ipcMain.handle("productos:crear", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.productos.crear(datos as any);
   }));
 
   ipcMain.handle(
     "productos:actualizar",
     safeHandler(async (_event, id: number, datos: unknown) => {
+      requireAuth();
       return servicios!.productos.actualizar(id, datos as any);
     })
   );
 
   ipcMain.handle("productos:desactivar", async (_event, id: number) => {
+    requireAuth();
     return servicios!.productos.desactivar(id);
   });
 
   ipcMain.handle("productos:buscar", async (_event, nombre: string) => {
+    requireAuth();
     return servicios!.productos.buscar(nombre);
   });
 
@@ -218,12 +330,14 @@ function registrarHandlers() {
   // CAJA
   // ============================================================
   ipcMain.handle("caja:abrir", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     const resultado = await servicios!.caja.abrir(datos as any);
     mainWindow?.webContents.send("data:cambio");
     return resultado;
   }));
 
   ipcMain.handle("caja:cerrar", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     const resultado = await servicios!.caja.cerrar(datos as any);
     mainWindow?.webContents.send("data:cambio");
     return resultado;
@@ -232,6 +346,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "caja:obtenerSesionAbierta",
     async (_event, usuarioId: number) => {
+      requireAuth();
       return servicios!.caja.obtenerSesionAbierta(usuarioId);
     }
   );
@@ -239,6 +354,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "caja:calcularEfectivoEsperado",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.caja.calcularEfectivoEsperado(sesionCajaId);
     }
   );
@@ -246,6 +362,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "caja:obtenerTotalDevoluciones",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.caja.obtenerTotalDevoluciones(sesionCajaId);
     }
   );
@@ -253,6 +370,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "caja:forzarCierre",
     async (_event, sesionCajaId: number, usuarioId: number) => {
+      requireAuth();
       return servicios!.caja.forzarCierre(sesionCajaId, usuarioId);
     }
   );
@@ -260,6 +378,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "caja:marcarRevisado",
     async (_event, cierreCajaId: number, usuarioId: number) => {
+      requireAuth();
       return servicios!.caja.marcarRevisado(cierreCajaId, usuarioId);
     }
   );
@@ -268,35 +387,42 @@ function registrarHandlers() {
   // STOCK
   // ============================================================
   ipcMain.handle("stock:registrarStock", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.stock.registrarStock(datos as any);
   }));
 
   ipcMain.handle(
     "stock:registrarReposicion",
     safeHandler(async (_event, productoId: number, sesionCajaId: number, cantidad: number, unidad?: "entero" | "porcion") => {
+      requireAuth();
       return servicios!.stock.registrarReposicion(productoId, sesionCajaId, cantidad, unidad);
     })
   );
 
   ipcMain.handle("stock:registrarCorte", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.stock.registrarCorte(datos as any);
   }));
 
   ipcMain.handle("stock:calcularAjusteCortesLote", async (_event, sesionCajaId: number) => {
+    requireAuth();
     return servicios!.stock.calcularAjusteCortesLote(sesionCajaId);
   });
 
   ipcMain.handle("stock:registrarMerma", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.stock.registrarMerma(datos as any);
   }));
 
   ipcMain.handle("stock:registrarCortesia", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.stock.registrarCortesia(datos as any);
   }));
 
   ipcMain.handle(
     "stock:obtenerStockPorSesion",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.stock.obtenerStockPorSesion(sesionCajaId);
     }
   );
@@ -304,6 +430,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "stock:listarMermasPorSesion",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.stock.listarMermasPorSesion(sesionCajaId);
     }
   );
@@ -311,6 +438,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "stock:listarCortesiasPorSesion",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.stock.listarCortesiasPorSesion(sesionCajaId);
     }
   );
@@ -318,6 +446,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "stock:conciliarStock",
     safeHandler(async (_event, sesionCajaId: number, conteoFisicoPorProducto: unknown[]) => {
+      requireAuth();
       return servicios!.stock.conciliarStock(
         sesionCajaId,
         conteoFisicoPorProducto as any
@@ -328,6 +457,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "stock:calcularVendido",
     async (_event, productoId: number, sesionCajaId: number, unidad?: string) => {
+      requireAuth();
       return servicios!.stock.calcularVendidoPorSesion(productoId, sesionCajaId, unidad);
     }
   );
@@ -335,6 +465,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "stock:calcularVendidoLote",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.stock.calcularVendidoLote(sesionCajaId);
     }
   );
@@ -342,6 +473,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "stock:verificarDisponibilidad",
     async (_event, productoId: number, sesionCajaId: number, unidad: "entero" | "porcion", cantidadRequerida: number) => {
+      requireAuth();
       return servicios!.stock.verificarDisponibilidad(productoId, sesionCajaId, unidad, cantidadRequerida);
     }
   );
@@ -350,6 +482,7 @@ function registrarHandlers() {
   // VENTAS
   // ============================================================
   ipcMain.handle("ventas:crear", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     const resultado = await servicios!.ventas.crear(datos as any);
     mainWindow?.webContents.send("data:cambio");
     return resultado;
@@ -358,15 +491,18 @@ function registrarHandlers() {
   ipcMain.handle(
     "ventas:listarPorSesion",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.ventas.listarPorSesion(sesionCajaId);
     }
   );
 
   ipcMain.handle("ventas:obtenerDetalle", async (_event, ventaId: number) => {
+    requireAuth();
     return servicios!.ventas.obtenerDetalle(ventaId);
   });
 
   ipcMain.handle("ventas:obtenerPorId", async (_event, id: number) => {
+    requireAuth();
     return servicios!.ventas.obtenerPorId(id);
   });
 
@@ -374,16 +510,19 @@ function registrarHandlers() {
   // PEDIDOS
   // ============================================================
   ipcMain.handle("pedidos:crear", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.pedidos.crear(datos as any);
   }));
 
   ipcMain.handle("pedidos:marcarListo", async (_event, pedidoId: number) => {
+    requireAuth();
     return servicios!.pedidos.marcarListo(pedidoId);
   });
 
   ipcMain.handle(
     "pedidos:actualizarEstado",
     async (_event, pedidoId: number, nuevoEstado: "pendiente" | "en_proceso" | "listo" | "entregado" | "cancelado") => {
+      requireAuth();
       return servicios!.pedidos.actualizarEstado(pedidoId, nuevoEstado);
     }
   );
@@ -396,6 +535,7 @@ function registrarHandlers() {
       sesionCajaEntregaId: number,
       metodoPagoSaldo?: string
     ) => {
+      requireAuth();
       // Obtener pedido para calcular saldo ANTES de entregar
       const pedido = await servicios!.pedidos.obtenerPorId(pedidoId);
       if (!pedido) throw new Error("Pedido no encontrado");
@@ -414,12 +554,14 @@ function registrarHandlers() {
       );
 
       // Detalles del pedido para la venta de saldo
+      // IMPORTANTE: cantidad=0 para que no impacte el stock disponible.
+      // Los pedidos de tipo producto no dependen del stock diario.
       const detallesValidos = detalles
         .filter((d) => d.productoId !== null)
         .map((d) => ({
           productoId: d.productoId!,
           unidad: ((d as any).unidad as "entero" | "porcion") || "entero",
-          cantidad: d.cantidad,
+          cantidad: 0, // No impactar stock
           precioUnitario: d.precioUnitario,
           subtotal: d.subtotal,
         }));
@@ -461,6 +603,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "pedidos:revertirEntrega",
     safeHandler(async (_event, pedidoId: number) => {
+      requireAuth();
       await servicios!.pedidos.revertirEntrega(pedidoId);
       return { exito: true };
     })
@@ -476,6 +619,7 @@ function registrarHandlers() {
       registradoPor: number,
       sesionCajaDevolucionId?: number
     ) => {
+      requireAuth();
       return servicios!.pedidos.cancelar(
         pedidoId,
         motivo,
@@ -487,20 +631,24 @@ function registrarHandlers() {
   );
 
   ipcMain.handle("pedidos:listarPorEstado", async (_event, estado: string) => {
+    requireAuth();
     return servicios!.pedidos.listarPorEstado(estado);
   });
 
   ipcMain.handle("pedidos:listarActivos", async () => {
+    requireAuth();
     return servicios!.pedidos.listarActivos();
   });
 
   ipcMain.handle("pedidos:listarTodos", async () => {
+    requireAuth();
     return servicios!.pedidos.listarTodos();
   });
 
   ipcMain.handle(
     "pedidos:listarPorSesionAnticipo",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.pedidos.listarPorSesionAnticipo(sesionCajaId);
     }
   );
@@ -508,19 +656,23 @@ function registrarHandlers() {
   ipcMain.handle(
     "pedidos:listarPorFecha",
     async (_event, fechaInicio: string, fechaFin: string) => {
+      requireAuth();
       return servicios!.pedidos.listarPorFecha(fechaInicio, fechaFin);
     }
   );
 
   ipcMain.handle("pedidos:obtenerPorId", async (_event, id: number) => {
+    requireAuth();
     return servicios!.pedidos.obtenerPorId(id);
   });
 
   ipcMain.handle("pedidos:obtenerDetalle", async (_event, pedidoId: number) => {
+    requireAuth();
     return servicios!.pedidos.obtenerDetalle(pedidoId);
   });
 
   ipcMain.handle("pedidos:obtenerResumen", async (_event, pedidoId: number) => {
+    requireAuth();
     return servicios!.pedidos.obtenerResumen(pedidoId);
   });
 
@@ -528,6 +680,7 @@ function registrarHandlers() {
   // GASTOS
   // ============================================================
   ipcMain.handle("gastos:crear", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     const resultado = await servicios!.gastos.crear(datos as any);
     mainWindow?.webContents.send("data:cambio");
     return resultado;
@@ -536,6 +689,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "gastos:listarPorSesion",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.gastos.listarPorSesion(sesionCajaId);
     }
   );
@@ -543,6 +697,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "gastos:listarPorCategoria",
     async (_event, categoriaId: number, sesionCajaId?: number) => {
+      requireAuth();
       return servicios!.gastos.listarPorCategoria(categoriaId, sesionCajaId);
     }
   );
@@ -550,15 +705,18 @@ function registrarHandlers() {
   ipcMain.handle(
     "gastos:obtenerTotalPorOrigen",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.gastos.obtenerTotalPorOrigen(sesionCajaId);
     }
   );
 
   ipcMain.handle("gastos:listarCategorias", async () => {
+    requireAuth();
     return servicios!.gastos.listarCategorias();
   });
 
   ipcMain.handle("gastos:crearCategoria", safeHandler(async (_event, nombre: string) => {
+    requireAuth();
     return servicios!.gastos.crearCategoria(nombre);
   }));
 
@@ -566,16 +724,19 @@ function registrarHandlers() {
   // NÓMINA
   // ============================================================
   ipcMain.handle("nomina:registrarAdelanto", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.nomina.registrarAdelanto(datos as any);
   }));
 
   ipcMain.handle("nomina:registrarMulta", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.nomina.registrarMulta(datos as any);
   }));
 
   ipcMain.handle(
     "nomina:listarAdelantosPorEmpleado",
     async (_event, empleadoId: number) => {
+      requireAuth();
       return servicios!.nomina.listarAdelantosPorEmpleado(empleadoId);
     }
   );
@@ -583,6 +744,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "nomina:listarAdelantosPorSesion",
     async (_event, sesionCajaId: number) => {
+      requireAuth();
       return servicios!.nomina.listarAdelantosPorSesion(sesionCajaId);
     }
   );
@@ -590,6 +752,7 @@ function registrarHandlers() {
   ipcMain.handle(
     "nomina:listarMultasPorEmpleado",
     async (_event, empleadoId: number) => {
+      requireAuth();
       return servicios!.nomina.listarMultasPorEmpleado(empleadoId);
     }
   );
@@ -597,15 +760,18 @@ function registrarHandlers() {
   ipcMain.handle(
     "nomina:calcularDescuentosMes",
     async (_event, empleadoId: number, mes: string) => {
+      requireAuth();
       return servicios!.nomina.calcularDescuentosMes(empleadoId, mes);
     }
   );
 
   ipcMain.handle("nomina:listarEmpleadosActivos", async () => {
+    requireAuth();
     return servicios!.nomina.listarEmpleadosActivos();
   });
 
   ipcMain.handle("nomina:crearEmpleado", safeHandler(async (_event, datos: unknown) => {
+    requireAuth();
     return servicios!.nomina.crearEmpleado(datos as any);
   }));
 
@@ -613,12 +779,14 @@ function registrarHandlers() {
   // REPORTES
   // ============================================================
   ipcMain.handle("reportes:reporteDiario", async (_event, fecha: string) => {
+    requireAuth();
     return servicios!.reportes.reporteDiario(fecha);
   });
 
   ipcMain.handle(
     "reportes:reportePorFechas",
     async (_event, fechaInicio: string, fechaFin: string) => {
+      requireAuth();
       return servicios!.reportes.reportePorFechas(fechaInicio, fechaFin);
     }
   );
@@ -626,17 +794,20 @@ function registrarHandlers() {
   ipcMain.handle(
     "reportes:listarCierresPorRango",
     async (_event, fechaInicio: string, fechaFin: string) => {
+      requireAuth();
       return servicios!.reportes.listarCierresPorRango(fechaInicio, fechaFin);
     }
   );
 
   ipcMain.handle("reportes:reportePedidosPendientes", async () => {
+    requireAuth();
     return servicios!.reportes.reportePedidosPendientes();
   });
 
   ipcMain.handle(
     "reportes:reporteProductosMasVendidos",
     async (_event, fechaInicio: string, fechaFin: string) => {
+      requireAuth();
       return servicios!.reportes.reporteProductosMasVendidos(fechaInicio, fechaFin);
     }
   );
@@ -655,8 +826,10 @@ function registrarHandlers() {
   ipcMain.handle(
     "sistema:backup",
     safeHandler(async (_event, rutaDestino: string) => {
+      requireAdmin();
       if (!db) throw new Error("Base de datos no inicializada");
       const fs = await import("fs");
+      const crypto = await import("crypto");
       const os = await import("os");
       const currentDbPath = path.join(app.getPath("userData"), "pos.sqlite");
       const walPath = currentDbPath + "-wal";
@@ -694,14 +867,32 @@ function registrarHandlers() {
         fs.copyFileSync(shmPath, rutaResuelta + "-shm");
       }
 
-      return { ok: true, ruta: rutaResuelta };
+      // Calcular SHA-256 del backup para verificación de integridad
+      const hash = crypto.createHash("sha256");
+      hash.update(fs.readFileSync(rutaResuelta));
+      const sha256 = hash.digest("hex");
+      fs.writeFileSync(rutaResuelta + ".sha256", sha256);
+
+      // Log de auditoría
+      try {
+        db?.insert(auditLog).values({
+          evento: "backup",
+          usuarioId: usuarioActual?.id,
+          detalle: JSON.stringify({ ruta: rutaResuelta, sha256 }),
+          origen: "desktop",
+        });
+      } catch { /* audit logging es best-effort */ }
+
+      return { ok: true, ruta: rutaResuelta, sha256 };
     })
   );
 
   ipcMain.handle(
     "sistema:restore",
     safeHandler(async (_event, rutaBackup: string) => {
+      requireAdmin();
       const fs = await import("fs");
+      const crypto = await import("crypto");
       const currentDbPath = path.join(app.getPath("userData"), "pos.sqlite");
       const walPath = currentDbPath + "-wal";
       const shmPath = currentDbPath + "-shm";
@@ -724,6 +915,18 @@ function registrarHandlers() {
       // Verificar que el backup existe
       if (!fs.existsSync(rutaResuelta)) {
         throw new Error("El archivo de backup no existe");
+      }
+
+      // Verificar integridad SHA-256 si existe archivo de hash
+      const rutaSha256 = rutaResuelta + ".sha256";
+      if (fs.existsSync(rutaSha256)) {
+        const hashAlmacenado = fs.readFileSync(rutaSha256, "utf-8").trim();
+        const hashCalc = crypto.createHash("sha256");
+        hashCalc.update(fs.readFileSync(rutaResuelta));
+        const sha256Calculado = hashCalc.digest("hex");
+        if (hashAlmacenado !== sha256Calculado) {
+          throw new Error("El backup está corrupto o fue manipulado (SHA-256 no coincide).");
+        }
       }
 
       // Cerrar conexión actual
@@ -749,6 +952,16 @@ function registrarHandlers() {
       const { db: newDb } = createDbFn(currentDbPath);
       db = newDb;
 
+      // Log de auditoría
+      try {
+        db?.insert(auditLog).values({
+          evento: "restore",
+          usuarioId: usuarioActual?.id,
+          detalle: JSON.stringify({ ruta: rutaResuelta }),
+          origen: "desktop",
+        });
+      } catch { /* audit logging es best-effort */ }
+
       return { ok: true };
     })
   );
@@ -763,6 +976,18 @@ async function crearVentanaPrincipal() {
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // Content Security Policy (CSP) — OWASP A05
+  mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        "Content-Security-Policy": [
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:*"
+        ],
+      },
+    });
   });
 
   setVentanaPrincipal(mainWindow);
@@ -846,6 +1071,11 @@ app.whenReady().then(async () => {
   startLocalServer({ port: 3000, db });
 
   await crearVentanaPrincipal();
+
+  // Configurar auto-updater (solo en producción)
+  if (mainWindow) {
+    setupAutoUpdater(mainWindow);
+  }
 });
 
 app.on("window-all-closed", () => {

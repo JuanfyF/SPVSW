@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
 import {
@@ -7,6 +7,7 @@ import {
   Package,
   User,
 } from "lucide-react";
+import Onboarding, { shouldShowOnboarding } from "../components/Onboarding";
 
 const menuItemsAdmin = [
   { path: "/movil", label: "Inicio", icon: <Home className="w-5 h-5" /> },
@@ -49,7 +50,13 @@ export default function LayoutMovil() {
     return removeListener;
   }, [logout, navigate]);
 
+  const [mostrarOnboarding, setMostrarOnboarding] = useState(() => shouldShowOnboarding());
+
   if (!usuario) return null;
+
+  if (mostrarOnboarding) {
+    return <Onboarding onComplete={() => setMostrarOnboarding(false)} />;
+  }
 
   const menuItems = usuario.rol === "pastelera" ? menuItemsPastelera : menuItemsAdmin;
 

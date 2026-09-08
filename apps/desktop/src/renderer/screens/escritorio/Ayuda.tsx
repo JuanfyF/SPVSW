@@ -1,4 +1,5 @@
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Download } from "lucide-react";
+import { generarGuiaUsuario } from "@pos/shared";
 
 export default function Ayuda() {
   return (
@@ -15,6 +16,13 @@ export default function Ayuda() {
           Sistema de Punto de Venta para pastelería artesanal.
           Gestión de ventas, pedidos, inventario, gastos y nómina.
         </p>
+        <button
+          onClick={() => generarGuiaUsuario()}
+          className="mt-4 flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-xl hover:bg-primary/90 transition-colors text-sm font-medium"
+        >
+          <Download className="w-4 h-4" />
+          Descargar guía de usuario (PDF)
+        </button>
       </section>
 
       {/* Por rol */}
