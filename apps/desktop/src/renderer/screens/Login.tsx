@@ -178,12 +178,13 @@ export default function Login() {
         )}
 
         {/* Numeric keypad */}
-        <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto">
+        <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto" role="group" aria-label="Teclado numérico para PIN">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
             <button
               key={num}
               onClick={() => handleKeyPress(num.toString())}
               disabled={loading}
+              aria-label={`Dígito ${num}`}
               className="h-14 text-xl font-semibold text-on-surface bg-surface-container hover:bg-surface-container-high rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {num}
@@ -192,6 +193,7 @@ export default function Login() {
           <button
             onClick={handleDelete}
             disabled={loading}
+            aria-label="Borrar último dígito"
             className="h-14 text-lg text-on-surface-variant hover:text-on-surface disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ←
@@ -199,6 +201,7 @@ export default function Login() {
           <button
             onClick={() => handleKeyPress("0")}
             disabled={loading}
+            aria-label="Dígito 0"
             className="h-14 text-xl font-semibold text-on-surface bg-surface-container hover:bg-surface-container-high rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             0

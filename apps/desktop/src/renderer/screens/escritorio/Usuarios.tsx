@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
-import { Users } from "lucide-react";
+import { Users, Search } from "lucide-react";
 
 interface Usuario {
   id: number;
@@ -44,6 +44,7 @@ export default function Usuarios() {
   const [modalError, setModalError] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [busqueda, setBusqueda] = useState("");
 
   // Modal cambiar PIN
   const [modalPin, setModalPin] = useState(false);
@@ -57,6 +58,16 @@ export default function Usuarios() {
   const [usuarioDesactivar, setUsuarioDesactivar] = useState<Usuario | null>(null);
 
   const adminsActivos = usuarios.filter((u) => esRolAdmin(u.rol) && u.activo).length;
+
+  const usuariosFiltrados = useMemo(() => {
+    if (!busqueda.trim()) return usuarios;
+    const q = busqueda.toLowerCase();
+    return usuarios.filter(
+      (u) =>
+        u.nombre.toLowerCase().includes(q) ||
+        u.rol.toLowerCase().includes(q)
+    );
+  }, [usuarios, busqueda]);
 
   useEffect(() => {
     cargarUsuarios();
@@ -186,14 +197,27 @@ export default function Usuarios() {
           <h1 className="text-2xl font-bold text-on-surface">Usuarios</h1>
           <p className="text-on-surface-variant mt-1">Gestiona los PINs de acceso al sistema</p>
         </div>
-        {esAdmin && (
-          <button
-            onClick={() => setModalCrear(true)}
-            className="px-6 py-3 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors font-medium"
-          >
-            + Nuevo Usuario
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
+            <input
+              type="text"
+              placeholder="Buscar..."
+              aria-label="Buscar usuarios por nombre o rol"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="pl-9 pr-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface text-sm w-48"
+            />
+          </div>
+          {esAdmin && (
+            <button
+              onClick={() => setModalCrear(true)}
+              className="px-6 py-3 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors font-medium"
+            >
+              + Nuevo Usuario
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -214,7 +238,7 @@ export default function Usuarios() {
             </tr>
           </thead>
           <tbody>
-            {usuarios.map((u) => (
+            {usuariosFiltrados.map((u) => (
               <tr key={u.id} className="border-b border-outline-variant/50 hover:bg-surface-container/50">
                 <td className="px-6 py-4">
                   <div className="font-medium text-on-surface">{u.nombre}</div>
@@ -267,11 +291,11 @@ export default function Usuarios() {
                 </td>
               </tr>
             ))}
-            {usuarios.length === 0 && (
+            {usuariosFiltrados.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-12 text-center text-on-surface-variant">
                   <Users className="w-10 h-10 mx-auto mb-3 text-on-surface-variant/40" />
-                  No hay usuarios registrados
+                  {busqueda ? "No se encontraron usuarios" : "No hay usuarios registrados"}
                 </td>
               </tr>
             )}

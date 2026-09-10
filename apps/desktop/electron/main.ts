@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import path from "node:path";
 import { randomInt } from "node:crypto";
 import { crearMenuPrincipal, setVentanaPrincipal } from "./menu";
@@ -14,7 +14,7 @@ app.commandLine.appendSwitch("in-process-gpu");
 app.commandLine.appendSwitch("no-sandbox");
 import { createDb, createDbWithSqlite, migrate, eq } from "@pos/db";
 import { usuarios, auditLog } from "@pos/db";
-import { crearHashPin } from "@pos/shared";
+import { crearHashPin, crearRateLimiter } from "@pos/shared";
 import { startLocalServer } from "@pos/local-server";
 import {
   crearServicioAuth,
@@ -52,11 +52,19 @@ let servicios: {
 // Estado de autenticación
 let usuarioActual: { id: number; nombre: string; rol: string } | null = null;
 let timeoutSesion: ReturnType<typeof setTimeout> | null = null;
+let timeoutAviso: ReturnType<typeof setTimeout> | null = null;
 const SESION_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos de inactividad
+const SESION_AVISO_MS = 14 * 60 * 1000; // Aviso 1 min antes de expirar
 
 function reiniciarTimeoutSesion() {
   if (timeoutSesion) clearTimeout(timeoutSesion);
+  if (timeoutAviso) clearTimeout(timeoutAviso);
   if (usuarioActual) {
+    // Aviso 1 min antes de expirar
+    timeoutAviso = setTimeout(() => {
+      mainWindow?.webContents.send("sesion:aviso");
+    }, SESION_AVISO_MS);
+    // Expiración
     timeoutSesion = setTimeout(() => {
       console.log("Sesión expirada por inactividad (15 min)");
       usuarioActual = null;
@@ -110,42 +118,13 @@ function registrarHandlers() {
   // ============================================================
   // RATE LIMITING — Desktop login
   // ============================================================
-  const intentosLogin = new Map<string, { count: number; resetAt: number }>();
-  const MAX_INTENTOS = 5;
-  const VENTANA_MS = 15 * 60 * 1000; // 15 minutos
-
-  function verificarRateLimitDesktop(clave: string): { permitido: boolean; restantes: number } {
-    const ahora = Date.now();
-    const datos = intentosLogin.get(clave);
-
-    if (!datos || ahora > datos.resetAt) {
-      intentosLogin.set(clave, { count: 1, resetAt: ahora + VENTANA_MS });
-      return { permitido: true, restantes: MAX_INTENTOS - 1 };
-    }
-
-    if (datos.count >= MAX_INTENTOS) {
-      return { permitido: false, restantes: 0 };
-    }
-
-    datos.count++;
-    return { permitido: true, restantes: MAX_INTENTOS - datos.count };
-  }
-
-  // Limpiar entradas expiradas cada 5 minutos
-  setInterval(() => {
-    const ahora = Date.now();
-    for (const [clave, datos] of intentosLogin.entries()) {
-      if (ahora > datos.resetAt) {
-        intentosLogin.delete(clave);
-      }
-    }
-  }, 5 * 60 * 1000);
+  const rateLimit = crearRateLimiter();
 
   // ============================================================
   // AUTH
   // ============================================================
   ipcMain.handle("auth:login", async (_event, pin: string, rol?: string) => {
-    const { permitido, restantes } = verificarRateLimitDesktop("desktop");
+    const { permitido, restantes } = rateLimit.verificar("desktop");
 
     if (!permitido) {
       throw new Error("Demasiados intentos. Espere 15 minutos.");
@@ -198,7 +177,17 @@ function registrarHandlers() {
       clearTimeout(timeoutSesion);
       timeoutSesion = null;
     }
+    if (timeoutAviso) {
+      clearTimeout(timeoutAviso);
+      timeoutAviso = null;
+    }
     return true;
+  });
+
+  ipcMain.handle("sesion:extender", async () => {
+    if (usuarioActual) {
+      reiniciarTimeoutSesion();
+    }
   });
 
   ipcMain.handle("auth:getUsuarioActual", async () => {
@@ -1053,8 +1042,13 @@ app.whenReady().then(async () => {
         pinHash,
       });
       console.log("=== USUARIO PROPIETARIO CREADO ===");
-      console.log(`PIN de acceso: ${pinAleatorio}`);
-      console.log("Guarde este PIN. Se recomienda cambiarlo después del primer inicio.");
+      await dialog.showMessageBox({
+        type: "info",
+        title: "PIN de acceso",
+        message: `Tu PIN de acceso es: ${pinAleatorio}`,
+        detail: "Guarde este PIN. Se recomienda cambiarlo después del primer inicio.",
+        buttons: ["Entendido"],
+      });
       console.log("===================================");
     }
   } catch (err) {

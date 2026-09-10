@@ -339,13 +339,61 @@ export function formatearReporteNomina(resumenGlobal: {
 
 // ── PDF ────────────────────────────────────────────────
 
-export async function generarPdf(datos: DatosExportacion): Promise<void> {
+let pdfMakeCache: any = null;
+
+async function initPdfMake() {
+  if (pdfMakeCache) return pdfMakeCache;
   const pdfMakeModule = await import("pdfmake/build/pdfmake");
   const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
   const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
   const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
   pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
+  pdfMakeCache = pdfMake;
+  return pdfMake;
+}
 
+function crearTimestamp(): string {
+  return new Date().toLocaleString("es-EC", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+async function crearDocumentoPdf(opts: {
+  content: any[];
+  orientation?: "portrait" | "landscape";
+  titulo: string;
+  filename?: string;
+  customStyles?: Record<string, any>;
+}) {
+  const pdfMake = await initPdfMake();
+
+  const defaultStyles = {
+    header: { fontSize: 18, bold: true, color: "#C97B4A", margin: [0, 0, 0, 5] as [number, number, number, number] },
+    subheader: { fontSize: 14, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number] },
+    sectionTitle: { fontSize: 11, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number], color: "#C97B4A" },
+  };
+
+  const docDefinition: any = {
+    content: opts.content,
+    styles: opts.customStyles ?? defaultStyles,
+    defaultStyle: { fontSize: 10 },
+    pageSize: "A4",
+    pageOrientation: (opts.orientation ?? "portrait") as const,
+    footer: (currentPage: number, pageCount: number) => ({
+      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — ${opts.titulo}`,
+      alignment: "center" as const,
+      fontSize: 8,
+      color: "#888888",
+      margin: [0, 10, 0, 0] as [number, number, number, number],
+    }),
+  };
+
+  const filename = opts.filename ?? `${opts.titulo.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+  pdfMake.createPdf(docDefinition).download(filename);
+}
+
+export async function generarPdf(datos: DatosExportacion): Promise<void> {
   const tableBody: any[][] = [];
 
   // Header
@@ -383,13 +431,11 @@ export async function generarPdf(datos: DatosExportacion): Promise<void> {
     tableBody.push(totalRow);
   }
 
-  const now = new Date();
-  const timestamp = now.toLocaleString("es-EC", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit",
-  });
+  const timestamp = crearTimestamp();
 
-  const docDefinition: any = {
+  await crearDocumentoPdf({
+    titulo: datos.titulo,
+    orientation: "landscape",
     content: [
       { text: "Sweet Bakery", style: "header" },
       { text: datos.titulo, style: "subheader" },
@@ -415,23 +461,7 @@ export async function generarPdf(datos: DatosExportacion): Promise<void> {
         layout: "lightHorizontalLines",
       },
     ],
-    styles: {
-      header: { fontSize: 18, bold: true, color: "#C97B4A", margin: [0, 0, 0, 5] as [number, number, number, number] },
-      subheader: { fontSize: 14, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number] },
-    },
-    defaultStyle: { fontSize: 10 },
-    pageSize: "A4",
-    pageOrientation: "landscape" as const,
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — ${datos.titulo}`,
-      alignment: "center" as const,
-      fontSize: 8,
-      color: "#888888",
-      margin: [0, 10, 0, 0] as [number, number, number, number],
-    }),
-  };
-
-  pdfMake.createPdf(docDefinition).download(`${datos.titulo.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`);
+  });
 }
 
 // ── PDF: Cierre de Caja ──────────────────────────────
@@ -465,17 +495,7 @@ export interface DatosCierreCaja {
 }
 
 export async function generarPdfCierreCaja(data: DatosCierreCaja): Promise<void> {
-  const pdfMakeModule = await import("pdfmake/build/pdfmake");
-  const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
-  const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
-  const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
-  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
-
-  const now = new Date();
-  const timestamp = now.toLocaleString("es-EC", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit",
-  });
+  const timestamp = crearTimestamp();
 
   const totalIngresos = data.ventas.total + data.anticipos.total + data.pedidos.total;
   const totalEgresos = data.gastos.total + data.adelantos.total + data.devoluciones.total;
@@ -687,26 +707,11 @@ export async function generarPdfCierreCaja(data: DatosCierreCaja): Promise<void>
     margin: [0, 0, 0, 5] as [number, number, number, number],
   });
 
-  const docDefinition: any = {
+  await crearDocumentoPdf({
+    titulo: "Cierre de Caja",
     content,
-    styles: {
-      header: { fontSize: 18, bold: true, color: "#C97B4A", margin: [0, 0, 0, 5] as [number, number, number, number] },
-      subheader: { fontSize: 14, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number] },
-      sectionTitle: { fontSize: 11, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number], color: "#C97B4A" },
-    },
-    defaultStyle: { fontSize: 10 },
-    pageSize: "A4",
-    pageOrientation: "portrait" as const,
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — Cierre de Caja`,
-      alignment: "center" as const,
-      fontSize: 8,
-      color: "#888888",
-      margin: [0, 10, 0, 0] as [number, number, number, number],
-    }),
-  };
-
-  pdfMake.createPdf(docDefinition).download(`Cierre_Caja_Sesion_${data.sesionId}.pdf`);
+    orientation: "portrait",
+  });
 }
 
 // ── PDF: Nómina ───────────────────────────────────────
@@ -726,17 +731,7 @@ export interface DatosNomina {
 }
 
 export async function generarPdfNomina(data: DatosNomina): Promise<void> {
-  const pdfMakeModule = await import("pdfmake/build/pdfmake");
-  const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
-  const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
-  const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
-  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
-
-  const now = new Date();
-  const timestamp = now.toLocaleString("es-EC", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit",
-  });
+  const timestamp = crearTimestamp();
 
   const content: any[] = [
     { text: "Sweet Bakery", style: "header" },
@@ -832,26 +827,11 @@ export async function generarPdfNomina(data: DatosNomina): Promise<void> {
     color: "#888888",
   });
 
-  const docDefinition: any = {
+  await crearDocumentoPdf({
+    titulo: "Nómina",
     content,
-    styles: {
-      header: { fontSize: 18, bold: true, color: "#C97B4A", margin: [0, 0, 0, 5] as [number, number, number, number] },
-      subheader: { fontSize: 14, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number] },
-      sectionTitle: { fontSize: 11, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number], color: "#C97B4A" },
-    },
-    defaultStyle: { fontSize: 10 },
-    pageSize: "A4",
-    pageOrientation: "portrait" as const,
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — Nómina`,
-      alignment: "center" as const,
-      fontSize: 8,
-      color: "#888888",
-      margin: [0, 10, 0, 0] as [number, number, number, number],
-    }),
-  };
-
-  pdfMake.createPdf(docDefinition).download(`Nomina_${data.mes.replace("/", "-")}.pdf`);
+    orientation: "portrait",
+  });
 }
 
 // ── PDF: Pedidos ──────────────────────────────────────
@@ -886,17 +866,8 @@ const ESTADO_COLORS: Record<string, string> = {
 };
 
 export async function generarPdfPedidos(data: DatosPedidosPdf): Promise<void> {
-  const pdfMakeModule = await import("pdfmake/build/pdfmake");
-  const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
-  const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
-  const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
-  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
-
   const now = new Date();
-  const timestamp = now.toLocaleString("es-EC", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit",
-  });
+  const timestamp = crearTimestamp();
 
   const content: any[] = [
     { text: "Sweet Bakery", style: "header" },
@@ -1022,26 +993,12 @@ export async function generarPdfPedidos(data: DatosPedidosPdf): Promise<void> {
     margin: [0, 0, 0, 10] as [number, number, number, number],
   });
 
-  const docDefinition: any = {
+  await crearDocumentoPdf({
+    titulo: "Pedidos",
     content,
-    styles: {
-      header: { fontSize: 18, bold: true, color: "#C97B4A", margin: [0, 0, 0, 5] as [number, number, number, number] },
-      subheader: { fontSize: 14, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number] },
-      sectionTitle: { fontSize: 11, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number], color: "#C97B4A" },
-    },
-    defaultStyle: { fontSize: 10 },
-    pageSize: "A4",
-    pageOrientation: "portrait" as const,
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — Pedidos`,
-      alignment: "center" as const,
-      fontSize: 8,
-      color: "#888888",
-      margin: [0, 10, 0, 0] as [number, number, number, number],
-    }),
-  };
-
-  pdfMake.createPdf(docDefinition).download(`Pedidos_${now.toISOString().slice(0, 10)}.pdf`);
+    orientation: "portrait",
+    filename: `Pedidos_${now.toISOString().slice(0, 10)}.pdf`,
+  });
 }
 
 // ── PDF: Reporte Diario ───────────────────────────────
@@ -1061,14 +1018,8 @@ export interface DatosReporteDiario {
 }
 
 export async function generarPdfDiario(data: DatosReporteDiario): Promise<void> {
-  const pdfMakeModule = await import("pdfmake/build/pdfmake");
-  const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
-  const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
-  const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
-  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
-
   const now = new Date();
-  const timestamp = now.toLocaleString("es-EC", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const timestamp = crearTimestamp();
 
   const content: any[] = [
     { text: "Sweet Bakery", style: "header" },
@@ -1137,21 +1088,12 @@ export async function generarPdfDiario(data: DatosReporteDiario): Promise<void> 
   content.push({ table: { widths: ["*", "auto", "auto", "auto"], body: rows }, layout: "lightHorizontalLines", margin: [0, 0, 0, 10] as [number, number, number, number] });
   content.push({ text: `Generado: ${timestamp}`, fontSize: 8, color: "#888888" });
 
-  const docDefinition: any = {
+  await crearDocumentoPdf({
+    titulo: "Reporte Diario",
     content,
-    styles: {
-      header: { fontSize: 18, bold: true, color: "#C97B4A", margin: [0, 0, 0, 5] as [number, number, number, number] },
-      subheader: { fontSize: 14, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number] },
-      sectionTitle: { fontSize: 11, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number], color: "#C97B4A" },
-    },
-    defaultStyle: { fontSize: 10 },
-    pageSize: "A4", pageOrientation: "portrait" as const,
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — Reporte Diario`,
-      alignment: "center" as const, fontSize: 8, color: "#888888", margin: [0, 10, 0, 0] as [number, number, number, number],
-    }),
-  };
-  pdfMake.createPdf(docDefinition).download(`Reporte_Diario_${data.fecha}.pdf`);
+    orientation: "portrait",
+    filename: `Reporte_Diario_${data.fecha}.pdf`,
+  });
 }
 
 // ── PDF: Reporte por Rango ────────────────────────────
@@ -1168,14 +1110,8 @@ export interface DatosReporteRango {
 }
 
 export async function generarPdfRango(data: DatosReporteRango): Promise<void> {
-  const pdfMakeModule = await import("pdfmake/build/pdfmake");
-  const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
-  const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
-  const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
-  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
-
   const now = new Date();
-  const timestamp = now.toLocaleString("es-EC", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const timestamp = crearTimestamp();
 
   const neto = data.consolidado?.ingresoNeto ?? (data.ventas.total + (data.pedidos?.total ?? 0) - data.gastos.total - (data.adelantos?.total ?? 0) - (data.devoluciones?.total ?? 0));
 
@@ -1235,21 +1171,12 @@ export async function generarPdfRango(data: DatosReporteRango): Promise<void> {
   content.push({ table: { widths: ["*", "auto", "auto", "auto"], body: rows }, layout: "lightHorizontalLines", margin: [0, 0, 0, 10] as [number, number, number, number] });
   content.push({ text: `Generado: ${timestamp}`, fontSize: 8, color: "#888888" });
 
-  const docDefinition: any = {
+  await crearDocumentoPdf({
+    titulo: "Reporte por Rango",
     content,
-    styles: {
-      header: { fontSize: 18, bold: true, color: "#C97B4A", margin: [0, 0, 0, 5] as [number, number, number, number] },
-      subheader: { fontSize: 14, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number] },
-      sectionTitle: { fontSize: 11, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number], color: "#C97B4A" },
-    },
-    defaultStyle: { fontSize: 10 },
-    pageSize: "A4", pageOrientation: "portrait" as const,
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — Reporte por Rango`,
-      alignment: "center" as const, fontSize: 8, color: "#888888", margin: [0, 10, 0, 0] as [number, number, number, number],
-    }),
-  };
-  pdfMake.createPdf(docDefinition).download(`Reporte_Rango_${data.fechaInicio}_a_${data.fechaFin}.pdf`);
+    orientation: "portrait",
+    filename: `Reporte_Rango_${data.fechaInicio}_a_${data.fechaFin}.pdf`,
+  });
 }
 
 // ── PDF: Historial de Cierres ─────────────────────────
@@ -1285,14 +1212,8 @@ export interface DatosCierresHistorial {
 }
 
 export async function generarPdfCierresHistorial(data: DatosCierresHistorial): Promise<void> {
-  const pdfMakeModule = await import("pdfmake/build/pdfmake");
-  const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
-  const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
-  const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
-  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
-
   const now = new Date();
-  const timestamp = now.toLocaleString("es-EC", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const timestamp = crearTimestamp();
 
   const content: any[] = [
     { text: "Sweet Bakery", style: "header" },
@@ -1353,21 +1274,12 @@ export async function generarPdfCierresHistorial(data: DatosCierresHistorial): P
 
   content.push({ text: `Generado: ${timestamp}`, fontSize: 8, color: "#888888" });
 
-  const docDefinition: any = {
+  await crearDocumentoPdf({
+    titulo: "Historial de Cierres",
     content,
-    styles: {
-      header: { fontSize: 18, bold: true, color: "#C97B4A", margin: [0, 0, 0, 5] as [number, number, number, number] },
-      subheader: { fontSize: 14, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number] },
-      sectionTitle: { fontSize: 11, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number], color: "#C97B4A" },
-    },
-    defaultStyle: { fontSize: 10 },
-    pageSize: "A4", pageOrientation: "landscape" as const,
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — Historial de Cierres`,
-      alignment: "center" as const, fontSize: 8, color: "#888888", margin: [0, 10, 0, 0] as [number, number, number, number],
-    }),
-  };
-  pdfMake.createPdf(docDefinition).download(`Cierres_${data.fechaInicio}_a_${data.fechaFin}.pdf`);
+    orientation: "landscape",
+    filename: `Cierres_${data.fechaInicio}_a_${data.fechaFin}.pdf`,
+  });
 }
 
 // ── PDF: Productos Más Vendidos ────────────────────────
@@ -1379,14 +1291,8 @@ export interface DatosProductosTop {
 }
 
 export async function generarPdfProductosTop(data: DatosProductosTop): Promise<void> {
-  const pdfMakeModule = await import("pdfmake/build/pdfmake");
-  const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
-  const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
-  const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
-  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
-
   const now = new Date();
-  const timestamp = now.toLocaleString("es-EC", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const timestamp = crearTimestamp();
 
   const content: any[] = [
     { text: "Sweet Bakery", style: "header" },
@@ -1434,40 +1340,24 @@ export async function generarPdfProductosTop(data: DatosProductosTop): Promise<v
 
   content.push({ text: `Generado: ${timestamp}`, fontSize: 8, color: "#888888" });
 
-  const docDefinition: any = {
+  await crearDocumentoPdf({
+    titulo: "Productos Más Vendidos",
     content,
-    styles: {
-      header: { fontSize: 18, bold: true, color: "#C97B4A", margin: [0, 0, 0, 5] as [number, number, number, number] },
-      subheader: { fontSize: 14, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number] },
-      sectionTitle: { fontSize: 11, bold: true, margin: [0, 0, 0, 5] as [number, number, number, number], color: "#C97B4A" },
-    },
-    defaultStyle: { fontSize: 10 },
-    pageSize: "A4", pageOrientation: "portrait" as const,
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — Productos Más Vendidos`,
-      alignment: "center" as const, fontSize: 8, color: "#888888", margin: [0, 10, 0, 0] as [number, number, number, number],
-    }),
-  };
-  pdfMake.createPdf(docDefinition).download(`Productos_Top_${now.toISOString().slice(0, 10)}.pdf`);
+    orientation: "portrait",
+    filename: `Productos_Top_${now.toISOString().slice(0, 10)}.pdf`,
+  });
 }
 
 // ── PDF: Guía de Usuario ──────────────────────────────
 
 export async function generarGuiaUsuario(): Promise<void> {
-  const pdfMakeModule = await import("pdfmake/build/pdfmake");
-  const pdfMake: any = pdfMakeModule.default || pdfMakeModule;
-  const pdfFontsModule = await import("pdfmake/build/vfs_fonts");
-  const pdfFonts: any = pdfFontsModule.default || pdfFontsModule;
-  pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
-
   const h1 = (text: string) => ({ text, style: "h1", margin: [0, 15, 0, 8] as [number, number, number, number] });
   const h2 = (text: string) => ({ text, style: "h2", margin: [0, 10, 0, 5] as [number, number, number, number] });
   const p = (text: string) => ({ text, margin: [0, 0, 0, 5] as [number, number, number, number], fontSize: 10 });
   const bullet = (text: string) => ({ text, margin: [15, 0, 0, 3] as [number, number, number, number], fontSize: 10, type: "bullet" });
   const numbered = (text: string, n: number) => ({ text: `${n}. ${text}`, margin: [15, 0, 0, 3] as [number, number, number, number], fontSize: 10 });
 
-  const docDefinition: any = {
-    content: [
+  const content: any[] = [
       // Portada
       { text: "Sweet Bakery", style: "title", margin: [0, 80, 0, 10] as [number, number, number, number] },
       { text: "Guía de Usuario", style: "subtitle", margin: [0, 0, 0, 20] as [number, number, number, number] },
@@ -1586,24 +1476,114 @@ export async function generarGuiaUsuario(): Promise<void> {
       bullet("Backspace: Borrar último dígito"),
       bullet("Enter: Confirmar PIN"),
       bullet("Esc: Cancelar"),
-    ],
-    styles: {
+  ];
+
+  await crearDocumentoPdf({
+    titulo: "Guía de Usuario",
+    content,
+    orientation: "portrait",
+    filename: "Guia_Usuario_Sweet_Bakery.pdf",
+    customStyles: {
       title: { fontSize: 28, bold: true, color: "#7D4A2E", alignment: "center" as const },
       subtitle: { fontSize: 18, bold: true, color: "#D4849E", alignment: "center" as const },
       h1: { fontSize: 16, bold: true, color: "#7D4A2E" },
       h2: { fontSize: 13, bold: true, color: "#333333" },
     },
-    defaultStyle: { fontSize: 10 },
-    pageSize: "A4",
-    pageOrientation: "portrait" as const,
-    footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — Guía de Usuario`,
-      alignment: "center" as const,
-      fontSize: 8,
-      color: "#888888",
-      margin: [0, 10, 0, 0] as [number, number, number, number],
-    }),
-  };
+  });
+}
 
-  pdfMake.createPdf(docDefinition).download("Guia_Usuario_Sweet_Bakery.pdf");
+// ── Impresión de Recibo ────────────────────────────────
+
+export interface ItemRecibo {
+  nombre: string;
+  unidad: string;
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+}
+
+export interface DatosRecibo {
+  ventaId: number;
+  fecha: string;
+  cajero: string;
+  metodoPago: string;
+  items: ItemRecibo[];
+  total: number;
+}
+
+export function imprimirRecibo(datos: DatosRecibo): void {
+  const filasHtml = datos.items.map(item => `
+    <tr>
+      <td>${item.nombre}</td>
+      <td>${item.unidad}</td>
+      <td style="text-align:center">${item.cantidad}</td>
+      <td style="text-align:right">$${item.precioUnitario.toFixed(2)}</td>
+      <td style="text-align:right">$${item.subtotal.toFixed(2)}</td>
+    </tr>
+  `).join("");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Recibo Venta #${datos.ventaId}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Courier New', monospace; font-size: 12px; width: 300px; padding: 10px; }
+    .header { text-align: center; margin-bottom: 10px; }
+    .header h1 { font-size: 16px; color: #7D4A2E; }
+    .header p { font-size: 10px; color: #666; margin-top: 2px; }
+    .info { margin-bottom: 8px; font-size: 11px; }
+    .info span { display: block; margin: 2px 0; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    th { border-bottom: 1px dashed #999; text-align: left; font-size: 10px; padding: 4px 0; }
+    td { padding: 3px 0; font-size: 11px; }
+    .total { border-top: 2px solid #7D4A2E; padding-top: 6px; text-align: right; font-size: 14px; font-weight: bold; }
+    .footer { text-align: center; margin-top: 12px; font-size: 9px; color: #888; }
+    @media print {
+      body { width: 100%; padding: 0; }
+      @page { margin: 5mm; size: 80mm auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Sweet Bakery</h1>
+    <p>Recibo de Venta</p>
+  </div>
+  <div class="info">
+    <span>Venta: #${datos.ventaId}</span>
+    <span>Fecha: ${datos.fecha}</span>
+    <span>Cajero: ${datos.cajero}</span>
+    <span>Pago: ${datos.metodoPago === "efectivo" ? "Efectivo" : "Transferencia"}</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Unidad</th>
+        <th style="text-align:center">Cant.</th>
+        <th style="text-align:right">P.U.</th>
+        <th style="text-align:right">Subt.</th>
+      </tr>
+    </thead>
+    <tbody>${filasHtml}</tbody>
+  </table>
+  <div class="total">
+    TOTAL: $${datos.total.toFixed(2)}
+  </div>
+  <div class="footer">
+    <p>¡Gracias por su compra!</p>
+    <p>Sweet Bakery — Pastelería Artesanal</p>
+  </div>
+</body>
+</html>`;
+
+  const printWindow = window.open("", "_blank", "width=320,height=600");
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
 }

@@ -48,21 +48,26 @@ export default function ConfirmModal({
       onClick={(e) => {
         if (e.target === e.currentTarget && !cargando) onCancelar();
       }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-modal-titulo"
+      aria-describedby="confirm-modal-mensaje"
     >
       <div className="bg-surface-container-lowest rounded-2xl p-6 w-full max-w-md shadow-xl">
         <div className="text-center mb-4">
           {color.icono}
         </div>
-        <h2 className="text-xl font-bold text-on-surface text-center mb-2">
+        <h2 id="confirm-modal-titulo" className="text-xl font-bold text-on-surface text-center mb-2">
           {titulo}
         </h2>
-        <p className="text-on-surface-variant text-center text-sm mb-6 whitespace-pre-line">
+        <p id="confirm-modal-mensaje" className="text-on-surface-variant text-center text-sm mb-6 whitespace-pre-line">
           {mensaje}
         </p>
         <div className="flex gap-4">
           <button
             onClick={onCancelar}
             disabled={cargando}
+            aria-label={textoCancelar}
             className="flex-1 py-3 border border-outline-variant text-on-surface-variant rounded-xl hover:bg-surface-container-high transition-colors disabled:opacity-50"
           >
             {textoCancelar}
@@ -70,6 +75,7 @@ export default function ConfirmModal({
           <button
             onClick={onConfirmar}
             disabled={cargando}
+            aria-label={textoConfirmar}
             className={`flex-1 py-3 rounded-xl transition-colors disabled:opacity-50 ${color.boton}`}
           >
             {cargando ? "Procesando..." : textoConfirmar}

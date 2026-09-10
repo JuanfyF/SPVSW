@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { formatearFecha } from "@pos/shared";
 import { useAuthStore } from "../../store/auth";
-import { TrendingDown } from "lucide-react";
+import { TrendingDown, Search } from "lucide-react";
 
 interface CategoriaGasto {
   id: number;
@@ -29,6 +29,7 @@ export default function Gastos() {
   const [error, setError] = useState("");
   const [modalError, setModalError] = useState("");
   const [errores, setErrores] = useState<Record<string, string>>({});
+  const [busqueda, setBusqueda] = useState("");
 
   // Formulario
   const [categoriaId, setCategoriaId] = useState("");
@@ -107,6 +108,19 @@ export default function Gastos() {
 
   const totalGastos = gastos.reduce((sum, g) => sum + g.monto, 0);
 
+  const gastosFiltrados = useMemo(() => {
+    if (!busqueda.trim()) return gastos;
+    const q = busqueda.toLowerCase();
+    return gastos.filter((g) => {
+      const catNombre = categorias.find((c) => c.id === g.categoriaId)?.nombre || "";
+      return (
+        g.descripcion.toLowerCase().includes(q) ||
+        catNombre.toLowerCase().includes(q) ||
+        g.origen.toLowerCase().includes(q)
+      );
+    });
+  }, [gastos, categorias, busqueda]);
+
   const handleCrearCategoria = async () => {
     if (!nuevaCategoria.trim()) return;
     try {
@@ -148,16 +162,29 @@ export default function Gastos() {
             Total: ${totalGastos.toFixed(2)} • {gastos.length} gastos registrados
           </p>
         </div>
-        <button
-          onClick={() => setModalNuevo(true)}
-          className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors"
-        >
-          + Nuevo Gasto
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant" />
+            <input
+              type="text"
+              placeholder="Buscar..."
+              aria-label="Buscar gastos por descripción, categoría u origen"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="pl-9 pr-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface text-sm w-48"
+            />
+          </div>
+          <button
+            onClick={() => setModalNuevo(true)}
+            className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors"
+          >
+            + Nuevo Gasto
+          </button>
+        </div>
       </div>
 
       {/* Lista de gastos */}
-      {gastos.length === 0 ? (
+      {gastosFiltrados.length === 0 ? (
         <div className="text-center py-12">
           <TrendingDown className="w-10 h-10 text-on-surface-variant" />
           <p className="mt-4 text-on-surface-variant">No hay gastos registrados</p>
@@ -182,7 +209,7 @@ export default function Gastos() {
               </tr>
             </thead>
             <tbody>
-              {gastos.map((gasto) => (
+              {gastosFiltrados.map((gasto) => (
                 <tr key={gasto.id} className="border-b border-outline-variant/50">
                   <td className="p-4">
                     <p className="font-medium text-on-surface">{gasto.descripcion}</p>

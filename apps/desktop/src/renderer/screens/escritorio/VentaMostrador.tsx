@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
-import { Package } from "lucide-react";
+import { Package, Printer } from "lucide-react";
+import { imprimirRecibo, type DatosRecibo } from "@pos/shared";
 
 const RECARGO_LLEVAR = 0.10; // Costo del repostero para llevar
 
@@ -36,6 +37,7 @@ export default function VentaMostrador() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [modalCobrar, setModalCobrar] = useState(false);
+  const [ultimaVenta, setUltimaVenta] = useState<DatosRecibo | null>(null);
 
   const cargarProductos = useCallback(async () => {
     try {
@@ -277,7 +279,7 @@ export default function VentaMostrador() {
         }
       }
 
-      await window.pos.ventas.crear({
+      const resultado = await window.pos.ventas.crear({
         sesionCajaId: sesionCaja.id,
         total,
         metodoPago: esCortesia ? "efectivo" : metodoPago,
@@ -291,6 +293,20 @@ export default function VentaMostrador() {
         })),
       });
 
+      setUltimaVenta({
+        ventaId: resultado?.id ?? Date.now(),
+        fecha: new Date().toLocaleString("es-EC"),
+        cajero: usuario?.nombre ?? "N/A",
+        metodoPago: esCortesia ? "cortesia" : metodoPago,
+        items: carrito.map((item) => ({
+          nombre: item.nombre,
+          unidad: item.unidad,
+          cantidad: item.cantidad,
+          precioUnitario: item.precioUnitario,
+          subtotal: item.subtotal,
+        })),
+        total,
+      });
       setCarrito([]);
       setModalCobrar(false);
       await cargarProductos();
@@ -306,10 +322,26 @@ export default function VentaMostrador() {
       {/* Panel de productos */}
       <div className="flex-1 p-6 overflow-auto">
         <div className="mb-6">
-          <h1 className="text-headline-lg font-bold text-on-surface mb-4">Venta de Mostrador</h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-headline-lg font-bold text-on-surface">Venta de Mostrador</h1>
+            {ultimaVenta && (
+              <button
+                onClick={() => {
+                  imprimirRecibo(ultimaVenta);
+                  setUltimaVenta(null);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors text-sm"
+                aria-label="Imprimir recibo de la última venta"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir Último Recibo
+              </button>
+            )}
+          </div>
           <input
             type="text"
             placeholder="Buscar productos..."
+            aria-label="Buscar productos por nombre"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
             className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface-container-lowest"

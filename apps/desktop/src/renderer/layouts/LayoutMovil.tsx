@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
-import {
-  Home,
-  ClipboardList,
-  Package,
-  User,
-} from "lucide-react";
+import ErrorBoundary from "../components/ErrorBoundary";
+import { Clock, Home, ClipboardList, Package, User } from "lucide-react";
 import Onboarding, { shouldShowOnboarding } from "../components/Onboarding";
 
 const menuItemsAdmin = [
@@ -34,14 +30,12 @@ export default function LayoutMovil() {
     }
   }, [usuario, navigate]);
 
-  // Redirigir a cambio de PIN forzado si el usuario tiene PIN temporal
   useEffect(() => {
     if (usuario?.debeCambiarPin && location.pathname !== "/cambiar-pin") {
       navigate("/cambiar-pin", { replace: true });
     }
   }, [usuario, location.pathname, navigate]);
 
-  // Listener para sesión expirada por inactividad (15 min)
   useEffect(() => {
     const removeListener = window.pos.onSesionExpirada(() => {
       logout();
@@ -49,6 +43,20 @@ export default function LayoutMovil() {
     });
     return removeListener;
   }, [logout, navigate]);
+
+  const [mostrarAvisoSesion, setMostrarAvisoSesion] = useState(false);
+
+  useEffect(() => {
+    const removeAviso = window.pos.onSesionAviso(() => {
+      setMostrarAvisoSesion(true);
+    });
+    return removeAviso;
+  }, []);
+
+  const handleExtenderSesion = async () => {
+    await window.pos.extenderSesion();
+    setMostrarAvisoSesion(false);
+  };
 
   const [mostrarOnboarding, setMostrarOnboarding] = useState(() => shouldShowOnboarding());
 
@@ -68,6 +76,27 @@ export default function LayoutMovil() {
 
   return (
     <div className="flex flex-col h-screen bg-surface">
+      {/* Aviso de sesión por expirar */}
+      {mostrarAvisoSesion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-surface rounded-2xl p-6 shadow-xl max-w-sm w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Clock className="w-6 h-6 text-amber-500" />
+              <h3 className="text-lg font-bold text-on-surface">Sesión por expirar</h3>
+            </div>
+            <p className="text-sm text-on-surface-variant mb-6">
+              Tu sesión expirará en 1 minuto por inactividad. ¿Deseas mantenerla activa?
+            </p>
+            <button
+              onClick={handleExtenderSesion}
+              className="w-full px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors"
+            >
+              Mantener sesión
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-secondary text-on-secondary p-4 flex items-center justify-between">
         <div>
@@ -86,7 +115,9 @@ export default function LayoutMovil() {
 
       {/* Contenido */}
       <main className="flex-1 overflow-auto">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
 
       {/* Navegación inferior */}

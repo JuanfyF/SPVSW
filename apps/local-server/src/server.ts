@@ -10,6 +10,7 @@ import {
   crearServicioNomina,
   crearServicioVentas,
 } from "@pos/core";
+import { crearRateLimiter } from "@pos/shared";
 import { stockRoutes, stockAdminRoutes } from "./routes/stock.routes";
 import { pedidosRoutes, pedidosAdminRoutes } from "./routes/pedidos.routes";
 import { gastosRoutes } from "./routes/gastos.routes";
@@ -38,36 +39,7 @@ interface OpcionesServidor {
 }
 
 // ─── Rate limiting para login ──────────────────────────
-const intentosLogin = new Map<string, { count: number; resetAt: number }>();
-const MAX_INTENTOS = 5;
-const VENTANA_MS = 15 * 60 * 1000; // 15 minutos
-
-function verificarRateLimit(ip: string): { permitido: boolean; restantes: number } {
-  const ahora = Date.now();
-  const datos = intentosLogin.get(ip);
-
-  if (!datos || ahora > datos.resetAt) {
-    intentosLogin.set(ip, { count: 1, resetAt: ahora + VENTANA_MS });
-    return { permitido: true, restantes: MAX_INTENTOS - 1 };
-  }
-
-  if (datos.count >= MAX_INTENTOS) {
-    return { permitido: false, restantes: 0 };
-  }
-
-  datos.count++;
-  return { permitido: true, restantes: MAX_INTENTOS - datos.count };
-}
-
-// Limpiar entradas de rate limiting expiradas cada 5 minutos
-setInterval(() => {
-  const ahora = Date.now();
-  for (const [ip, datos] of intentosLogin.entries()) {
-    if (ahora > datos.resetAt) {
-      intentosLogin.delete(ip);
-    }
-  }
-}, 5 * 60 * 1000);
+const rateLimit = crearRateLimiter();
 
 export function startLocalServer(opciones: OpcionesServidor) {
   const app = express();
@@ -106,7 +78,7 @@ export function startLocalServer(opciones: OpcionesServidor) {
   app.post("/auth/login", async (req, res) => {
     try {
       const ip = req.ip || req.socket.remoteAddress || "unknown";
-      const { permitido, restantes } = verificarRateLimit(ip);
+      const { permitido, restantes } = rateLimit.verificar(ip);
 
       if (!permitido) {
         return res.status(429).json({

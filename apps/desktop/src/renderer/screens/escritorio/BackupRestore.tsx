@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import { AlertTriangle } from "lucide-react";
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function BackupRestore() {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ export default function BackupRestore() {
   const [loading, setLoading] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
+  const [mostrarConfirmRestore, setMostrarConfirmRestore] = useState(false);
 
   if (usuario?.rol !== "propietario") {
     return (
@@ -40,6 +42,11 @@ export default function BackupRestore() {
   };
 
   const handleRestore = async () => {
+    setMostrarConfirmRestore(true);
+  };
+
+  const confirmarRestore = async () => {
+    setMostrarConfirmRestore(false);
     setLoading(true);
     setMensaje("");
     setError("");
@@ -55,7 +62,6 @@ export default function BackupRestore() {
         }
 
         try {
-          // En Electron, el File object tiene una propiedad `path` con la ruta real del disco
           const rutaBackup = (file as File & { path: string }).path;
           if (!rutaBackup) {
             setError("No se pudo obtener la ruta del archivo. Usa la versión de escritorio.");
@@ -85,6 +91,17 @@ export default function BackupRestore() {
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
+      <ConfirmModal
+        open={mostrarConfirmRestore}
+        titulo="Restaurar Backup"
+        mensaje="Esto sobreescribirá todos los datos actuales. Esta acción no se puede deshacer. ¿Estás seguro?"
+        textoConfirmar="Sí, restaurar"
+        variante="peligro"
+        onConfirmar={confirmarRestore}
+        onCancelar={() => setMostrarConfirmRestore(false)}
+        cargando={loading}
+      />
+
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={() => navigate("/")}

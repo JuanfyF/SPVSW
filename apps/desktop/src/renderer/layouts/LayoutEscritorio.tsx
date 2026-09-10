@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
+import ErrorBoundary from "../components/ErrorBoundary";
+import { Clock } from "lucide-react";
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -85,6 +87,21 @@ export default function LayoutEscritorio() {
     return removeListener;
   }, [logout, navigate]);
 
+  // Aviso 1 min antes de expirar
+  const [mostrarAvisoSesion, setMostrarAvisoSesion] = useState(false);
+
+  useEffect(() => {
+    const removeAviso = window.pos.onSesionAviso(() => {
+      setMostrarAvisoSesion(true);
+    });
+    return removeAviso;
+  }, []);
+
+  const handleExtenderSesion = async () => {
+    await window.pos.extenderSesion();
+    setMostrarAvisoSesion(false);
+  };
+
   const [mostrarOnboarding, setMostrarOnboarding] = useState(() => shouldShowOnboarding());
 
   if (!usuario) return null;
@@ -101,6 +118,27 @@ export default function LayoutEscritorio() {
 
   return (
     <div className="flex h-screen bg-surface">
+      {/* Aviso de sesión por expirar */}
+      {mostrarAvisoSesion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-surface rounded-2xl p-6 shadow-xl max-w-sm w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <Clock className="w-6 h-6 text-amber-500" />
+              <h3 className="text-lg font-bold text-on-surface">Sesión por expirar</h3>
+            </div>
+            <p className="text-sm text-on-surface-variant mb-6">
+              Tu sesión expirará en 1 minuto por inactividad. ¿Deseas mantenerla activa?
+            </p>
+            <button
+              onClick={handleExtenderSesion}
+              className="w-full px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors"
+            >
+              Mantener sesión
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <aside className="w-64 bg-surface-container-low border-r border-outline-variant flex flex-col h-full overflow-hidden">
         {/* Logo */}
@@ -121,11 +159,13 @@ export default function LayoutEscritorio() {
         </div>
 
         {/* Menú - scrollable */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto min-h-0">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto min-h-0" aria-label="Menú principal">
           {menuItems.map((item) => (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
+              aria-label={`Ir a ${item.label}`}
+              aria-current={location.pathname === item.path ? "page" : undefined}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 location.pathname === item.path
                   ? "bg-secondary text-on-secondary shadow-md"
@@ -149,6 +189,7 @@ export default function LayoutEscritorio() {
                 </div>
                 <button
                   onClick={() => navigate("/caja/cierre")}
+                  aria-label="Cerrar caja del día"
                   className="w-full px-4 py-2 bg-tertiary text-on-tertiary rounded-xl hover:bg-tertiary/90 transition-colors"
                 >
                   Cerrar Caja
@@ -157,6 +198,7 @@ export default function LayoutEscritorio() {
             ) : (
               <button
                 onClick={() => navigate("/caja/apertura")}
+                aria-label="Abrir caja del día"
                 className="w-full px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors"
               >
                 Abrir Caja
@@ -178,7 +220,9 @@ export default function LayoutEscritorio() {
 
       {/* Contenido principal */}
       <main className="flex-1 min-h-0 overflow-auto bg-surface">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   );

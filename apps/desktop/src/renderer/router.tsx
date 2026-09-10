@@ -1,157 +1,171 @@
+import { lazy, Suspense } from "react";
 import { createHashRouter } from "react-router-dom";
+import LoadingScreen from "./components/LoadingScreen";
 
 type RouterType = ReturnType<typeof createHashRouter>;
 
-// Layouts
+// Layouts (se cargan inmediatamente — necesarios para estructura)
 import LayoutEscritorio from "./layouts/LayoutEscritorio";
 import LayoutMovil from "./layouts/LayoutMovil";
 
-// Pantallas de autenticación
-import Login from "./screens/Login";
-import LoginMovil from "./screens/LoginMovil";
-import PinVerificacion from "./screens/PinVerificacion";
+// Pantallas de autenticación (lazy)
+const Login = lazy(() => import("./screens/Login"));
+const LoginMovil = lazy(() => import("./screens/LoginMovil"));
+const PinVerificacion = lazy(() => import("./screens/PinVerificacion"));
+const CambiarPinForzado = lazy(() => import("./screens/CambiarPinForzado"));
 
-// Pantallas de escritorio (11)
-import Dashboard from "./screens/escritorio/Dashboard";
-import AperturaCaja from "./screens/escritorio/AperturaCaja";
-import VentaMostrador from "./screens/escritorio/VentaMostrador";
-import StockEscritorio from "./screens/escritorio/Stock";
-import Productos from "./screens/escritorio/Productos";
-import PedidosLista from "./screens/escritorio/pedidos/Lista";
-import PedidoNuevo from "./screens/escritorio/pedidos/Nuevo";
-import PedidoDetalle from "./screens/escritorio/pedidos/Detalle";
-import Gastos from "./screens/escritorio/Gastos";
-import Nomina from "./screens/escritorio/Nomina";
-import CierreCaja from "./screens/escritorio/CierreCaja";
-import Reportes from "./screens/escritorio/Reportes";
-import Usuarios from "./screens/escritorio/Usuarios";
-import BackupRestore from "./screens/escritorio/BackupRestore";
-import Ayuda from "./screens/escritorio/Ayuda";
-import CambiarPinForzado from "./screens/CambiarPinForzado";
+// Pantallas de escritorio (lazy)
+const Dashboard = lazy(() => import("./screens/escritorio/Dashboard"));
+const AperturaCaja = lazy(() => import("./screens/escritorio/AperturaCaja"));
+const VentaMostrador = lazy(() => import("./screens/escritorio/VentaMostrador"));
+const StockEscritorio = lazy(() => import("./screens/escritorio/Stock"));
+const Productos = lazy(() => import("./screens/escritorio/Productos"));
+const PedidosLista = lazy(() => import("./screens/escritorio/pedidos/Lista"));
+const PedidoNuevo = lazy(() => import("./screens/escritorio/pedidos/Nuevo"));
+const PedidoDetalle = lazy(() => import("./screens/escritorio/pedidos/Detalle"));
+const Gastos = lazy(() => import("./screens/escritorio/Gastos"));
+const Nomina = lazy(() => import("./screens/escritorio/Nomina"));
+const CierreCaja = lazy(() => import("./screens/escritorio/CierreCaja"));
+const Reportes = lazy(() => import("./screens/escritorio/Reportes"));
+const Usuarios = lazy(() => import("./screens/escritorio/Usuarios"));
+const BackupRestore = lazy(() => import("./screens/escritorio/BackupRestore"));
+const Ayuda = lazy(() => import("./screens/escritorio/Ayuda"));
 
-// Pantallas móviles (7)
-import MenuMovil from "./screens/movil/Menu";
-import PedidosMovil from "./screens/movil/pedidos/Lista";
-import PedidoMovilDetalle from "./screens/movil/pedidos/Detalle";
-import PedidoMovilNuevo from "./screens/movil/pedidos/Nuevo";
-import StockMovil from "./screens/movil/Stock";
-import PerfilMovil from "./screens/movil/Perfil";
+// Pantallas móviles (lazy)
+const MenuMovil = lazy(() => import("./screens/movil/Menu"));
+const PedidosMovil = lazy(() => import("./screens/movil/pedidos/Lista"));
+const PedidoMovilDetalle = lazy(() => import("./screens/movil/pedidos/Detalle"));
+const PedidoMovilNuevo = lazy(() => import("./screens/movil/pedidos/Nuevo"));
+const StockMovil = lazy(() => import("./screens/movil/Stock"));
+const PerfilMovil = lazy(() => import("./screens/movil/Perfil"));
+
+const errorElement = (
+  <div className="flex flex-col items-center justify-center h-full min-h-[400px] p-8 text-center">
+    <p className="text-on-surface-variant">Ocurrió un error al cargar esta pantalla.</p>
+  </div>
+);
 
 export const router: RouterType = createHashRouter([
   // Rutas de autenticación
   {
     path: "/login",
-    element: <Login />,
+    element: <Suspense fallback={<LoadingScreen />}><Login /></Suspense>,
+    errorElement,
   },
   {
     path: "/movil/login",
-    element: <LoginMovil />,
+    element: <Suspense fallback={<LoadingScreen />}><LoginMovil /></Suspense>,
+    errorElement,
   },
   {
     path: "/pin",
-    element: <PinVerificacion />,
+    element: <Suspense fallback={<LoadingScreen />}><PinVerificacion /></Suspense>,
+    errorElement,
   },
   {
     path: "/cambiar-pin",
-    element: <CambiarPinForzado />,
+    element: <Suspense fallback={<LoadingScreen />}><CambiarPinForzado /></Suspense>,
+    errorElement,
   },
 
-  // Rutas de escritorio (11 pantallas)
+  // Rutas de escritorio
   {
     path: "/",
     element: <LayoutEscritorio />,
+    errorElement,
     children: [
       {
         index: true,
-        element: <Dashboard />,
+        element: <Suspense fallback={<LoadingScreen />}><Dashboard /></Suspense>,
       },
       {
         path: "caja/apertura",
-        element: <AperturaCaja />,
+        element: <Suspense fallback={<LoadingScreen />}><AperturaCaja /></Suspense>,
       },
       {
         path: "caja/cierre",
-        element: <CierreCaja />,
+        element: <Suspense fallback={<LoadingScreen />}><CierreCaja /></Suspense>,
       },
       {
         path: "venta",
-        element: <VentaMostrador />,
+        element: <Suspense fallback={<LoadingScreen />}><VentaMostrador /></Suspense>,
       },
       {
         path: "stock",
-        element: <StockEscritorio />,
+        element: <Suspense fallback={<LoadingScreen />}><StockEscritorio /></Suspense>,
       },
       {
         path: "productos",
-        element: <Productos />,
+        element: <Suspense fallback={<LoadingScreen />}><Productos /></Suspense>,
       },
       {
         path: "pedidos",
-        element: <PedidosLista />,
+        element: <Suspense fallback={<LoadingScreen />}><PedidosLista /></Suspense>,
       },
       {
         path: "pedidos/nuevo",
-        element: <PedidoNuevo />,
+        element: <Suspense fallback={<LoadingScreen />}><PedidoNuevo /></Suspense>,
       },
       {
         path: "pedidos/:id",
-        element: <PedidoDetalle />,
+        element: <Suspense fallback={<LoadingScreen />}><PedidoDetalle /></Suspense>,
       },
       {
         path: "gastos",
-        element: <Gastos />,
+        element: <Suspense fallback={<LoadingScreen />}><Gastos /></Suspense>,
       },
       {
         path: "nomina",
-        element: <Nomina />,
+        element: <Suspense fallback={<LoadingScreen />}><Nomina /></Suspense>,
       },
       {
         path: "reportes",
-        element: <Reportes />,
+        element: <Suspense fallback={<LoadingScreen />}><Reportes /></Suspense>,
       },
       {
         path: "usuarios",
-        element: <Usuarios />,
+        element: <Suspense fallback={<LoadingScreen />}><Usuarios /></Suspense>,
       },
       {
         path: "backup",
-        element: <BackupRestore />,
+        element: <Suspense fallback={<LoadingScreen />}><BackupRestore /></Suspense>,
       },
       {
         path: "ayuda",
-        element: <Ayuda />,
+        element: <Suspense fallback={<LoadingScreen />}><Ayuda /></Suspense>,
       },
     ],
   },
 
-  // Rutas móviles (7 pantallas)
+  // Rutas móviles
   {
     path: "/movil",
     element: <LayoutMovil />,
+    errorElement,
     children: [
       {
         index: true,
-        element: <MenuMovil />,
+        element: <Suspense fallback={<LoadingScreen />}><MenuMovil /></Suspense>,
       },
       {
         path: "pedidos",
-        element: <PedidosMovil />,
+        element: <Suspense fallback={<LoadingScreen />}><PedidosMovil /></Suspense>,
       },
       {
         path: "pedidos/nuevo",
-        element: <PedidoMovilNuevo />,
+        element: <Suspense fallback={<LoadingScreen />}><PedidoMovilNuevo /></Suspense>,
       },
       {
         path: "pedidos/:id",
-        element: <PedidoMovilDetalle />,
+        element: <Suspense fallback={<LoadingScreen />}><PedidoMovilDetalle /></Suspense>,
       },
       {
         path: "stock",
-        element: <StockMovil />,
+        element: <Suspense fallback={<LoadingScreen />}><StockMovil /></Suspense>,
       },
       {
         path: "perfil",
-        element: <PerfilMovil />,
+        element: <Suspense fallback={<LoadingScreen />}><PerfilMovil /></Suspense>,
       },
     ],
   },

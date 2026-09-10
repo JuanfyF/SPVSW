@@ -195,7 +195,7 @@ export default function Dashboard() {
     const removeListener = window.pos.onCambio(handleRefresh);
     window.addEventListener('focus', handleRefresh);
     document.addEventListener('visibilitychange', handleVisibility);
-    const interval = setInterval(handleRefresh, 3000);
+    const interval = setInterval(handleRefresh, 30000);
     return () => {
       if (typeof removeListener === "function") removeListener();
       window.removeEventListener('focus', handleRefresh);
