@@ -5,14 +5,7 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import { Clock, Home, ClipboardList, Package, User } from "lucide-react";
 import Onboarding, { shouldShowOnboarding } from "../components/Onboarding";
 
-const menuItemsAdmin = [
-  { path: "/movil", label: "Inicio", icon: <Home className="w-5 h-5" /> },
-  { path: "/movil/pedidos", label: "Pedidos", icon: <ClipboardList className="w-5 h-5" /> },
-  { path: "/movil/stock", label: "Stock", icon: <Package className="w-5 h-5" /> },
-  { path: "/movil/perfil", label: "Perfil", icon: <User className="w-5 h-5" /> },
-];
-
-const menuItemsPastelera = [
+const menuItems = [
   { path: "/movil", label: "Inicio", icon: <Home className="w-5 h-5" /> },
   { path: "/movil/pedidos", label: "Pedidos", icon: <ClipboardList className="w-5 h-5" /> },
   { path: "/movil/stock", label: "Stock", icon: <Package className="w-5 h-5" /> },
@@ -65,8 +58,6 @@ export default function LayoutMovil() {
   if (mostrarOnboarding) {
     return <Onboarding onComplete={() => setMostrarOnboarding(false)} />;
   }
-
-  const menuItems = usuario.rol === "pastelera" ? menuItemsPastelera : menuItemsAdmin;
 
   const handleLogout = async () => {
     await window.pos.auth.logout();

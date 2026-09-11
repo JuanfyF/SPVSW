@@ -36,8 +36,9 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
           usuarioId: usuario.usuarioId,
         });
         res.json({ sesion });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al abrir caja" });
+      } catch (error) {
+        console.error("Error al abrir caja:", error);
+        res.status(500).json({ error: "Error al abrir caja" });
       }
     }
   );
@@ -69,8 +70,9 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
           conteoStock: req.body.conteoStock,
         });
         res.json({ cierre });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al cerrar caja" });
+      } catch (error) {
+        console.error("Error al cerrar caja:", error);
+        res.status(500).json({ error: "Error al cerrar caja" });
       }
     }
   );
@@ -148,8 +150,9 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         }
         await caja.marcarRevisado(cierreCajaId, usuario.usuarioId);
         res.json({ mensaje: "Cierre marcado como revisado" });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al marcar revisado" });
+      } catch (error) {
+        console.error("Error al marcar revisado:", error);
+        res.status(500).json({ error: "Error al marcar revisado" });
       }
     }
   );
@@ -167,8 +170,9 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         }
         await caja.forzarCierre(sesionCajaId, usuario.usuarioId);
         res.json({ exito: true });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al forzar cierre" });
+      } catch (error) {
+        console.error("Error al forzar cierre:", error);
+        res.status(500).json({ error: "Error al forzar cierre" });
       }
     }
   );

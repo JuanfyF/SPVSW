@@ -19,6 +19,10 @@ export interface PosAPI {
       expiracion: string;
       nombre: string;
     }>;
+    restablecerPinPublico: (usuarioId: number) => Promise<{
+      pinTemporal: string;
+      expiracion: string;
+    }>;
   };
 
   // ============================================================
@@ -31,6 +35,11 @@ export interface PosAPI {
       rol: string;
       activo: boolean;
       actualizadoEn: string;
+    }>>;
+    listarPublico: () => Promise<Array<{
+      id: number;
+      nombre: string;
+      rol: string;
     }>>;
     obtenerPorId: (id: number) => Promise<{
       id: number;
@@ -982,6 +991,8 @@ export interface PosAPI {
   // Eventos push del main process
   onCambio: (callback: () => void) => () => void;
   onSesionExpirada: (callback: () => void) => () => void;
+  onSesionAviso: (callback: () => void) => () => void;
+  extenderSesion: () => Promise<void>;
   onUpdateProgress: (callback: (data: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => () => void;
 }
 

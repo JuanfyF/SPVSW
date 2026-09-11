@@ -91,8 +91,9 @@ export function ventasRoutes(ventas: ReturnType<typeof crearServicioVentas>): Ro
       try {
         const venta = await ventas.crear(req.body);
         res.json({ venta });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al crear venta" });
+      } catch (error) {
+        console.error("Error al crear venta:", error);
+        res.status(500).json({ error: "Error al crear venta" });
       }
     }
   );

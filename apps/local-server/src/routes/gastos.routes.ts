@@ -55,8 +55,9 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
           registradoPor: usuario.usuarioId,
         });
         res.json({ gasto });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al crear gasto" });
+      } catch (error) {
+        console.error("Error al crear gasto:", error);
+        res.status(500).json({ error: "Error al crear gasto" });
       }
     }
   );
@@ -73,8 +74,9 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
         }
         const categoria = await gastos.crearCategoria(nombre);
         res.json({ categoria });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al crear categoría" });
+      } catch (error) {
+        console.error("Error al crear categoría:", error);
+        res.status(500).json({ error: "Error al crear categoría" });
       }
     }
   );

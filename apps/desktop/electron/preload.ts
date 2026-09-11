@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld("pos", {
     logout: () => ipcRenderer.invoke("auth:logout"),
     getUsuarioActual: () => ipcRenderer.invoke("auth:getUsuarioActual"),
     restablecerPin: (usuarioId: number) => ipcRenderer.invoke("auth:restablecerPin", usuarioId),
+    restablecerPinPublico: (usuarioId: number) => ipcRenderer.invoke("auth:restablecerPinPublico", usuarioId),
   },
 
   // ============================================================
@@ -22,6 +23,7 @@ contextBridge.exposeInMainWorld("pos", {
   // ============================================================
   usuarios: {
     listar: () => ipcRenderer.invoke("usuarios:listar"),
+    listarPublico: () => ipcRenderer.invoke("usuarios:listarPublico"),
     obtenerPorId: (id: number) => ipcRenderer.invoke("usuarios:obtenerPorId", id),
     crear: (datos: unknown) => ipcRenderer.invoke("usuarios:crear", datos),
     actualizar: (id: number, datos: unknown) =>

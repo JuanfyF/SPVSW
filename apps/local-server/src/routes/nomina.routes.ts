@@ -31,8 +31,9 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
       try {
         const empleado = await nomina.crearEmpleado(req.body);
         res.json({ empleado });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al crear empleado" });
+      } catch (error) {
+        console.error("Error al crear empleado:", error);
+        res.status(500).json({ error: "Error al crear empleado" });
       }
     }
   );
@@ -69,8 +70,9 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
           registradoPor: usuario.usuarioId,
         });
         res.json({ adelanto });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al registrar adelanto" });
+      } catch (error) {
+        console.error("Error al registrar adelanto:", error);
+        res.status(500).json({ error: "Error al registrar adelanto" });
       }
     }
   );
@@ -107,8 +109,9 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
           registradoPor: usuario.usuarioId,
         });
         res.json({ multa });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message || "Error al registrar multa" });
+      } catch (error) {
+        console.error("Error al registrar multa:", error);
+        res.status(500).json({ error: "Error al registrar multa" });
       }
     }
   );

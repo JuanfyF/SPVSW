@@ -4,7 +4,7 @@
  * CRUD de usuarios con control de acceso por rol.
  */
 
-import { PosDatabase, usuarios, eq, and, count, sql } from "@pos/db";
+import { PosDatabase, usuarios, auditLog, eq, and, count, sql } from "@pos/db";
 import { CrearUsuarioInput, CrearUsuarioSchema, CambiarPinSchema, ActualizarUsuarioSchema, IdSchema } from "@pos/shared";
 import { crearHashPin } from "@pos/shared";
 
@@ -139,6 +139,15 @@ export function crearServicioUsuarios(db: PosDatabase) {
         .update(usuarios)
         .set({ pinHash, debeCambiarPin: false })
         .where(eq(usuarios.id, id));
+
+      try {
+        await db.insert(auditLog).values({
+          evento: "pin_cambiado",
+          usuarioId: id,
+          detalle: JSON.stringify({ metodo: "cambiarPin" }),
+          origen: "core",
+        });
+      } catch { /* best-effort */ }
     },
   };
 }

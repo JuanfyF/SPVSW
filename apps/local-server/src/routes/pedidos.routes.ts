@@ -194,8 +194,9 @@ export function pedidosAdminRoutes(
       try {
         const pedido = await pedidos.crear(req.body);
         res.json({ pedido });
-      } catch (error: any) {
-        res.status(400).json({ error: error.message || "Error al crear el pedido" });
+      } catch (error) {
+        console.error("Error al crear el pedido:", error);
+        res.status(400).json({ error: "Error al crear el pedido" });
       }
     }
   );

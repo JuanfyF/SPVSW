@@ -82,7 +82,6 @@ export default function Menu() {
             className="p-6 bg-secondary text-on-secondary rounded-2xl text-center"
           >
           <ClipboardList className="w-8 h-8 mb-2" />
-          <span className="font-medium">Pedidos</span>
             <span className="font-medium">Nuevo Pedido</span>
           </button>
         )}
@@ -97,6 +96,7 @@ export default function Menu() {
               {pedidosPendientes}
             </span>
           )}
+          <span className="font-medium">Pedidos</span>
         </button>
 
         <button

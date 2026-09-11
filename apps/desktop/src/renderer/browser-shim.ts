@@ -2,7 +2,7 @@
  * Browser shim: reemplaza window.pos.* (Electron IPC) con llamadas HTTP
  * al local-server (puerto 3000). Se carga solo cuando no estamos en Electron.
  *
- * Solo implementa los métodos que usan las pantallas móviles.
+ * Implementa los métodos que usan las pantallas móviles.
  */
 (function () {
   // Si ya estamos en Electron, no hacer nada
@@ -36,8 +36,10 @@
 
   window.pos = {
     auth: {
-      async login(pin: string) {
-        const { token, usuario } = await api("POST", "/auth/login", { pin });
+      async login(pin: string, rol?: string) {
+        const body: Record<string, string> = { pin };
+        if (rol) body.rol = rol;
+        const { token, usuario } = await api("POST", "/auth/login", body);
         _token = token;
         sessionStorage.setItem("pos_token", token);
 
@@ -64,6 +66,25 @@
         } catch {
           return null;
         }
+      },
+      async restablecerPin(usuarioId: number) {
+        const data = await api("POST", "/auth/restablecer-pin", { usuarioId });
+        return data;
+      },
+      async restablecerPinPublico(usuarioId: number) {
+        const data = await api("POST", "/auth/restablecer-pin", { usuarioId });
+        return data;
+      },
+    },
+
+    usuarios: {
+      async listar() {
+        const data = await api("GET", "/api/usuarios");
+        return data.usuarios;
+      },
+      async listarPublico() {
+        const data = await api("GET", "/api/usuarios");
+        return data.usuarios;
       },
     },
 
@@ -120,6 +141,16 @@
           `/api/stock/disponibilidad?productoId=${productoId}&sesionCajaId=${sesionCajaId}&unidad=${unidad}&cantidad=${cantidad}`
         );
       },
+    },
+
+    onSesionExpirada: (_cb: () => void) => {
+      return () => {};
+    },
+    onSesionAviso: (_cb: () => void) => {
+      return () => {};
+    },
+    extenderSesion: async () => {
+      await api("GET", "/auth/sesion-activa");
     },
   } as any;
 })();

@@ -1,5 +1,7 @@
+import path from "path";
 import express from "express";
-import { PosDatabase, auditLog } from "@pos/db";
+import { PosDatabase, auditLog, usuarios as usuariosTable } from "@pos/db";
+import { eq } from "@pos/db";
 import {
   crearServicioAuth,
   crearServicioStock,
@@ -9,8 +11,9 @@ import {
   crearServicioGastos,
   crearServicioNomina,
   crearServicioVentas,
+  crearServicioUsuarios,
 } from "@pos/core";
-import { crearRateLimiter } from "@pos/shared";
+import { crearRateLimiter, crearHashPin } from "@pos/shared";
 import { stockRoutes, stockAdminRoutes } from "./routes/stock.routes";
 import { pedidosRoutes, pedidosAdminRoutes } from "./routes/pedidos.routes";
 import { gastosRoutes } from "./routes/gastos.routes";
@@ -21,12 +24,14 @@ import {
   authMiddleware,
   crearSesion,
   eliminarSesion,
+  requerirRol,
 } from "./middleware/auth";
 
 /**
  * IMPORTANTE (AGENT.md 5.1 — configuración de seguridad):
- * Este servidor escucha SOLO en 127.0.0.1 (loopback).
- * Toda ruta valida el PIN/rol antes de ejecutar cualquier acción.
+ * Este servidor escucha en 0.0.0.0 para acceso LAN (mobile).
+ * CORS restringe orígenes a localhost y rangos LAN privados.
+ * Toda ruta /api valida el PIN/rol antes de ejecutar cualquier acción.
  *
  * AGENT.md §2.7 — Roles en local-server:
  * - Pastelera: stock (merma, cortesía, reposición), pedidos (solo lectura producción)
@@ -40,16 +45,18 @@ interface OpcionesServidor {
 
 // ─── Rate limiting para login ──────────────────────────
 const rateLimit = crearRateLimiter();
+const resetRateLimit = crearRateLimiter({ maxIntentos: 2, ventanaMs: 60 * 60 * 1000 });
 
 export function startLocalServer(opciones: OpcionesServidor) {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
 
-  // Security headers
+  // Security headers (OWASP A05)
   app.use((_req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Content-Security-Policy", "default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:");
     next();
   });
 
@@ -110,7 +117,6 @@ export function startLocalServer(opciones: OpcionesServidor) {
         } catch { /* audit logging es best-effort */ }
         return res.status(401).json({
           error: "PIN incorrecto",
-          intentosRestantes: restantes,
         });
       }
 
@@ -185,6 +191,56 @@ export function startLocalServer(opciones: OpcionesServidor) {
     }
   });
 
+  // ─── Usuarios (solo pasteleras, para recuperación PIN) ─
+  app.get("/api/usuarios", authMiddleware(servicios.auth), requerirRol("propietario", "cajero"), async (_req, res) => {
+    try {
+      const usuariosService = crearServicioUsuarios(opciones.db);
+      const todos = await usuariosService.listar();
+      const pasteleras = todos
+        .filter((u: any) => u.rol === "pastelera")
+        .map((u: any) => ({ id: u.id, nombre: u.nombre, rol: u.rol }));
+      res.json({ usuarios: pasteleras });
+    } catch (error) {
+      res.status(500).json({ error: "Error al obtener usuarios" });
+    }
+  });
+
+  // ─── Restablecer PIN (público, rate-limited) ──────────
+  app.post("/auth/restablecer-pin", async (req, res) => {
+    try {
+      const ip = req.ip || req.socket.remoteAddress || "unknown";
+      const { permitido } = resetRateLimit.verificar(ip);
+      if (!permitido) {
+        return res.status(429).json({ error: "Demasiadas solicitudes. Espere 1 hora." });
+      }
+
+      const { usuarioId } = req.body;
+      if (!usuarioId) {
+        return res.status(400).json({ error: "usuarioId es requerido" });
+      }
+
+      const crypto = await import("crypto");
+      const pinTemporal = String(crypto.randomInt(100000, 999999));
+      const pinHash = await crearHashPin(pinTemporal);
+      const expiracion = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      await opciones.db.update(usuariosTable).set({ pinHash }).where(eq(usuariosTable.id, usuarioId));
+
+      try {
+        opciones.db.insert(auditLog).values({
+          evento: "pin_reset_publico",
+          usuarioId,
+          detalle: JSON.stringify({ expiracion }),
+          origen: "local-server",
+        });
+      } catch { /* best-effort */ }
+
+      res.json({ pinTemporal, expiracion });
+    } catch (error) {
+      res.status(500).json({ error: "Error al restablecer PIN" });
+    }
+  });
+
   // ─── Gastos: propietario y cajero ─────────────────────
   app.use("/api/gastos", gastosRoutes(servicios.gastos));
 
@@ -197,9 +253,25 @@ export function startLocalServer(opciones: OpcionesServidor) {
   // ─── Caja: propietario y cajero ───────────────────────
   app.use("/api/caja", cajaRoutes(servicios.caja));
 
-  // ─── Escuchar solo en loopback (127.0.0.1) ────────────
-  const server = app.listen(opciones.port, "127.0.0.1", () => {
-    console.log(`Servidor local escuchando en http://127.0.0.1:${opciones.port}`);
+  // ─── SPA estática para mobile (producción) ─────────────
+  const distPath = path.resolve(__dirname, "../dist");
+  app.use(express.static(distPath));
+
+  // Redirect /movil/* → /#/movil/* (createHashRouter requiere hash)
+  app.get("/movil*", (req, res) => {
+    res.redirect(302, `/#${req.path}`);
+  });
+
+  // SPA fallback
+  app.get("*", (req, res) => {
+    if (!req.path.startsWith("/api") && !req.path.startsWith("/auth")) {
+      res.sendFile(path.join(distPath, "index.html"));
+    }
+  });
+
+  // ─── Escuchar en todas las interfaces (0.0.0.0) ───────
+  const server = app.listen(opciones.port, "0.0.0.0", () => {
+    console.log(`Servidor local escuchando en http://0.0.0.0:${opciones.port}`);
   });
 
   server.on("error", (err: NodeJS.ErrnoException) => {

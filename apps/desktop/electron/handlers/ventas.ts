@@ -9,6 +9,7 @@ export function registrarVentasHandlers() {
 
   ipcMain.handle("ventas:crear", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.ventas.crear(datos as any);
+    ctx.logAuditoria("venta_creada", undefined, { ventaId: resultado.id, total: resultado.total, metodoPago: resultado.metodoPago });
     ctx.notificarCambio();
     return resultado;
   }, { auth: true }));

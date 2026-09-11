@@ -70,7 +70,7 @@ export default function LoginMovil() {
     setErrorReset("");
     setCopiado(false);
     try {
-      const lista = await window.pos.usuarios.listar();
+      const lista = await window.pos.usuarios.listarPublico();
       setUsuarios(lista.filter((u) => u.rol === "pastelera"));
     } catch (err: any) {
       console.error("Error cargando usuarios:", err);
@@ -92,7 +92,7 @@ export default function LoginMovil() {
     setCargandoReset(true);
     setErrorReset("");
     try {
-      const resultado = await window.pos.auth.restablecerPin(usuarioSeleccionado);
+      const resultado = await window.pos.auth.restablecerPinPublico(usuarioSeleccionado);
       setPinTemporal(resultado.pinTemporal);
       setExpiracion(resultado.expiracion);
     } catch (err: any) {

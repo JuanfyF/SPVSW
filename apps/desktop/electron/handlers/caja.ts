@@ -9,12 +9,14 @@ export function registrarCajaHandlers() {
 
   ipcMain.handle("caja:abrir", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.caja.abrir(datos as any);
+    ctx.logAuditoria("caja_abierta", undefined, { sesionCajaId: resultado.id });
     ctx.notificarCambio();
     return resultado;
   }, { auth: true }));
 
   ipcMain.handle("caja:cerrar", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.caja.cerrar(datos as any);
+    ctx.logAuditoria("caja_cerrada", undefined, { cierreCajaId: resultado.id, efectivoEsperado: resultado.efectivoEsperado });
     ctx.notificarCambio();
     return resultado;
   }, { auth: true }));
@@ -32,7 +34,9 @@ export function registrarCajaHandlers() {
   }, { auth: true }));
 
   ipcMain.handle("caja:forzarCierre", ctx.safeHandler(async (_event, sesionCajaId: number, usuarioId: number) => {
-    return servicios.caja.forzarCierre(sesionCajaId, usuarioId);
+    const resultado = await servicios.caja.forzarCierre(sesionCajaId, usuarioId);
+    ctx.logAuditoria("caja_forzar_cierre", usuarioId, { sesionCajaId });
+    return resultado;
   }, { admin: true }));
 
   ipcMain.handle("caja:marcarRevisado", ctx.safeHandler(async (_event, cierreCajaId: number, usuarioId: number) => {
