@@ -10,7 +10,7 @@
 
   const BASE = "http://" + location.hostname + ":3000";
 
-  let _token: string | null = localStorage.getItem("pos_token");
+  let _token: string | null = sessionStorage.getItem("pos_token");
 
   async function api(
     method: string,
@@ -39,7 +39,7 @@
       async login(pin: string) {
         const { token, usuario } = await api("POST", "/auth/login", { pin });
         _token = token;
-        localStorage.setItem("pos_token", token);
+        sessionStorage.setItem("pos_token", token);
 
         // Obtener sesión de caja abierta
         let sesionAbierta = null;
@@ -53,7 +53,7 @@
       async logout() {
         await api("POST", "/auth/logout");
         _token = null;
-        localStorage.removeItem("pos_token");
+        sessionStorage.removeItem("pos_token");
         return true;
       },
       async getUsuarioActual() {

@@ -84,8 +84,15 @@ export async function verificarPin(
     );
 
     const derivedKey = new Uint8Array(derivedBits);
-    const match = derivedKey.length === storedKey.length &&
-      derivedKey.every((b, i) => b === storedKey[i]);
+    let match = false;
+    if (derivedKey.length === storedKey.length) {
+      try {
+        const { timingSafeEqual } = await import("crypto");
+        match = timingSafeEqual(Buffer.from(derivedKey), Buffer.from(storedKey));
+      } catch {
+        match = derivedKey.every((b, i) => b === storedKey[i]);
+      }
+    }
 
     return { valido: match };
   }
@@ -127,47 +134,3 @@ export function formatearHora(fecha: Date): string {
   return `${h}:${m}`;
 }
 
-/**
- * Valida un formato de fecha YYYY-MM-DD.
- */
-export function esFormatoFechaValido(fecha: string): boolean {
-  const regex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!regex.test(fecha)) return false;
-
-  const partes = fecha.split("-");
-  const año = parseInt(partes[0] ?? "0", 10);
-  const mes = parseInt(partes[1] ?? "0", 10);
-  const dia = parseInt(partes[2] ?? "0", 10);
-  
-  const fechaObj = new Date(año, mes - 1, dia);
-
-  return (
-    fechaObj.getFullYear() === año &&
-    fechaObj.getMonth() === mes - 1 &&
-    fechaObj.getDate() === dia
-  );
-}
-
-/**
- * Valida un formato de hora HH:MM o HH:MM:SS.
- */
-export function esFormatoHoraValido(hora: string): boolean {
-  const regex = /^\d{2}:\d{2}(:\d{2})?$/;
-  if (!regex.test(hora)) return false;
-
-  const partes = hora.split(":");
-  const horas = parseInt(partes[0] ?? "0", 10);
-  const minutos = parseInt(partes[1] ?? "0", 10);
-
-  return horas >= 0 && horas <= 23 && minutos >= 0 && minutos <= 59;
-}
-
-/**
- * Calcula la diferencia en días entre dos fechas.
- */
-export function diferenciaEnDias(fecha1: string, fecha2: string): number {
-  const f1 = new Date(fecha1);
-  const f2 = new Date(fecha2);
-  const diffTime = Math.abs(f2.getTime() - f1.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}

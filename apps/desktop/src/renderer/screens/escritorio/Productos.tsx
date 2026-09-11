@@ -1,18 +1,7 @@
 import { useState, useEffect } from "react";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Cake } from "lucide-react";
-
-interface Producto {
-  id: number;
-  nombre: string;
-  categoria: string | null;
-  tipoVenta: string;
-  precioEntero: number | null;
-  precioPorcion: number | null;
-  artesanal: boolean;
-  activo: boolean;
-  actualizadoEn: string;
-}
+import type { Producto } from "@pos/shared";
 
 interface FormularioProducto {
   nombre: string;

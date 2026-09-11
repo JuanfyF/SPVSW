@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "../../store/auth";
-
-interface Producto {
-  id: number;
-  nombre: string;
-  categoria: string | null;
-}
+import type { Producto } from "@pos/shared";
 
 interface StockItem {
   id: number;

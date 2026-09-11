@@ -1,5 +1,5 @@
 import express from "express";
-import { PosDatabase } from "@pos/db";
+import { PosDatabase, auditLog } from "@pos/db";
 import {
   crearServicioAuth,
   crearServicioStock,
@@ -43,7 +43,15 @@ const rateLimit = crearRateLimiter();
 
 export function startLocalServer(opciones: OpcionesServidor) {
   const app = express();
-  app.use(express.json());
+  app.use(express.json({ limit: "1mb" }));
+
+  // Security headers
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    next();
+  });
 
   // CORS restringido: solo localhost y rangos LAN privados
   app.use((_req, res, next) => {
@@ -93,6 +101,13 @@ export function startLocalServer(opciones: OpcionesServidor) {
 
       const usuario = await servicios.auth.login(pin);
       if (!usuario) {
+        try {
+          opciones.db.insert(auditLog).values({
+            evento: "login_fallido",
+            detalle: JSON.stringify({ intentosRestantes: restantes, ip }),
+            origen: "local-server",
+          });
+        } catch { /* audit logging es best-effort */ }
         return res.status(401).json({
           error: "PIN incorrecto",
           intentosRestantes: restantes,
@@ -109,6 +124,15 @@ export function startLocalServer(opciones: OpcionesServidor) {
         nombre: usuario.nombre,
         rol: usuario.rol as "propietario" | "cajero" | "pastelera",
       });
+
+      try {
+        opciones.db.insert(auditLog).values({
+          evento: "login_exitoso",
+          usuarioId: usuario.id,
+          detalle: JSON.stringify({ nombre: usuario.nombre, rol: usuario.rol }),
+          origen: "local-server",
+        });
+      } catch { /* audit logging es best-effort */ }
 
       res.json({ token, usuario });
     } catch (error) {

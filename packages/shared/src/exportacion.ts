@@ -379,7 +379,7 @@ async function crearDocumentoPdf(opts: {
     styles: opts.customStyles ?? defaultStyles,
     defaultStyle: { fontSize: 10 },
     pageSize: "A4",
-    pageOrientation: (opts.orientation ?? "portrait") as const,
+    pageOrientation: (opts.orientation ?? "portrait") as "portrait" | "landscape",
     footer: (currentPage: number, pageCount: number) => ({
       text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — ${opts.titulo}`,
       alignment: "center" as const,
@@ -1018,7 +1018,6 @@ export interface DatosReporteDiario {
 }
 
 export async function generarPdfDiario(data: DatosReporteDiario): Promise<void> {
-  const now = new Date();
   const timestamp = crearTimestamp();
 
   const content: any[] = [
@@ -1110,7 +1109,6 @@ export interface DatosReporteRango {
 }
 
 export async function generarPdfRango(data: DatosReporteRango): Promise<void> {
-  const now = new Date();
   const timestamp = crearTimestamp();
 
   const neto = data.consolidado?.ingresoNeto ?? (data.ventas.total + (data.pedidos?.total ?? 0) - data.gastos.total - (data.adelantos?.total ?? 0) - (data.devoluciones?.total ?? 0));
@@ -1212,7 +1210,6 @@ export interface DatosCierresHistorial {
 }
 
 export async function generarPdfCierresHistorial(data: DatosCierresHistorial): Promise<void> {
-  const now = new Date();
   const timestamp = crearTimestamp();
 
   const content: any[] = [

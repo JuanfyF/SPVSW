@@ -4,17 +4,9 @@ import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Package, Printer } from "lucide-react";
 import { imprimirRecibo, type DatosRecibo } from "@pos/shared";
+import type { Producto } from "@pos/shared";
 
 const RECARGO_LLEVAR = 0.10; // Costo del repostero para llevar
-
-interface Producto {
-  id: number;
-  nombre: string;
-  categoria: string | null;
-  tipoVenta: string;
-  precioEntero: number | null;
-  precioPorcion: number | null;
-}
 
 interface CarritoItem {
   productoId: number;

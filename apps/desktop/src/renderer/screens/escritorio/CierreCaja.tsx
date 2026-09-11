@@ -4,12 +4,7 @@ import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
 import { generarPdfCierreCaja, type DatosCierreCaja } from "@pos/shared";
 import { Check, Download } from "lucide-react";
-
-interface Producto {
-  id: number;
-  nombre: string;
-  categoria: string | null;
-}
+import type { Producto } from "@pos/shared";
 
 interface StockItem {
   productoId: number;

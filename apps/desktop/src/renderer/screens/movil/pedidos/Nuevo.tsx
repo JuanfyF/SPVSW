@@ -2,13 +2,7 @@ import { useState, useEffect } from "react";
 import { formatearFecha } from "@pos/shared";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/auth";
-
-interface Producto {
-  id: number;
-  nombre: string;
-  precioEntero: number | null;
-  precioPorcion: number | null;
-}
+import type { Producto } from "@pos/shared";
 
 interface DetallePedido {
   productoId: number | null;

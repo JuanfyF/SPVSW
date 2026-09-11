@@ -4,13 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
 import { CircleDollarSign } from "lucide-react";
-
-interface Producto {
-  id: number;
-  nombre: string;
-  categoria: string | null;
-  tipoVenta: string;
-}
+import type { Producto } from "@pos/shared";
 
 export default function AperturaCaja() {
   const navigate = useNavigate();

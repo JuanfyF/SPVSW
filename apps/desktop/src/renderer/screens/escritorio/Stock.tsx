@@ -1,15 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuthStore } from "../../store/auth";
 import { Package } from "lucide-react";
-
-interface Producto {
-  id: number;
-  nombre: string;
-  categoria: string | null;
-  tipoVenta: string;
-  precioEntero: number | null;
-  precioPorcion: number | null;
-}
+import type { Producto } from "@pos/shared";
 
 interface StockItem {
   id: number;

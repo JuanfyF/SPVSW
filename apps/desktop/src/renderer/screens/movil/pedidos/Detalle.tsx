@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { useAuthStore } from "../../../store/auth";
 import { Phone } from "lucide-react";
+import type { Producto } from "@pos/shared";
 
 interface Pedido {
   id: number;
@@ -23,12 +24,6 @@ interface DetallePedido {
   cantidad: number;
   precioUnitario: number;
   subtotal: number;
-}
-
-interface Producto {
-  id: number;
-  nombre: string;
-  categoria: string | null;
 }
 
 const coloresEstado: Record<string, string> = {
