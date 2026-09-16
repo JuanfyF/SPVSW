@@ -1,0 +1,115 @@
+name: Build & Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm --filter @pos/shared build && pnpm --filter @pos/db build && pnpm --filter @pos/core build
+
+      - name: Build Electron main process
+        run: pnpm --filter @pos/desktop build:main
+
+      - name: Build renderer
+        run: pnpm --filter @pos/desktop build:renderer
+
+      - name: Rebuild native modules
+        run: pnpm --filter @pos/desktop exec electron-rebuild -f -w better-sqlite3
+
+      - name: Build AppImage
+        run: pnpm --filter @pos/desktop exec electron-builder --linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version
+        id: version
+        run: echo "version=$(node -p "require('./apps/desktop/package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Patch AppImage
+        run: bash apps/desktop/scripts/patch-appimage.sh 'apps/desktop/release/Sweet Bakery-${{ steps.version.outputs.version }}.AppImage'
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: apps/desktop/release/*.AppImage
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm --filter @pos/shared build && pnpm --filter @pos/db build && pnpm --filter @pos/core build
+
+      - name: Build Electron main process
+        run: pnpm --filter @pos/desktop build:main
+
+      - name: Build renderer
+        run: pnpm --filter @pos/desktop build:renderer
+
+      - name: Rebuild native modules
+        run: pnpm --filter @pos/desktop exec electron-rebuild -f -w better-sqlite3
+
+      - name: Build NSIS installer
+        run: pnpm --filter @pos/desktop exec electron-builder --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: apps/desktop/release/*.exe
+
+  release:
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/linux-appimage/*
+            artifacts/windows-installer/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

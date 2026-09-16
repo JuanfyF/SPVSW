@@ -7,10 +7,6 @@ import * as relations from "./relations";
  * No abre la conexión al importar el módulo — la ruta del archivo SQLite
  * depende de app.getPath('userData'), que solo existe dentro del proceso
  * de Electron. apps/desktop llama a createDb(rutaArchivo) al arrancar.
- *
- * TODO(fase 3): agregar pragma de WAL mode y foreign_keys=ON al abrir,
- * son buenas prácticas para SQLite en apps de escritorio con escrituras
- * concurrentes (desktop + local-server escribiendo a la vez).
  */
 export function createDb(rutaArchivo: string) {
   const sqlite = new Database(rutaArchivo);

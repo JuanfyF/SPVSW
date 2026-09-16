@@ -192,7 +192,17 @@ export function crearServicioPedidos(db: PosDatabase) {
       }
 
       // Emitir evento
-      eventBus.emit("pedido:entregado", { pedidoId: validados.pedidoId });
+      eventBus.emit("pedido:entregado", {
+        pedidoId: validados.pedidoId,
+        cliente: pedido.cliente,
+        totalEstimado: pedido.totalEstimado,
+        anticipo: pedido.anticipo,
+        saldoPendiente: pedido.saldoPendiente,
+        metodoPagoSaldo: validados.metodoPagoSaldo ?? pedido.metodoPagoSaldo,
+        requiereFactura: pedido.requiereFactura,
+        clienteIdentificacion: pedido.clienteIdentificacion,
+        fechaEntrega: pedido.fechaEntrega,
+      });
     },
 
     /**

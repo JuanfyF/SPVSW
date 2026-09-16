@@ -6,15 +6,61 @@
  * /packages/facturacion-sri, se suscribe aquí sin tocar el código de
  * ventas ya probado. Ver AGENT.md sección 3 (arquitectura) y sección 5.3 (SOLID).
  *
- * TODO(fase 3): definir el payload real de cada evento junto con el
- * módulo de core correspondiente. Estos son placeholders de forma.
+ * Payloads diseñados para soportar facturación SRI y reporting sin
+ * necesidad de queries adicionales en el subscriber.
  */
 
 export type EventoSistema =
-  | { tipo: "venta:creada"; payload: { ventaId: number } }
-  | { tipo: "pedido:entregado"; payload: { pedidoId: number } }
-  | { tipo: "cierre:completado"; payload: { sesionCajaId: number } }
-  | { tipo: "cierre:diferencia_detectada"; payload: { sesionCajaId: number } };
+  | {
+      tipo: "venta:creada";
+      payload: {
+        ventaId: number;
+        sesionCajaId: number;
+        total: number;
+        metodoPago: "efectivo" | "transferencia";
+        tipoOrigen: "mostrador" | "pedido" | "cortesia";
+        requiereFactura: boolean;
+        clienteIdentificacion: string | null;
+        clienteNombre: string | null;
+        fechaHora: string;
+      };
+    }
+  | {
+      tipo: "pedido:entregado";
+      payload: {
+        pedidoId: number;
+        cliente: string;
+        totalEstimado: number;
+        anticipo: number;
+        saldoPendiente: number;
+        metodoPagoSaldo: "efectivo" | "transferencia" | null;
+        requiereFactura: boolean;
+        clienteIdentificacion: string | null;
+        fechaEntrega: string;
+      };
+    }
+  | {
+      tipo: "cierre:completado";
+      payload: {
+        sesionCajaId: number;
+        fecha: string;
+        usuarioId: number;
+        totalVentas: number;
+        totalGastos: number;
+        diferencia: number;
+      };
+    }
+  | {
+      tipo: "cierre:diferencia_detectada";
+      payload: {
+        sesionCajaId: number;
+        fecha: string;
+        usuarioId: number;
+        diferencia: number;
+        totalEsperado: number;
+        totalReal: number;
+      };
+    };
 
 type Handler<T extends EventoSistema["tipo"]> = (
   payload: Extract<EventoSistema, { tipo: T }>["payload"]
