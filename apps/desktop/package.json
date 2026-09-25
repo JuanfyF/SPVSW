@@ -1,6 +1,6 @@
 {
   "name": "@pos/desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sistema POS local-first para pastelería",
   "author": {
     "name": "Sweet Bakery",
