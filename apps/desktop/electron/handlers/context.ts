@@ -45,7 +45,7 @@ export interface HandlerContext {
   getUsuarioActual: () => UsuarioActual | null;
   setUsuarioActual: (u: UsuarioActual | null) => void;
   getServicios: () => Servicios;
-  getDb: () => DbType;
+  getDb: () => DbType | null;
   getMainWindow: () => BrowserWindow | null;
   reiniciarTimeoutSesion: () => void;
   safeHandler: <T extends (...args: any[]) => Promise<any>>(fn: T, opts?: { auth?: boolean; admin?: boolean }) => T;

@@ -56,7 +56,7 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
         });
         res.json({ gasto });
       } catch (error) {
-        console.error("Error al crear gasto:", error);
+        console.error("Error al crear gasto:", error instanceof Error ? error.message : "Error desconocido");
         res.status(500).json({ error: "Error al crear gasto" });
       }
     }
@@ -75,7 +75,7 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
         const categoria = await gastos.crearCategoria(nombre);
         res.json({ categoria });
       } catch (error) {
-        console.error("Error al crear categoría:", error);
+        console.error("Error al crear categoría:", error instanceof Error ? error.message : "Error desconocido");
         res.status(500).json({ error: "Error al crear categoría" });
       }
     }

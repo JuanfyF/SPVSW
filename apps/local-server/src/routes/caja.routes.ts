@@ -37,7 +37,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         });
         res.json({ sesion });
       } catch (error) {
-        console.error("Error al abrir caja:", error);
+        console.error("Error al abrir caja:", error instanceof Error ? error.message : "Error desconocido");
         res.status(500).json({ error: "Error al abrir caja" });
       }
     }
@@ -71,7 +71,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         });
         res.json({ cierre });
       } catch (error) {
-        console.error("Error al cerrar caja:", error);
+        console.error("Error al cerrar caja:", error instanceof Error ? error.message : "Error desconocido");
         res.status(500).json({ error: "Error al cerrar caja" });
       }
     }
@@ -151,7 +151,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         await caja.marcarRevisado(cierreCajaId, usuario.usuarioId);
         res.json({ mensaje: "Cierre marcado como revisado" });
       } catch (error) {
-        console.error("Error al marcar revisado:", error);
+        console.error("Error al marcar revisado:", error instanceof Error ? error.message : "Error desconocido");
         res.status(500).json({ error: "Error al marcar revisado" });
       }
     }
@@ -171,7 +171,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         await caja.forzarCierre(sesionCajaId, usuario.usuarioId);
         res.json({ exito: true });
       } catch (error) {
-        console.error("Error al forzar cierre:", error);
+        console.error("Error al forzar cierre:", error instanceof Error ? error.message : "Error desconocido");
         res.status(500).json({ error: "Error al forzar cierre" });
       }
     }

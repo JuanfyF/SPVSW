@@ -1,9 +1,20 @@
 #!/bin/bash
 # patch-appimage.sh — Extract AppImage, patch AppRun with GPU/sandbox flags, repackage.
-# Usage: ./patch-appimage.sh <path-to.AppImage>
+# Usage: ./patch-appimage.sh <path-to.AppImage> | ./patch-appimage.sh <directory>
 set -euo pipefail
 
-APPIMAGE_PATH="${1:?Usage: $0 <appimage-path>}"
+INPUT="${1:?Usage: $0 <appimage-path-or-directory>}"
+
+# Si es un directorio, buscar el primer .AppImage
+if [ -d "$INPUT" ]; then
+  INPUT=$(find "$INPUT" -maxdepth 1 -name "*.AppImage" -type f | head -1)
+  if [ -z "$INPUT" ]; then
+    echo "Error: No se encontró ningún .AppImage en el directorio"
+    exit 1
+  fi
+fi
+
+APPIMAGE_PATH="$INPUT"
 APPIMAGE_NAME="$(basename "$APPIMAGE_PATH")"
 APPIMAGE_DIR="$(dirname "$APPIMAGE_PATH")"
 WORKDIR="$(mktemp -d)"

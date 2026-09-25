@@ -16,7 +16,7 @@
     "build:main": "tsx scripts/build-electron.ts",
     "build:renderer": "vite build",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
-    "build:electron": "pnpm build:main && pnpm build:renderer && pnpm rebuild:native && electron-builder && bash scripts/patch-appimage.sh 'release/Sweet Bakery-0.1.0.AppImage'",
+    "build:electron": "pnpm build:main && pnpm build:renderer && pnpm rebuild:native && electron-builder && bash scripts/patch-appimage.sh release",
     "build": "pnpm build:electron",
     "typecheck": "tsc --noEmit",
     "test:e2e": "npx playwright test",

@@ -195,7 +195,7 @@ export function pedidosAdminRoutes(
         const pedido = await pedidos.crear(req.body);
         res.json({ pedido });
       } catch (error) {
-        console.error("Error al crear el pedido:", error);
+        console.error("Error al crear el pedido:", error instanceof Error ? error.message : "Error desconocido");
         res.status(400).json({ error: "Error al crear el pedido" });
       }
     }

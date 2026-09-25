@@ -24,7 +24,7 @@ function generarPinAleatorio(): string {
   do {
     const array = new Uint32Array(1);
     crypto.getRandomValues(array);
-    pin = String((array[0] % range) + min);
+    pin = String(((array[0] ?? 0) % range) + min);
   } while (esPinDebil(pin));
   return pin;
 }

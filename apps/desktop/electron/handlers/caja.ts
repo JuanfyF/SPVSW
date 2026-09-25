@@ -9,6 +9,7 @@ export function registrarCajaHandlers() {
 
   ipcMain.handle("caja:abrir", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.caja.abrir(datos as any);
+    if (!resultado) throw new Error("Error al abrir la sesión de caja");
     ctx.logAuditoria("caja_abierta", undefined, { sesionCajaId: resultado.id });
     ctx.notificarCambio();
     return resultado;
@@ -16,6 +17,7 @@ export function registrarCajaHandlers() {
 
   ipcMain.handle("caja:cerrar", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.caja.cerrar(datos as any);
+    if (!resultado) throw new Error("Error al cerrar la sesión de caja");
     ctx.logAuditoria("caja_cerrada", undefined, { cierreCajaId: resultado.id, efectivoEsperado: resultado.efectivoEsperado });
     ctx.notificarCambio();
     return resultado;

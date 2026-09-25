@@ -40,12 +40,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get version
-        id: version
-        run: echo "version=$(node -p "require('./apps/desktop/package.json').version")" >> $GITHUB_OUTPUT
-
       - name: Patch AppImage
-        run: bash apps/desktop/scripts/patch-appimage.sh 'apps/desktop/release/Sweet Bakery-${{ steps.version.outputs.version }}.AppImage'
+        run: bash apps/desktop/scripts/patch-appimage.sh apps/desktop/release
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
