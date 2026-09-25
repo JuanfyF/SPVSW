@@ -33,7 +33,7 @@ jobs:
         run: pnpm --filter @pos/desktop exec electron-rebuild -f -w better-sqlite3
 
       - name: Build AppImage
-        run: pnpm --filter @pos/desktop exec electron-builder --linux
+        run: pnpm --filter @pos/desktop exec electron-builder --linux --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -73,7 +73,7 @@ jobs:
         run: pnpm --filter @pos/desktop exec electron-rebuild -f -w better-sqlite3
 
       - name: Build NSIS installer
-        run: pnpm --filter @pos/desktop exec electron-builder --win
+        run: pnpm --filter @pos/desktop exec electron-builder --win --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
