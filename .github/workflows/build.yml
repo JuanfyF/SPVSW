@@ -23,6 +23,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install FUSE for AppImage tooling
+        run: sudo apt-get update && sudo apt-get install -y libfuse2
+
       - name: Build Electron main process
         run: pnpm --filter @pos/desktop build:main
 
