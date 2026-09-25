@@ -23,9 +23,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build shared packages
-        run: pnpm --filter @pos/shared build && pnpm --filter @pos/db build && pnpm --filter @pos/core build
-
       - name: Build Electron main process
         run: pnpm --filter @pos/desktop build:main
 
@@ -65,9 +62,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Build shared packages
-        run: pnpm --filter @pos/shared build && pnpm --filter @pos/db build && pnpm --filter @pos/core build
 
       - name: Build Electron main process
         run: pnpm --filter @pos/desktop build:main
