@@ -104,7 +104,9 @@ jobs:
       - name: Fix update manifests (filename + sha512 must match actual assets)
         run: |
           fix_yml() {
-            local yml="$1" file="$2"
+            local yml="$1" dir="$2" pattern="$3"
+            local file
+            file="$(find "$dir" -maxdepth 1 -name "$pattern" -type f | head -1)"
             if [ -f "$yml" ] && [ -f "$file" ]; then
               local filename sha512 size
               filename="$(basename "$file")"
@@ -115,13 +117,15 @@ jobs:
               sed -i "s|sha512: .*|sha512: $sha512|" "$yml"
               sed -i "s|size: .*|size: $size|" "$yml"
               sed -i "/blockMapSize/d" "$yml"
-              echo "Fixed $yml -> $filename"
+              echo "Fixed $yml -> $filename (sha512=${sha512:0:16}..., size=$size)"
+            else
+              echo "SKIP: yml=$yml file=$file"
             fi
           }
           fix_yml artifacts/windows-installer/latest.yml \
-                   artifacts/windows-installer/Sweet.Bakery-*-Setup.exe
+                   artifacts/windows-installer "Sweet*Bakery*Setup.exe"
           fix_yml artifacts/linux-appimage/latest-linux.yml \
-                   artifacts/linux-appimage/*.AppImage
+                   artifacts/linux-appimage "*.AppImage"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
