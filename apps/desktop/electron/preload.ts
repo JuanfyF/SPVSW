@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import { limpiarErrorIPC } from "./utils/error-utils";
 
 /**
  * API expuesta al renderer a través de contextBridge.
@@ -6,195 +7,202 @@ import { contextBridge, ipcRenderer } from "electron";
  * NUNCA se expone ipcRenderer directo (AGENT.md 5.1, seguridad).
  */
 
+/** Wrapper seguro de ipcRenderer.invoke que limpia errores. */
+function invoke(canal: string, ...args: unknown[]): Promise<any> {
+  return ipcRenderer.invoke(canal, ...args).catch((err) => {
+    throw limpiarErrorIPC(err, canal);
+  });
+}
+
 contextBridge.exposeInMainWorld("pos", {
   // ============================================================
   // AUTH
   // ============================================================
   auth: {
-    login: (pin: string, rol?: string) => ipcRenderer.invoke("auth:login", pin, rol),
-    logout: () => ipcRenderer.invoke("auth:logout"),
-    getUsuarioActual: () => ipcRenderer.invoke("auth:getUsuarioActual"),
-    restablecerPin: (usuarioId: number) => ipcRenderer.invoke("auth:restablecerPin", usuarioId),
-    restablecerPinPublico: (usuarioId: number) => ipcRenderer.invoke("auth:restablecerPinPublico", usuarioId),
+    login: (pin: string, rol?: string) => invoke("auth:login", pin, rol),
+    logout: () => invoke("auth:logout"),
+    getUsuarioActual: () => invoke("auth:getUsuarioActual"),
+    restablecerPin: (usuarioId: number) => invoke("auth:restablecerPin", usuarioId),
+    restablecerPinPublico: (usuarioId: number) => invoke("auth:restablecerPinPublico", usuarioId),
   },
 
   // ============================================================
   // USUARIOS
   // ============================================================
   usuarios: {
-    listar: () => ipcRenderer.invoke("usuarios:listar"),
-    listarPublico: () => ipcRenderer.invoke("usuarios:listarPublico"),
-    obtenerPorId: (id: number) => ipcRenderer.invoke("usuarios:obtenerPorId", id),
-    crear: (datos: unknown) => ipcRenderer.invoke("usuarios:crear", datos),
+    listar: () => invoke("usuarios:listar"),
+    listarPublico: () => invoke("usuarios:listarPublico"),
+    obtenerPorId: (id: number) => invoke("usuarios:obtenerPorId", id),
+    crear: (datos: unknown) => invoke("usuarios:crear", datos),
     actualizar: (id: number, datos: unknown) =>
-      ipcRenderer.invoke("usuarios:actualizar", id, datos),
-    desactivar: (id: number) => ipcRenderer.invoke("usuarios:desactivar", id),
+      invoke("usuarios:actualizar", id, datos),
+    desactivar: (id: number) => invoke("usuarios:desactivar", id),
     cambiarPin: (id: number, nuevoPin: string) =>
-      ipcRenderer.invoke("usuarios:cambiarPin", id, nuevoPin),
+      invoke("usuarios:cambiarPin", id, nuevoPin),
   },
 
   // ============================================================
   // EMPLEADOS
   // ============================================================
   empleados: {
-    listar: () => ipcRenderer.invoke("empleados:listar"),
-    obtenerPorId: (id: number) => ipcRenderer.invoke("empleados:obtenerPorId", id),
-    crear: (datos: unknown) => ipcRenderer.invoke("empleados:crear", datos),
+    listar: () => invoke("empleados:listar"),
+    obtenerPorId: (id: number) => invoke("empleados:obtenerPorId", id),
+    crear: (datos: unknown) => invoke("empleados:crear", datos),
     actualizar: (id: number, datos: unknown) =>
-      ipcRenderer.invoke("empleados:actualizar", id, datos),
-    desactivar: (id: number) => ipcRenderer.invoke("empleados:desactivar", id),
+      invoke("empleados:actualizar", id, datos),
+    desactivar: (id: number) => invoke("empleados:desactivar", id),
   },
 
   // ============================================================
   // PRODUCTOS
   // ============================================================
   productos: {
-    listar: () => ipcRenderer.invoke("productos:listar"),
-    obtenerPorId: (id: number) => ipcRenderer.invoke("productos:obtenerPorId", id),
-    crear: (datos: unknown) => ipcRenderer.invoke("productos:crear", datos),
+    listar: () => invoke("productos:listar"),
+    obtenerPorId: (id: number) => invoke("productos:obtenerPorId", id),
+    crear: (datos: unknown) => invoke("productos:crear", datos),
     actualizar: (id: number, datos: unknown) =>
-      ipcRenderer.invoke("productos:actualizar", id, datos),
-    desactivar: (id: number) => ipcRenderer.invoke("productos:desactivar", id),
-    buscar: (nombre: string) => ipcRenderer.invoke("productos:buscar", nombre),
+      invoke("productos:actualizar", id, datos),
+    desactivar: (id: number) => invoke("productos:desactivar", id),
+    buscar: (nombre: string) => invoke("productos:buscar", nombre),
   },
 
   // ============================================================
   // CAJA
   // ============================================================
   caja: {
-    abrir: (datos: unknown) => ipcRenderer.invoke("caja:abrir", datos),
-    cerrar: (datos: unknown) => ipcRenderer.invoke("caja:cerrar", datos),
+    abrir: (datos: unknown) => invoke("caja:abrir", datos),
+    cerrar: (datos: unknown) => invoke("caja:cerrar", datos),
     obtenerSesionAbierta: (usuarioId: number) =>
-      ipcRenderer.invoke("caja:obtenerSesionAbierta", usuarioId),
+      invoke("caja:obtenerSesionAbierta", usuarioId),
     calcularEfectivoEsperado: (sesionCajaId: number) =>
-      ipcRenderer.invoke("caja:calcularEfectivoEsperado", sesionCajaId),
+      invoke("caja:calcularEfectivoEsperado", sesionCajaId),
     obtenerTotalDevoluciones: (sesionCajaId: number) =>
-      ipcRenderer.invoke("caja:obtenerTotalDevoluciones", sesionCajaId),
+      invoke("caja:obtenerTotalDevoluciones", sesionCajaId),
     forzarCierre: (sesionCajaId: number, usuarioId: number) =>
-      ipcRenderer.invoke("caja:forzarCierre", sesionCajaId, usuarioId),
+      invoke("caja:forzarCierre", sesionCajaId, usuarioId),
     marcarRevisado: (cierreCajaId: number, usuarioId: number) =>
-      ipcRenderer.invoke("caja:marcarRevisado", cierreCajaId, usuarioId),
+      invoke("caja:marcarRevisado", cierreCajaId, usuarioId),
   },
 
   // ============================================================
   // STOCK
   // ============================================================
   stock: {
-    registrarStock: (datos: unknown) => ipcRenderer.invoke("stock:registrarStock", datos),
+    registrarStock: (datos: unknown) => invoke("stock:registrarStock", datos),
     registrarReposicion: (productoId: number, sesionCajaId: number, cantidad: number, unidad?: "entero" | "porcion") =>
-      ipcRenderer.invoke("stock:registrarReposicion", productoId, sesionCajaId, cantidad, unidad),
-    registrarCorte: (datos: unknown) => ipcRenderer.invoke("stock:registrarCorte", datos),
-    registrarMerma: (datos: unknown) => ipcRenderer.invoke("stock:registrarMerma", datos),
-    registrarCortesia: (datos: unknown) => ipcRenderer.invoke("stock:registrarCortesia", datos),
+      invoke("stock:registrarReposicion", productoId, sesionCajaId, cantidad, unidad),
+    registrarCorte: (datos: unknown) => invoke("stock:registrarCorte", datos),
+    registrarMerma: (datos: unknown) => invoke("stock:registrarMerma", datos),
+    registrarCortesia: (datos: unknown) => invoke("stock:registrarCortesia", datos),
     obtenerStockPorSesion: (sesionCajaId: number) =>
-      ipcRenderer.invoke("stock:obtenerStockPorSesion", sesionCajaId),
+      invoke("stock:obtenerStockPorSesion", sesionCajaId),
     listarMermasPorSesion: (sesionCajaId: number) =>
-      ipcRenderer.invoke("stock:listarMermasPorSesion", sesionCajaId),
+      invoke("stock:listarMermasPorSesion", sesionCajaId),
     listarCortesiasPorSesion: (sesionCajaId: number) =>
-      ipcRenderer.invoke("stock:listarCortesiasPorSesion", sesionCajaId),
+      invoke("stock:listarCortesiasPorSesion", sesionCajaId),
     conciliarStock: (sesionCajaId: number, conteoFisicoPorProducto: unknown[]) =>
-      ipcRenderer.invoke("stock:conciliarStock", sesionCajaId, conteoFisicoPorProducto),
+      invoke("stock:conciliarStock", sesionCajaId, conteoFisicoPorProducto),
     calcularVendido: (productoId: number, sesionCajaId: number, unidad?: string) =>
-      ipcRenderer.invoke("stock:calcularVendido", productoId, sesionCajaId, unidad),
+      invoke("stock:calcularVendido", productoId, sesionCajaId, unidad),
     calcularVendidoLote: (sesionCajaId: number) =>
-      ipcRenderer.invoke("stock:calcularVendidoLote", sesionCajaId),
+      invoke("stock:calcularVendidoLote", sesionCajaId),
     calcularAjusteCortesLote: (sesionCajaId: number) =>
-      ipcRenderer.invoke("stock:calcularAjusteCortesLote", sesionCajaId),
+      invoke("stock:calcularAjusteCortesLote", sesionCajaId),
     verificarDisponibilidad: (productoId: number, sesionCajaId: number, unidad: "entero" | "porcion", cantidadRequerida: number) =>
-      ipcRenderer.invoke("stock:verificarDisponibilidad", productoId, sesionCajaId, unidad, cantidadRequerida),
+      invoke("stock:verificarDisponibilidad", productoId, sesionCajaId, unidad, cantidadRequerida),
   },
 
   // ============================================================
   // VENTAS
   // ============================================================
   ventas: {
-    crear: (datos: unknown) => ipcRenderer.invoke("ventas:crear", datos),
+    crear: (datos: unknown) => invoke("ventas:crear", datos),
     listarPorSesion: (sesionCajaId: number) =>
-      ipcRenderer.invoke("ventas:listarPorSesion", sesionCajaId),
+      invoke("ventas:listarPorSesion", sesionCajaId),
     obtenerDetalle: (ventaId: number) =>
-      ipcRenderer.invoke("ventas:obtenerDetalle", ventaId),
-    obtenerPorId: (id: number) => ipcRenderer.invoke("ventas:obtenerPorId", id),
+      invoke("ventas:obtenerDetalle", ventaId),
+    obtenerPorId: (id: number) => invoke("ventas:obtenerPorId", id),
   },
 
   // ============================================================
   // PEDIDOS
   // ============================================================
   pedidos: {
-    crear: (datos: unknown) => ipcRenderer.invoke("pedidos:crear", datos),
-    marcarListo: (pedidoId: number) => ipcRenderer.invoke("pedidos:marcarListo", pedidoId),
-    actualizarEstado: (pedidoId: number, nuevoEstado: string) => ipcRenderer.invoke("pedidos:actualizarEstado", pedidoId, nuevoEstado),
+    crear: (datos: unknown) => invoke("pedidos:crear", datos),
+    marcarListo: (pedidoId: number) => invoke("pedidos:marcarListo", pedidoId),
+    actualizarEstado: (pedidoId: number, nuevoEstado: string) => invoke("pedidos:actualizarEstado", pedidoId, nuevoEstado),
     entregar: (pedidoId: number, sesionCajaEntregaId: number, metodoPagoSaldo?: string) =>
-      ipcRenderer.invoke("pedidos:entregar", pedidoId, sesionCajaEntregaId, metodoPagoSaldo),
+      invoke("pedidos:entregar", pedidoId, sesionCajaEntregaId, metodoPagoSaldo),
     revertirEntrega: (pedidoId: number) =>
-      ipcRenderer.invoke("pedidos:revertirEntrega", pedidoId),
+      invoke("pedidos:revertirEntrega", pedidoId),
     cancelar: (pedidoId: number, motivo: string, metodoDevolucion: string, registradoPor: number, sesionCajaDevolucionId?: number) =>
-      ipcRenderer.invoke("pedidos:cancelar", pedidoId, motivo, metodoDevolucion, registradoPor, sesionCajaDevolucionId),
-    listarPorEstado: (estado: string) => ipcRenderer.invoke("pedidos:listarPorEstado", estado),
-    listarActivos: () => ipcRenderer.invoke("pedidos:listarActivos"),
-    listarTodos: () => ipcRenderer.invoke("pedidos:listarTodos"),
-    listarPorSesionAnticipo: (sesionCajaId: number) => ipcRenderer.invoke("pedidos:listarPorSesionAnticipo", sesionCajaId),
+      invoke("pedidos:cancelar", pedidoId, motivo, metodoDevolucion, registradoPor, sesionCajaDevolucionId),
+    listarPorEstado: (estado: string) => invoke("pedidos:listarPorEstado", estado),
+    listarActivos: () => invoke("pedidos:listarActivos"),
+    listarTodos: () => invoke("pedidos:listarTodos"),
+    listarPorSesionAnticipo: (sesionCajaId: number) => invoke("pedidos:listarPorSesionAnticipo", sesionCajaId),
     listarPorFecha: (fechaInicio: string, fechaFin: string) =>
-      ipcRenderer.invoke("pedidos:listarPorFecha", fechaInicio, fechaFin),
-    obtenerPorId: (id: number) => ipcRenderer.invoke("pedidos:obtenerPorId", id),
-    obtenerDetalle: (pedidoId: number) => ipcRenderer.invoke("pedidos:obtenerDetalle", pedidoId),
-    obtenerResumen: (pedidoId: number) => ipcRenderer.invoke("pedidos:obtenerResumen", pedidoId),
+      invoke("pedidos:listarPorFecha", fechaInicio, fechaFin),
+    obtenerPorId: (id: number) => invoke("pedidos:obtenerPorId", id),
+    obtenerDetalle: (pedidoId: number) => invoke("pedidos:obtenerDetalle", pedidoId),
+    obtenerResumen: (pedidoId: number) => invoke("pedidos:obtenerResumen", pedidoId),
   },
 
   // ============================================================
   // GASTOS
   // ============================================================
   gastos: {
-    crear: (datos: unknown) => ipcRenderer.invoke("gastos:crear", datos),
+    crear: (datos: unknown) => invoke("gastos:crear", datos),
     listarPorSesion: (sesionCajaId: number) =>
-      ipcRenderer.invoke("gastos:listarPorSesion", sesionCajaId),
+      invoke("gastos:listarPorSesion", sesionCajaId),
     listarPorCategoria: (categoriaId: number, sesionCajaId?: number) =>
-      ipcRenderer.invoke("gastos:listarPorCategoria", categoriaId, sesionCajaId),
+      invoke("gastos:listarPorCategoria", categoriaId, sesionCajaId),
     obtenerTotalPorOrigen: (sesionCajaId: number) =>
-      ipcRenderer.invoke("gastos:obtenerTotalPorOrigen", sesionCajaId),
-    listarCategorias: () => ipcRenderer.invoke("gastos:listarCategorias"),
-    crearCategoria: (nombre: string) => ipcRenderer.invoke("gastos:crearCategoria", nombre),
+      invoke("gastos:obtenerTotalPorOrigen", sesionCajaId),
+    listarCategorias: () => invoke("gastos:listarCategorias"),
+    crearCategoria: (nombre: string) => invoke("gastos:crearCategoria", nombre),
   },
 
   // ============================================================
   // NÓMINA
   // ============================================================
   nomina: {
-    registrarAdelanto: (datos: unknown) => ipcRenderer.invoke("nomina:registrarAdelanto", datos),
-    registrarMulta: (datos: unknown) => ipcRenderer.invoke("nomina:registrarMulta", datos),
+    registrarAdelanto: (datos: unknown) => invoke("nomina:registrarAdelanto", datos),
+    registrarMulta: (datos: unknown) => invoke("nomina:registrarMulta", datos),
     listarAdelantosPorEmpleado: (empleadoId: number) =>
-      ipcRenderer.invoke("nomina:listarAdelantosPorEmpleado", empleadoId),
+      invoke("nomina:listarAdelantosPorEmpleado", empleadoId),
     listarAdelantosPorSesion: (sesionCajaId: number) =>
-      ipcRenderer.invoke("nomina:listarAdelantosPorSesion", sesionCajaId),
+      invoke("nomina:listarAdelantosPorSesion", sesionCajaId),
     listarMultasPorEmpleado: (empleadoId: number) =>
-      ipcRenderer.invoke("nomina:listarMultasPorEmpleado", empleadoId),
+      invoke("nomina:listarMultasPorEmpleado", empleadoId),
     calcularDescuentosMes: (empleadoId: number, mes: string) =>
-      ipcRenderer.invoke("nomina:calcularDescuentosMes", empleadoId, mes),
-    listarEmpleadosActivos: () => ipcRenderer.invoke("nomina:listarEmpleadosActivos"),
-    crearEmpleado: (datos: unknown) => ipcRenderer.invoke("nomina:crearEmpleado", datos),
+      invoke("nomina:calcularDescuentosMes", empleadoId, mes),
+    listarEmpleadosActivos: () => invoke("nomina:listarEmpleadosActivos"),
+    crearEmpleado: (datos: unknown) => invoke("nomina:crearEmpleado", datos),
   },
 
   // ============================================================
   // REPORTES
   // ============================================================
   reportes: {
-    reporteDiario: (fecha: string) => ipcRenderer.invoke("reportes:reporteDiario", fecha),
+    reporteDiario: (fecha: string) => invoke("reportes:reporteDiario", fecha),
     reportePorFechas: (fechaInicio: string, fechaFin: string) =>
-      ipcRenderer.invoke("reportes:reportePorFechas", fechaInicio, fechaFin),
+      invoke("reportes:reportePorFechas", fechaInicio, fechaFin),
     listarCierresPorRango: (fechaInicio: string, fechaFin: string) =>
-      ipcRenderer.invoke("reportes:listarCierresPorRango", fechaInicio, fechaFin),
-    reportePedidosPendientes: () => ipcRenderer.invoke("reportes:reportePedidosPendientes"),
+      invoke("reportes:listarCierresPorRango", fechaInicio, fechaFin),
+    reportePedidosPendientes: () => invoke("reportes:reportePedidosPendientes"),
     reporteProductosMasVendidos: (fechaInicio: string, fechaFin: string) =>
-      ipcRenderer.invoke("reportes:reporteProductosMasVendidos", fechaInicio, fechaFin),
+      invoke("reportes:reporteProductosMasVendidos", fechaInicio, fechaFin),
   },
 
   // ============================================================
   // SISTEMA
   // ============================================================
   sistema: {
-    getDbPath: () => ipcRenderer.invoke("sistema:getDbPath"),
-    getVersion: () => ipcRenderer.invoke("sistema:getVersion"),
-    backup: (rutaDestino: string) => ipcRenderer.invoke("sistema:backup", rutaDestino),
-    restore: (rutaBackup: string) => ipcRenderer.invoke("sistema:restore", rutaBackup),
+    getDbPath: () => invoke("sistema:getDbPath"),
+    getVersion: () => invoke("sistema:getVersion"),
+    backup: (rutaDestino: string) => invoke("sistema:backup", rutaDestino),
+    restore: (rutaBackup: string) => invoke("sistema:restore", rutaBackup),
   },
 
   // ============================================================
@@ -218,7 +226,7 @@ contextBridge.exposeInMainWorld("pos", {
       ipcRenderer.removeListener("sesion:aviso", callback);
     };
   },
-  extenderSesion: () => ipcRenderer.invoke("sesion:extender"),
+  extenderSesion: () => invoke("sesion:extender"),
   onUpdateProgress: (callback: (data: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => {
     const handler = (_event: any, data: any) => callback(data);
     ipcRenderer.on("update:progress", handler);

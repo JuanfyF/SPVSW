@@ -12,9 +12,9 @@ export function registrarSistemaHandlers() {
     return path.join(app.getPath("userData"), "pos.sqlite");
   }, { auth: true }));
 
-  ipcMain.handle("sistema:getVersion", async () => {
+  ipcMain.handle("sistema:getVersion", ctx.safeHandler(async () => {
     return app.getVersion();
-  });
+  }));
 
   ipcMain.handle("sistema:backup", ctx.safeHandler(async (_event, rutaDestino: string) => {
     const db = ctx.getDb();

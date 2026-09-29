@@ -12,7 +12,7 @@ export function registrarAuthHandlers() {
   const servicios = ctx.getServicios();
   const rateLimit = crearRateLimiter();
 
-  ipcMain.handle("auth:login", async (_event, pin: string, rol?: string) => {
+  ipcMain.handle("auth:login", ctx.safeHandler(async (_event, pin: string, rol?: string) => {
     const { permitido, restantes } = rateLimit.verificar("desktop");
     if (!permitido) {
       ctx.logAuditoria("login_bloqueado", undefined, { razon: "rate_limit" });
@@ -38,13 +38,13 @@ export function registrarAuthHandlers() {
       sesionAbierta = await servicios.caja.obtenerSesionAbierta(usuario.id);
     }
     return { usuario, sesionAbierta };
-  });
+  }));
 
-  ipcMain.handle("auth:logout", async () => {
+  ipcMain.handle("auth:logout", ctx.safeHandler(async () => {
     ctx.setUsuarioActual(null);
     ctx.limpiarSesionesTimeout();
     return true;
-  });
+  }));
 
   ipcMain.handle("sesion:extender", ctx.safeHandler(async () => {
     ctx.reiniciarTimeoutSesion();

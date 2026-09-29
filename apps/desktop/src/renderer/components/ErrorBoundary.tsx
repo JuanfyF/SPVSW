@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { limpiarMensajeError } from "../../../electron/utils/error-utils";
 
 interface Props {
   children: ReactNode;
@@ -18,7 +19,8 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    const msg = limpiarMensajeError(error.message || "");
+    return { hasError: true, error: new Error(msg || "Ocurrió un error inesperado") };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
