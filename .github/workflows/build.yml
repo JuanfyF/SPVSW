@@ -109,7 +109,8 @@ jobs:
             file="$(find "$dir" -maxdepth 1 -name "$pattern" -type f | head -1)"
             if [ -f "$yml" ] && [ -f "$file" ]; then
               local filename sha512 size
-              filename="$(basename "$file")"
+              # GitHub Releases replaces spaces with dots in asset names
+              filename="$(basename "$file" | tr ' ' '.')"
               sha512="$(openssl dgst -sha512 -binary "$file" | base64 -w0)"
               size="$(stat -c%s "$file")"
               sed -i "s|url: .*|url: $filename|" "$yml"
