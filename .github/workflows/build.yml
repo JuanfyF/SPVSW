@@ -47,7 +47,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-appimage
-          path: apps/desktop/release/*.AppImage
+          path: |
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/latest-linux.yml
 
   build-windows:
     runs-on: windows-latest
@@ -84,7 +86,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: apps/desktop/release/*.exe
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/latest.yml
 
   release:
     needs: [build-linux, build-windows]

@@ -49,5 +49,22 @@ grep -A4 'atexit()' "$WORKDIR/appdir/AppImage" 2>/dev/null || grep 'exec.*BIN.*n
 echo "Repackaging..."
 ARCH=x86_64 "$TOOL" "$WORKDIR/appdir" "$APPIMAGE_PATH" 2>&1 | grep -v "^$"
 
+# Regenerate latest-linux.yml with correct filename, sha512 and size
+YML="$APPIMAGE_DIR/latest-linux.yml"
+if [ -f "$YML" ]; then
+  FILENAME="$(basename "$APPIMAGE_PATH")"
+  SHA512_B64="$(openssl dgst -sha512 -binary "$APPIMAGE_PATH" | base64 -w0)"
+  SIZE="$(stat -c%s "$APPIMAGE_PATH")"
+
+  sed -i "s|url: .*|url: $FILENAME|" "$YML"
+  sed -i "s|path: .*|path: $FILENAME|" "$YML"
+  sed -i "s|sha512: .*|sha512: $SHA512_B64|" "$YML"
+  sed -i "s|size: .*|size: $SIZE|" "$YML"
+  sed -i "/blockMapSize/d" "$YML"
+
+  echo "Updated $YML:"
+  cat "$YML"
+fi
+
 echo "Done: $APPIMAGE_PATH"
 ls -lh "$APPIMAGE_PATH"
