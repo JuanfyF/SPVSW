@@ -101,6 +101,28 @@ jobs:
         with:
           path: artifacts
 
+      - name: Fix update manifests (filename + sha512 must match actual assets)
+        run: |
+          fix_yml() {
+            local yml="$1" file="$2"
+            if [ -f "$yml" ] && [ -f "$file" ]; then
+              local filename sha512 size
+              filename="$(basename "$file")"
+              sha512="$(openssl dgst -sha512 -binary "$file" | base64 -w0)"
+              size="$(stat -c%s "$file")"
+              sed -i "s|url: .*|url: $filename|" "$yml"
+              sed -i "s|path: .*|path: $filename|" "$yml"
+              sed -i "s|sha512: .*|sha512: $sha512|" "$yml"
+              sed -i "s|size: .*|size: $size|" "$yml"
+              sed -i "/blockMapSize/d" "$yml"
+              echo "Fixed $yml -> $filename"
+            fi
+          }
+          fix_yml artifacts/windows-installer/latest.yml \
+                   artifacts/windows-installer/Sweet.Bakery-*-Setup.exe
+          fix_yml artifacts/linux-appimage/latest-linux.yml \
+                   artifacts/linux-appimage/*.AppImage
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
