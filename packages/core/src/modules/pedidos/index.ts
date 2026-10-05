@@ -32,6 +32,22 @@ import {
 } from "@pos/shared";
 import { eventBus } from "@pos/shared";
 
+/**
+ * Monto a cobrar al entregar un pedido.
+ * Fuente única: la columna `pedidos.saldoPendiente` (lo que `entregar()` evalúa).
+ * Solo si la columna es null (datos legacy) se recalcula como total − anticipo.
+ */
+export function montoCobradoEntrega(pedido: {
+  totalEstimado?: number | null;
+  anticipo?: number | null;
+  saldoPendiente?: number | null;
+}): number {
+  if (pedido.saldoPendiente !== null && pedido.saldoPendiente !== undefined) {
+    return Math.max(pedido.saldoPendiente, 0);
+  }
+  return Math.max((pedido.totalEstimado ?? 0) - (pedido.anticipo ?? 0), 0);
+}
+
 export function crearServicioPedidos(db: PosDatabase) {
   return {
     /**
@@ -319,6 +335,17 @@ export function crearServicioPedidos(db: PosDatabase) {
     },
 
     /**
+     * Lista pedidos entregados en una sesión de caja (sesionCajaEntregaId).
+     * Usado para el detalle de "Pedidos Entregados Hoy" en el PDF del cierre.
+     */
+    async listarPorSesionEntrega(sesionCajaId: number) {
+      return db
+        .select()
+        .from(pedidos)
+        .where(eq(pedidos.sesionCajaEntregaId, sesionCajaId));
+    },
+
+    /**
      * Lista pedidos por rango de fechas de entrega.
      */
     async listarPorFecha(fechaInicio: string, fechaFin: string) {
@@ -387,11 +414,15 @@ export function crearServicioPedidos(db: PosDatabase) {
 
       const totalDevoluciones = devoluciones.reduce((acc, d) => acc + d.monto, 0);
       const totalPagado = pedido.anticipo - totalDevoluciones;
-      // Saldo real recalculado: nunca menor a 0
-      const saldoPendiente = Math.max(
-        (pedido.totalEstimado ?? 0) - pedido.anticipo + totalDevoluciones,
-        0
-      );
+      // Entregado/cancelado: la columna saldoPendiente ya está en 0 (saldado o
+      // devuelto) — recalcular contradiría el estado real del pedido.
+      const saldoPendiente =
+        pedido.estado === "entregado" || pedido.estado === "cancelado"
+          ? 0
+          : Math.max(
+              (pedido.totalEstimado ?? 0) - pedido.anticipo + totalDevoluciones,
+              0
+            );
 
       return {
         pedido,

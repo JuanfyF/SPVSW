@@ -609,6 +609,25 @@ export interface PosAPI {
       clienteIdentificacion: string | null;
       actualizadoEn: string;
     }>>;
+    listarPorSesionEntrega: (sesionCajaId: number) => Promise<Array<{
+      id: number;
+      cliente: string;
+      telefono: string | null;
+      fechaPedido: string;
+      fechaEntrega: string;
+      estado: string;
+      anticipo: number;
+      metodoPagoAnticipo: string;
+      sesionCajaAnticipoId: number;
+      totalEstimado: number;
+      saldoPendiente: number;
+      metodoPagoSaldo: string | null;
+      sesionCajaEntregaId: number | null;
+      notas: string | null;
+      requiereFactura: boolean;
+      clienteIdentificacion: string | null;
+      actualizadoEn: string;
+    }>>;
     listarPorFecha: (fechaInicio: string, fechaFin: string) => Promise<Array<{
       id: number;
       cliente: string;
@@ -652,6 +671,7 @@ export interface PosAPI {
       pedidoId: number;
       productoId: number | null;
       descripcionPersonalizada: string | null;
+      nombre: string | null;
       unidad: "entero" | "porcion";
       cantidad: number;
       precioUnitario: number;

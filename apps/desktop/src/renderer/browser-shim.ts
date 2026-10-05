@@ -119,6 +119,9 @@
         const data = await api("POST", "/api/pedidos", datos);
         return data.pedido;
       },
+      async listarPorSesionEntrega(_sesionCajaId: number): Promise<any[]> {
+        return [];
+      },
     },
 
     stock: {

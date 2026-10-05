@@ -360,47 +360,36 @@ export default function CierreCaja() {
   const exportarPdf = async () => {
     if (!sesionCaja || !resumen) return;
     try {
-      // Obtener ventas de la sesión para pedidos entregados
-      const ventasSesion = await window.pos.ventas.listarPorSesion(sesionCaja.id);
+      // Pedidos entregados en ESTA sesión con sus cobros de saldo
+      const pedidosEntregadosSesion =
+        await window.pos.pedidos.listarPorSesionEntrega(sesionCaja.id);
 
-      // Pedidos entregados hoy con sus pagos
-      const pedidosEntregadosMap = new Map<number, {
-        id: number;
-        cliente: string;
-        producto: string;
-        cantidad: number;
-        total: number;
-        cobradoEfectivo: number;
-        cobradoTransferencia: number;
-        saldoPendiente: number;
-      }>();
-
-      // Procesar ventas de tipo "pedido" (saldos cobrados al entregar)
-      for (const v of ventasSesion.filter((v: any) => v.tipoOrigen === "pedido")) {
-        const pedido = (await window.pos.pedidos.obtenerResumen(v.pedidoId)) as any;
-        if (pedido) {
-          const existente = pedidosEntregadosMap.get(pedido.id);
-          if (existente) {
-            existente.cobradoEfectivo += v.metodoPago === "efectivo" ? v.total : 0;
-            existente.cobradoTransferencia += v.metodoPago === "transferencia" ? v.total : 0;
-          } else {
-            const detalles = pedido.detalles || [];
-            const productoPrincipal = detalles.length > 0 ? detalles[0].descripcion : "Pedido";
-            pedidosEntregadosMap.set(pedido.id, {
-              id: pedido.id,
-              cliente: pedido.cliente,
-              producto: productoPrincipal,
-              cantidad: detalles.length,
-              total: pedido.totalEstimado,
-              cobradoEfectivo: v.metodoPago === "efectivo" ? v.total : 0,
-              cobradoTransferencia: v.metodoPago === "transferencia" ? v.total : 0,
-              saldoPendiente: pedido.saldoPendiente,
-            });
-          }
-        }
-      }
-
-      const pedidosEntregados = Array.from(pedidosEntregadosMap.values());
+      const pedidosEntregados = await Promise.all(
+        pedidosEntregadosSesion.map(async (p) => {
+          const detallesPedido = await window.pos.pedidos.obtenerDetalle(p.id);
+          const principal = detallesPedido[0];
+          const productoPrincipal =
+            principal?.nombre ?? principal?.descripcionPersonalizada ?? "Pedido";
+          // La columna saldoPendiente queda en 0 al entregar; el cobro se reconstruye
+          // con la fórmula original (idéntica al monto que registró la venta).
+          const cobradoTotal = Math.max(
+            (p.totalEstimado ?? 0) - (p.anticipo ?? 0),
+            0
+          );
+          return {
+            id: p.id,
+            cliente: p.cliente,
+            producto: productoPrincipal,
+            cantidad: detallesPedido.reduce((sum, d) => sum + d.cantidad, 0),
+            total: p.totalEstimado,
+            cobradoEfectivo:
+              p.metodoPagoSaldo === "efectivo" ? cobradoTotal : 0,
+            cobradoTransferencia:
+              p.metodoPagoSaldo === "transferencia" ? cobradoTotal : 0,
+            saldoPendiente: 0,
+          };
+        })
+      );
 
       // Calcular transferencia esperada
       const transferenciaEsperada =

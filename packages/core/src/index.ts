@@ -25,7 +25,7 @@ export { crearServicioProductos } from "./modules/productos";
 export { crearServicioStock } from "./modules/stock";
 export { crearServicioCaja } from "./modules/caja";
 export { crearServicioVentas } from "./modules/ventas";
-export { crearServicioPedidos } from "./modules/pedidos";
+export { crearServicioPedidos, montoCobradoEntrega } from "./modules/pedidos";
 export { crearServicioGastos } from "./modules/gastos";
 export { crearServicioNomina } from "./modules/nomina";
 export { crearServicioReportes } from "./modules/reportes";

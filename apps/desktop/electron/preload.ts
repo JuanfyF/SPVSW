@@ -141,6 +141,7 @@ contextBridge.exposeInMainWorld("pos", {
     listarActivos: () => invoke("pedidos:listarActivos"),
     listarTodos: () => invoke("pedidos:listarTodos"),
     listarPorSesionAnticipo: (sesionCajaId: number) => invoke("pedidos:listarPorSesionAnticipo", sesionCajaId),
+    listarPorSesionEntrega: (sesionCajaId: number) => invoke("pedidos:listarPorSesionEntrega", sesionCajaId),
     listarPorFecha: (fechaInicio: string, fechaFin: string) =>
       invoke("pedidos:listarPorFecha", fechaInicio, fechaFin),
     obtenerPorId: (id: number) => invoke("pedidos:obtenerPorId", id),

@@ -37,7 +37,7 @@ const coloresEstado: Record<string, string> = {
 export default function Detalle() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { usuario } = useAuthStore();
+  const { usuario, sesionCaja } = useAuthStore();
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [detalles, setDetalles] = useState<DetallePedido[]>([]);
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -47,6 +47,7 @@ export default function Detalle() {
   const [modalMarcarListo, setModalMarcarListo] = useState(false);
   const [modalMarcarEnProceso, setModalMarcarEnProceso] = useState(false);
   const [modalEntregar, setModalEntregar] = useState(false);
+  const [metodoPagoSaldo, setMetodoPagoSaldo] = useState<"efectivo" | "transferencia">("efectivo");
   const pedidoVersionRef = useRef(0);
 
   const esPastelera = usuario?.rol === "pastelera";
@@ -111,15 +112,23 @@ export default function Detalle() {
   };
 
   const handleEntregar = () => {
+    if (!sesionCaja) {
+      setError("Abre caja para entregar el pedido");
+      return;
+    }
     setModalEntregar(true);
   };
 
   const confirmarEntregar = async () => {
-    if (!pedido) return;
+    if (!pedido || !sesionCaja) return;
     setAccionLoading(true);
     setModalEntregar(false);
     try {
-      await window.pos.pedidos.entregar(pedido.id);
+      await window.pos.pedidos.entregar(
+        pedido.id,
+        sesionCaja.id,
+        pedido.saldoPendiente > 0 ? metodoPagoSaldo : undefined
+      );
       await cargarPedido(pedido.id);
     } catch (err: any) {
       setError(err.message);
@@ -330,16 +339,79 @@ export default function Detalle() {
         onCancelar={() => setModalMarcarEnProceso(false)}
       />
 
-      <ConfirmModal
-        open={modalEntregar}
-        titulo="Entregar Pedido"
-        mensaje={`¿Confirmar entrega del pedido #${pedido?.id}?\n\nCliente: ${pedido?.cliente}\nSaldo pendiente: $${pedido?.saldoPendiente?.toFixed(2) ?? "0.00"}`}
-        textoConfirmar="Confirmar Entrega"
-        textoCancelar="Cancelar"
-        variante="info"
-        onConfirmar={confirmarEntregar}
-        onCancelar={() => setModalEntregar(false)}
-      />
+      {/* Modal de entrega */}
+      {modalEntregar && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !accionLoading) setModalEntregar(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-entregar-titulo"
+        >
+          <div className="bg-surface-container-lowest rounded-2xl p-6 w-full max-w-md shadow-xl">
+            <h2 id="modal-entregar-titulo" className="text-headline-lg font-bold text-on-surface mb-4">
+              Entregar Pedido #{pedido.id}
+            </h2>
+            <p className="text-on-surface-variant mb-4">
+              Cliente: {pedido.cliente}
+            </p>
+
+            {pedido.saldoPendiente > 0 && (
+              <div className="mb-4">
+                <p className="text-on-surface-variant mb-2">
+                  Saldo pendiente: ${pedido.saldoPendiente.toFixed(2)}
+                </p>
+                <p className="text-label-md text-on-surface-variant mb-2">
+                  Selecciona método de pago para el saldo:
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setMetodoPagoSaldo("efectivo")}
+                    aria-pressed={metodoPagoSaldo === "efectivo"}
+                    className={`flex-1 py-3 rounded-xl transition-colors ${
+                      metodoPagoSaldo === "efectivo"
+                        ? "bg-secondary text-on-secondary"
+                        : "bg-surface-container text-on-surface-variant"
+                    }`}
+                  >
+                    Efectivo
+                  </button>
+                  <button
+                    onClick={() => setMetodoPagoSaldo("transferencia")}
+                    aria-pressed={metodoPagoSaldo === "transferencia"}
+                    className={`flex-1 py-3 rounded-xl transition-colors ${
+                      metodoPagoSaldo === "transferencia"
+                        ? "bg-secondary text-on-secondary"
+                        : "bg-surface-container text-on-surface-variant"
+                    }`}
+                  >
+                    Transferencia
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => setModalEntregar(false)}
+                disabled={accionLoading}
+                className="flex-1 py-3 border border-outline-variant text-on-surface-variant rounded-xl transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarEntregar}
+                disabled={accionLoading}
+                className="flex-1 py-3 bg-tertiary text-on-tertiary rounded-xl hover:bg-tertiary/90 disabled:opacity-50 transition-colors"
+              >
+                {accionLoading ? "Procesando..." : "Confirmar Entrega"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
  * Handlers IPC de gestión de pedidos.
  */
 import { ipcMain } from "electron";
+import { montoCobradoEntrega } from "@pos/core";
 import { ctx } from "./context";
 
 export function registrarPedidosHandlers() {
@@ -33,10 +34,8 @@ export function registrarPedidosHandlers() {
     if (!pedido) throw new Error("Pedido no encontrado");
     const detalles = await servicios.pedidos.obtenerDetalle(pedidoId);
 
-    const saldoCobrado = Math.max(
-      (pedido.totalEstimado ?? 0) - (pedido.anticipo ?? 0),
-      0
-    );
+    // Monto canónico: la misma fuente que evalúa entregar() (columna saldoPendiente)
+    const saldoCobrado = montoCobradoEntrega(pedido);
 
     await servicios.pedidos.entregar(
       pedidoId,
@@ -122,6 +121,10 @@ export function registrarPedidosHandlers() {
 
   ipcMain.handle("pedidos:listarPorSesionAnticipo", ctx.safeHandler(async (_event, sesionCajaId: number) => {
     return servicios.pedidos.listarPorSesionAnticipo(sesionCajaId);
+  }, { auth: true }));
+
+  ipcMain.handle("pedidos:listarPorSesionEntrega", ctx.safeHandler(async (_event, sesionCajaId: number) => {
+    return servicios.pedidos.listarPorSesionEntrega(sesionCajaId);
   }, { auth: true }));
 
   ipcMain.handle("pedidos:listarPorFecha", ctx.safeHandler(async (_event, fechaInicio: string, fechaFin: string) => {
