@@ -1,9 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
-import { generarPdfCierreCaja, type DatosCierreCaja } from "@pos/shared";
-import { Check, Download } from "lucide-react";
+import { generarPdfCierreCaja, type DatosCierreCaja, formatearMoneda } from "@pos/shared";
+import {
+  Check,
+  Download,
+  Banknote,
+  TrendingUp,
+  TrendingDown,
+  Scale,
+  ShoppingCart,
+  Cake,
+  ClipboardList,
+  Receipt,
+  ShoppingBag,
+  HandCoins,
+  Wallet,
+  AlertTriangle,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import type { Producto } from "@pos/shared";
 
 interface StockItem {
@@ -19,6 +35,113 @@ interface ResumenCaja {
   anticipos: { efectivo: number; transferencia: number; total: number };
   gastos: { caja: number; pedidos: number; total: number };
   adelantos: { efectivo: number; transferencia: number; total: number };
+}
+
+// ── Presentación de montos ─────────────────────────────────────
+
+type TonoMonto = "entra" | "sale" | "neutro";
+
+function colorMonto(tono: TonoMonto): string {
+  if (tono === "entra") return "text-on-tertiary-container";
+  if (tono === "sale") return "text-error";
+  return "text-on-surface";
+}
+
+/** Detalle: los ceros se atenúan para que los montos reales destaquen. */
+function colorFilaMonto(valor: number, tono: TonoMonto): string {
+  return valor === 0 ? "text-on-surface-variant" : colorMonto(tono);
+}
+
+interface FilaMontoProps {
+  label: string;
+  valor: number;
+  tono?: TonoMonto;
+  icono?: LucideIcon;
+}
+
+function FilaMonto({ label, valor, tono = "entra", icono: Icono }: FilaMontoProps) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="flex items-center gap-2 text-label-md text-on-surface-variant min-w-0">
+        {Icono ? <Icono className="w-4 h-4 shrink-0" aria-hidden="true" /> : null}
+        <span className="truncate">{label}</span>
+      </span>
+      <span className={`text-body-md font-medium tabular-nums text-right shrink-0 ${colorFilaMonto(valor, tono)}`}>
+        {formatearMoneda(valor)}
+      </span>
+    </div>
+  );
+}
+
+interface BandaTotalProps {
+  label: string;
+  valor: number;
+  tono?: TonoMonto;
+  fuerte?: boolean;
+}
+
+/** Subtotal en banda con fondo — jerarquía clara sobre las filas de detalle. */
+function BandaTotal({ label, valor, tono = "neutro", fuerte = false }: BandaTotalProps) {
+  return (
+    <div className="flex items-center justify-between gap-3 bg-surface-container rounded-xl px-3 py-2">
+      <span className="text-label-md font-medium text-on-surface">{label}</span>
+      <span
+        className={`tabular-nums text-right shrink-0 font-bold ${fuerte ? "text-headline-md" : "text-body-lg"} ${colorMonto(tono)}`}
+      >
+        {formatearMoneda(valor)}
+      </span>
+    </div>
+  );
+}
+
+/** Sección agrupadora (eyebrow) dentro de una tarjeta. */
+function Seccion({ icono: Icono, titulo, children }: { icono: LucideIcon; titulo: string; children: ReactNode }) {
+  return (
+    <section>
+      <h3 className="flex items-center gap-1.5 text-caption font-semibold uppercase tracking-wider text-on-surface-variant mb-2">
+        <Icono className="w-3.5 h-3.5" aria-hidden="true" />
+        {titulo}
+      </h3>
+      <div className="space-y-1.5">{children}</div>
+    </section>
+  );
+}
+
+interface LineaFormulaProps {
+  signo: "+" | "−";
+  label: string;
+  valor: number;
+  tono?: TonoMonto;
+}
+
+/** Línea de la fórmula de efectivo con marcador (+) / (−) en el gutter. */
+function LineaFormula({ signo, label, valor, tono = "entra" }: LineaFormulaProps) {
+  return (
+    <div className="flex items-baseline gap-2 text-body-md">
+      <span className="w-6 shrink-0 text-center font-mono text-on-surface-variant" aria-hidden="true">
+        {signo}
+      </span>
+      <span className="flex-1 min-w-0 truncate text-on-surface-variant">{label}</span>
+      <span className={`shrink-0 font-medium tabular-nums ${colorFilaMonto(valor, tono)}`}>
+        {formatearMoneda(valor)}
+      </span>
+    </div>
+  );
+}
+
+/** Subtotal (=) dentro de la fórmula. */
+function LineaFormulaTotal({ label, valor, tono = "neutro" }: { label: string; valor: number; tono?: TonoMonto }) {
+  return (
+    <div className="flex items-baseline gap-2 border-t border-outline-variant pt-2">
+      <span className="w-6 shrink-0 text-center font-mono text-on-surface-variant" aria-hidden="true">
+        =
+      </span>
+      <span className="flex-1 min-w-0 truncate text-label-md font-medium text-on-surface">{label}</span>
+      <span className={`shrink-0 text-body-lg font-bold tabular-nums ${colorMonto(tono)}`}>
+        {formatearMoneda(valor)}
+      </span>
+    </div>
+  );
 }
 
 export default function CierreCaja() {
@@ -187,6 +310,19 @@ export default function CierreCaja() {
     devolucionesEfectivo;
 
   const diferencia = (parseFloat(efectivoContado) || 0) - efectivoEsperado;
+
+  // Totales de presentación (espejo de las tarjetas y de la fórmula de efectivo)
+  const totalIngresos =
+    (resumen?.ventas.total ?? 0) + (resumen?.anticipos.total ?? 0) + (resumen?.pedidos.total ?? 0);
+  const totalEgresos = (resumen?.gastos.total ?? 0) + (resumen?.adelantos.total ?? 0);
+  const neto = totalIngresos - totalEgresos;
+  const ingresosEfectivo =
+    (resumen?.ventas.efectivo ?? 0) + (resumen?.anticipos.efectivo ?? 0) + (resumen?.pedidos.efectivo ?? 0);
+  const egresosEfectivo =
+    (resumen?.gastos.caja ?? 0) +
+    (resumen?.gastos.pedidos ?? 0) +
+    (resumen?.adelantos.efectivo ?? 0) +
+    devolucionesEfectivo;
 
   // Calcular diferencias de stock
   const diferenciasStock = stock.map((s) => {
@@ -357,155 +493,146 @@ export default function CierreCaja() {
         <p className="text-on-surface-variant">{sesionCaja?.fecha} - Sesión #{sesionCaja?.id}</p>
       </div>
 
-      {/* Resumen financiero */}
+      {/* Tira KPI — resumen en cifras grandes */}
+      <div className="bg-surface-container-lowest rounded-2xl shadow-sm border border-outline-variant hover:shadow-md transition-shadow mb-6 grid grid-cols-1 sm:grid-cols-3 divide-y divide-outline-variant sm:divide-y-0 sm:divide-x">
+        <div className="p-5 flex flex-col gap-1">
+          <span className="flex items-center gap-2 text-label-md text-on-surface-variant">
+            <TrendingUp className="w-4 h-4 text-on-tertiary-container" aria-hidden="true" />
+            Ingresos
+          </span>
+          <span className="text-headline-lg font-bold text-on-tertiary-container tabular-nums">
+            {formatearMoneda(totalIngresos)}
+          </span>
+        </div>
+        <div className="p-5 flex flex-col gap-1">
+          <span className="flex items-center gap-2 text-label-md text-on-surface-variant">
+            <TrendingDown className="w-4 h-4 text-error" aria-hidden="true" />
+            Egresos
+          </span>
+          <span className="text-headline-lg font-bold text-error tabular-nums">
+            {formatearMoneda(totalEgresos)}
+          </span>
+        </div>
+        <div className="p-5 flex flex-col gap-1">
+          <span className="flex items-center gap-2 text-label-md text-on-surface-variant">
+            <Scale className="w-4 h-4" aria-hidden="true" />
+            Neto
+          </span>
+          <span className={`text-headline-lg font-bold tabular-nums ${neto < 0 ? "text-error" : "text-on-surface"}`}>
+            {formatearMoneda(neto)}
+          </span>
+        </div>
+      </div>
+
+      {/* Ingresos / Egresos */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-          <h2 className="text-headline-md font-semibold text-on-surface mb-4">Ingresos</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">Ventas efectivo:</span>
-              <span className="font-medium text-on-surface">${resumen?.ventas.efectivo.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">Ventas transferencia:</span>
-              <span className="font-medium text-on-surface">${resumen?.ventas.transferencia.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between border-t border-outline-variant pt-3">
-              <span className="text-on-surface-variant font-medium">Total ventas:</span>
-              <span className="font-bold text-on-surface">${resumen?.ventas.total.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-on-surface-variant">Anticipos pedidos efectivo:</span>
-              <span className="font-medium text-on-surface">${resumen?.anticipos.efectivo.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">Anticipos pedidos transferencia:</span>
-              <span className="font-medium text-on-surface">${resumen?.anticipos.transferencia.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between border-t border-outline-variant pt-3">
-              <span className="text-on-surface-variant font-medium">Total anticipos:</span>
-              <span className="font-bold text-on-surface">${resumen?.anticipos.total.toFixed(2) ?? "0.00"}</span>
-            </div>
+          <h2 className="flex items-center gap-2 text-headline-md font-semibold text-on-surface mb-5">
+            <Banknote className="w-5 h-5 text-on-tertiary-container" aria-hidden="true" />
+            Ingresos
+          </h2>
+          <div className="space-y-5">
+            <Seccion icono={ShoppingCart} titulo="Ventas">
+              <FilaMonto label="Efectivo" valor={resumen?.ventas.efectivo ?? 0} />
+              <FilaMonto label="Transferencia" valor={resumen?.ventas.transferencia ?? 0} />
+              <BandaTotal label="Total ventas" valor={resumen?.ventas.total ?? 0} />
+            </Seccion>
+
+            <Seccion icono={Cake} titulo="Anticipos de pedidos">
+              <FilaMonto label="Efectivo" valor={resumen?.anticipos.efectivo ?? 0} />
+              <FilaMonto label="Transferencia" valor={resumen?.anticipos.transferencia ?? 0} />
+              <BandaTotal label="Total anticipos" valor={resumen?.anticipos.total ?? 0} />
+            </Seccion>
+
             {(resumen?.pedidos.total ?? 0) > 0 && (
-              <>
-                <div className="flex justify-between pt-2">
-                  <span className="text-on-surface-variant">Saldos pedidos efectivo:</span>
-                  <span className="font-medium text-on-surface">${resumen?.pedidos.efectivo.toFixed(2) ?? "0.00"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Saldos pedidos transferencia:</span>
-                  <span className="font-medium text-on-surface">${resumen?.pedidos.transferencia.toFixed(2) ?? "0.00"}</span>
-                </div>
-                <div className="flex justify-between border-t border-outline-variant pt-3">
-                  <span className="text-on-surface-variant font-medium">Total saldos:</span>
-                  <span className="font-bold text-on-surface">${resumen?.pedidos.total.toFixed(2) ?? "0.00"}</span>
-                </div>
-              </>
+              <Seccion icono={ClipboardList} titulo="Saldos de pedidos">
+                <FilaMonto label="Efectivo" valor={resumen?.pedidos.efectivo ?? 0} />
+                <FilaMonto label="Transferencia" valor={resumen?.pedidos.transferencia ?? 0} />
+                <BandaTotal label="Total saldos" valor={resumen?.pedidos.total ?? 0} />
+              </Seccion>
             )}
-            <div className="flex justify-between border-t border-outline-variant pt-3">
-              <span className="text-on-surface font-medium">Total ingresos:</span>
-              <span className="font-bold text-on-surface">${((resumen?.ventas.total ?? 0) + (resumen?.anticipos.total ?? 0) + (resumen?.pedidos.total ?? 0)).toFixed(2)}</span>
-            </div>
+
+            <BandaTotal label="Total ingresos" valor={totalIngresos} fuerte />
           </div>
         </div>
 
         <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-          <h2 className="text-headline-md font-semibold text-on-surface mb-4">Egresos</h2>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">Gastos caja:</span>
-              <span className="font-medium text-error">${resumen?.gastos.caja.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">Gastos pedidos:</span>
-              <span className="font-medium text-error">${resumen?.gastos.pedidos.toFixed(2) ?? "0.00"}</span>
-            </div>
-            {gastosDetalle.length > 0 && (
-              <div className="pt-2 border-t border-outline-variant">
-                {gastosDetalle.map((g) => (
-                  <div key={g.id} className="flex justify-between text-label-md py-1">
-                    <span className="text-on-surface-variant truncate mr-2">{g.descripcion}</span>
-                    <span className="whitespace-nowrap text-error">${g.monto.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">Adelantos efectivo:</span>
-              <span className="font-medium text-error">${resumen?.adelantos.efectivo.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">Adelantos transferencia:</span>
-              <span className="font-medium text-error">${resumen?.adelantos.transferencia.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between border-t border-outline-variant pt-3">
-              <span className="text-on-surface font-medium">Total egresos:</span>
-              <span className="font-bold text-error">${((resumen?.gastos.total ?? 0) + (resumen?.adelantos.total ?? 0)).toFixed(2)}</span>
-            </div>
+          <h2 className="flex items-center gap-2 text-headline-md font-semibold text-on-surface mb-5">
+            <Receipt className="w-5 h-5 text-error" aria-hidden="true" />
+            Egresos
+          </h2>
+          <div className="space-y-5">
+            <Seccion icono={ShoppingBag} titulo="Gastos">
+              <FilaMonto label="De caja" valor={resumen?.gastos.caja ?? 0} tono="sale" />
+              <FilaMonto label="De pedidos" valor={resumen?.gastos.pedidos ?? 0} tono="sale" />
+              {gastosDetalle.length > 0 && (
+                <div className="ml-1 pl-4 border-l-2 border-outline-variant/60 space-y-0.5">
+                  {gastosDetalle.map((g) => (
+                    <div key={g.id} className="flex justify-between items-baseline gap-2 text-caption py-0.5">
+                      <span className="text-on-surface-variant truncate">{g.descripcion}</span>
+                      <span className="text-on-surface-variant tabular-nums shrink-0">{formatearMoneda(g.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Seccion>
+
+            <Seccion icono={HandCoins} titulo="Adelantos">
+              <FilaMonto label="Efectivo" valor={resumen?.adelantos.efectivo ?? 0} tono="sale" />
+              <FilaMonto label="Transferencia" valor={resumen?.adelantos.transferencia ?? 0} tono="sale" />
+            </Seccion>
+
+            <BandaTotal label="Total egresos" valor={totalEgresos} tono="sale" fuerte />
           </div>
         </div>
       </div>
 
-      {/* Conciliación de efectivo */}
+      {/* Conciliación de efectivo — fórmula vertical */}
       <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
-        <h2 className="text-headline-md font-semibold text-on-surface mb-4">Conciliación de Efectivo</h2>
-        
-        {/* Resumen detallado de efectivo */}
-        <div className="bg-surface-container rounded-xl p-4 mb-4">
-          <h3 className="text-label-md font-medium text-on-surface-variant mb-3">Resumen del Flujo de Efectivo</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between text-label-md">
-              <span className="text-on-surface-variant">+ Ventas en efectivo (mostrador):</span>
-              <span className="font-medium text-tertiary">${resumen?.ventas.efectivo.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between text-label-md">
-              <span className="text-on-surface-variant">+ Anticipos pedidos en efectivo:</span>
-              <span className="font-medium text-tertiary">${resumen?.anticipos.efectivo.toFixed(2) ?? "0.00"}</span>
-            </div>
-            {(resumen?.pedidos.efectivo ?? 0) > 0 && (
-              <div className="flex justify-between text-label-md">
-                <span className="text-on-surface-variant">+ Cobro pedidos entregados (efectivo):</span>
-                <span className="font-medium text-tertiary">${resumen?.pedidos.efectivo.toFixed(2) ?? "0.00"}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-label-md border-t border-outline-variant pt-2">
-              <span className="text-on-surface font-medium">Total ingresos efectivo:</span>
-              <span className="font-bold text-tertiary">${((resumen?.ventas.efectivo ?? 0) + (resumen?.anticipos.efectivo ?? 0) + (resumen?.pedidos.efectivo ?? 0)).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-label-md mt-2">
-              <span className="text-on-surface-variant">- Gastos de caja:</span>
-              <span className="font-medium text-error">${resumen?.gastos.caja.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between text-label-md">
-              <span className="text-on-surface-variant">- Gastos de pedidos:</span>
-              <span className="font-medium text-error">${resumen?.gastos.pedidos.toFixed(2) ?? "0.00"}</span>
-            </div>
-            <div className="flex justify-between text-label-md">
-              <span className="text-on-surface-variant">- Adelantos en efectivo:</span>
-              <span className="font-medium text-error">${resumen?.adelantos.efectivo.toFixed(2) ?? "0.00"}</span>
-            </div>
-            {devolucionesEfectivo > 0 && (
-              <div className="flex justify-between text-label-md">
-                <span className="text-on-surface-variant">- Devoluciones de anticipo (efectivo):</span>
-                <span className="font-medium text-error">${devolucionesEfectivo.toFixed(2)}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-label-md border-t border-outline-variant pt-2">
-              <span className="text-on-surface font-medium">Total egresos efectivo:</span>
-              <span className="font-bold text-error">${((resumen?.gastos.caja ?? 0) + (resumen?.gastos.pedidos ?? 0) + (resumen?.adelantos.efectivo ?? 0) + devolucionesEfectivo).toFixed(2)}</span>
-            </div>
-          </div>
+        <h2 className="flex items-center gap-2 text-headline-md font-semibold text-on-surface mb-5">
+          <Wallet className="w-5 h-5" aria-hidden="true" />
+          Conciliación de Efectivo
+        </h2>
+
+        <div className="bg-surface-container rounded-xl p-4 mb-4 space-y-2">
+          <h3 className="text-caption font-semibold uppercase tracking-wider text-on-surface-variant mb-3">
+            Flujo de efectivo
+          </h3>
+          <LineaFormula signo="+" label="Ventas en efectivo" valor={resumen?.ventas.efectivo ?? 0} />
+          <LineaFormula signo="+" label="Anticipos de pedidos" valor={resumen?.anticipos.efectivo ?? 0} />
+          {(resumen?.pedidos.efectivo ?? 0) > 0 && (
+            <LineaFormula signo="+" label="Cobro de pedidos entregados" valor={resumen?.pedidos.efectivo ?? 0} />
+          )}
+          <LineaFormulaTotal label="Ingresos en efectivo" valor={ingresosEfectivo} />
+          <LineaFormula signo="−" label="Gastos de caja" valor={resumen?.gastos.caja ?? 0} tono="sale" />
+          <LineaFormula signo="−" label="Gastos de pedidos" valor={resumen?.gastos.pedidos ?? 0} tono="sale" />
+          <LineaFormula signo="−" label="Adelantos en efectivo" valor={resumen?.adelantos.efectivo ?? 0} tono="sale" />
+          {devolucionesEfectivo > 0 && (
+            <LineaFormula signo="−" label="Devoluciones de anticipo" valor={devolucionesEfectivo} tono="sale" />
+          )}
+          <LineaFormulaTotal label="Egresos en efectivo" valor={egresosEfectivo} tono="sale" />
         </div>
 
-        <div className="space-y-4">
-          <div className="flex justify-between items-center p-4 bg-surface-container rounded-xl">
-            <span className="text-on-surface">Efectivo esperado en caja:</span>
-            <span className="text-headline-lg font-bold text-on-surface">${efectivoEsperado.toFixed(2)}</span>
-          </div>
+        {/* Número héroe: la cifra que cierra la caja */}
+        <div className="bg-tertiary-fixed rounded-xl px-4 py-4 mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <span className="flex items-baseline gap-2">
+            <span className="w-6 text-center font-mono text-on-surface-variant" aria-hidden="true">
+              =
+            </span>
+            <span className="text-label-md font-semibold text-on-surface">Efectivo esperado en caja</span>
+          </span>
+          <span className="text-display-price text-on-surface tabular-nums">
+            {formatearMoneda(efectivoEsperado)}
+          </span>
+        </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
           <div>
-            <label className="block text-label-md text-on-surface-variant mb-1">Efectivo contado a mano *</label>
+            <label htmlFor="efectivo-contado" className="block text-label-md text-on-surface-variant mb-1">
+              Efectivo contado a mano *
+            </label>
             <input
+              id="efectivo-contado"
               type="number"
               value={efectivoContado}
               onChange={(e) => {
@@ -521,24 +648,35 @@ export default function CierreCaja() {
               min="0"
               max="999999"
               step="0.01"
-              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-secondary bg-surface text-headline-md ${errores.efectivoContado ? "border-error" : "border-outline-variant"}`}
-              placeholder="0.00"
+              className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:border-secondary bg-surface text-headline-md tabular-nums ${errores.efectivoContado ? "border-error" : "border-outline-variant"}`}
+              placeholder="0,00"
             />
             {errores.efectivoContado && <p className="text-error text-caption mt-1">{errores.efectivoContado}</p>}
           </div>
 
-          {efectivoContado && (
-            <div className={`p-4 rounded-xl ${diferencia === 0 ? "bg-tertiary-fixed" : diferencia > 0 ? "bg-tertiary-fixed" : "bg-error-container"}`}>
-              <div className="flex justify-between items-center">
-                <span className={`font-medium ${diferencia === 0 ? "text-tertiary" : diferencia > 0 ? "text-tertiary" : "text-error"}`}>
+          <div>
+            <span className="block text-label-md text-on-surface-variant mb-1">Diferencia</span>
+            {efectivoContado ? (
+              <div className={`rounded-xl px-4 py-3 flex items-center justify-between gap-2 ${diferencia >= 0 ? "bg-tertiary-fixed" : "bg-error-container"}`}>
+                <span className={`flex items-center gap-1.5 text-label-md font-medium ${diferencia >= 0 ? "text-on-tertiary-container" : "text-error"}`}>
+                  {diferencia === 0 ? (
+                    <Check className="w-4 h-4" aria-hidden="true" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+                  )}
                   {diferencia === 0 ? "Cuadra perfecto" : diferencia > 0 ? "Sobrante" : "Faltante"}
                 </span>
-                <span className={`text-headline-lg font-bold ${diferencia === 0 ? "text-tertiary" : diferencia > 0 ? "text-tertiary" : "text-error"}`}>
-                  ${Math.abs(diferencia).toFixed(2)}
+                <span className={`text-headline-md font-bold tabular-nums ${diferencia >= 0 ? "text-on-tertiary-container" : "text-error"}`}>
+                  {formatearMoneda(Math.abs(diferencia))}
                 </span>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="rounded-xl px-4 py-3 bg-surface-container flex items-center justify-between gap-2">
+                <span className="text-label-md font-medium text-on-surface-variant">Sin contar aún</span>
+                <span className="text-headline-md font-bold text-on-surface-variant/60 tabular-nums">—</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -633,7 +771,7 @@ export default function CierreCaja() {
       <ConfirmModal
         open={modalCerrar}
         titulo="Cerrar Caja"
-        mensaje={`¿Estás seguro de cerrar la caja?\n\nEfectivo contado: $${parseFloat(efectivoContado || "0").toFixed(2)}\nEfectivo esperado: $${efectivoEsperado.toFixed(2)}\n\nEsta acción es irreversible.`}
+        mensaje={`¿Estás seguro de cerrar la caja?\n\nEfectivo contado: ${formatearMoneda(parseFloat(efectivoContado || "0"))}\nEfectivo esperado: ${formatearMoneda(efectivoEsperado)}\n\nEsta acción es irreversible.`}
         textoConfirmar="Cerrar Caja"
         textoCancelar="Cancelar"
         variante="peligro"

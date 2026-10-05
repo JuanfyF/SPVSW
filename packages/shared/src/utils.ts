@@ -134,3 +134,20 @@ export function formatearHora(fecha: Date): string {
   return `${h}:${m}`;
 }
 
+/**
+ * Formatea un monto en USD con locale es-EC: separador de miles con punto
+ * y decimal con coma. Ej: 1234.5 → "$1.234,50".
+ *
+ * Negativos se antepone el signo antes del "$": -50 → "-$50,00".
+ * Valores no numéricos (null/undefined/NaN/Infinity) → "$0,00".
+ */
+export function formatearMoneda(valor: number | null | undefined): string {
+  const v = typeof valor === "number" ? valor : Number(valor);
+  if (!Number.isFinite(v)) return "$0,00";
+  const abs = Math.abs(v).toLocaleString("es-EC", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return v < 0 ? `-$${abs}` : `$${abs}`;
+}
+
