@@ -5,14 +5,15 @@ set -euo pipefail
 
 INPUT="${1:?Usage: $0 <appimage-path-or-directory>}"
 
-# Si es un directorio, buscar el primer .AppImage
+# Si es un directorio, buscar el .AppImage MÁS RECIENTE (evita archivos stale)
 if [ -d "$INPUT" ]; then
-  INPUT=$(find "$INPUT" -maxdepth 1 -name "*.AppImage" -type f | head -1)
+  INPUT=$(find "$INPUT" -maxdepth 1 -name "*.AppImage" -type f -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
   if [ -z "$INPUT" ]; then
     echo "Error: No se encontró ningún .AppImage en el directorio"
     exit 1
   fi
 fi
+echo "Target: $INPUT"
 
 APPIMAGE_PATH="$INPUT"
 APPIMAGE_NAME="$(basename "$APPIMAGE_PATH")"
