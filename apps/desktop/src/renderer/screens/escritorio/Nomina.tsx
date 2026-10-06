@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { formatearFecha, generarPdfNomina } from "@pos/shared";
+import { formatearFecha, formatearMoneda, generarPdfNomina } from "@pos/shared";
 import { useAuthStore } from "../../store/auth";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Banknote, AlertTriangle } from "lucide-react";
@@ -225,6 +225,7 @@ export default function Nomina() {
 
   const totalAdelantos = adelantos.reduce((sum, a) => sum + a.monto, 0);
   const totalMultas = multas.reduce((sum, m) => sum + m.monto, 0);
+  const empleadoActual = empleados.find((e) => e.id === parseInt(empleadoSeleccionado)) ?? null;
 
   // Resumen mensual (por empleado)
   const [mesResumenIndividual, setMesResumenIndividual] = useState("");
@@ -353,28 +354,28 @@ export default function Nomina() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-headline-lg font-bold text-on-surface">Nómina</h1>
-        <p className="text-on-surface-variant">Gestión de adelantos y multas</p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-headline-lg font-bold text-on-surface">Nómina</h1>
+          <p className="text-on-surface-variant">Gestión de adelantos y multas</p>
+        </div>
+        <button
+          onClick={() => { setModalCrear(true); cargarUsuarios(); }}
+          className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors text-label-md"
+        >
+          + Crear Empleado
+        </button>
       </div>
 
       {/* Selector de empleado */}
-      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-headline-md font-semibold text-on-surface">
-            Seleccionar Empleado
-          </h2>
-          <button
-            onClick={() => { setModalCrear(true); cargarUsuarios(); }}
-            className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors text-label-md"
-          >
-            + Crear Empleado
-          </button>
-        </div>
+      <div className="bg-surface-container-lowest rounded-2xl px-4 py-3 shadow-sm border border-outline-variant mb-6 flex items-center gap-3 hover:shadow-md transition-shadow">
+        <label className="text-label-md font-medium text-on-surface-variant whitespace-nowrap">
+          Empleado
+        </label>
         <select
           value={empleadoSeleccionado}
           onChange={(e) => setEmpleadoSeleccionado(e.target.value)}
-          className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
+          className="flex-1 min-w-0 px-3 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
         >
           <option value="">Seleccionar empleado...</option>
           {empleados.map((e) => (
@@ -387,96 +388,121 @@ export default function Nomina() {
 
       {/* Resumen Global */}
       <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
-        <h2 className="text-headline-md font-semibold text-on-surface mb-4">
-          Resumen Global del Mes
-        </h2>
-        <div className="flex gap-4 items-end mb-4">
-          <div className="flex-1">
-            <label className="block text-label-md text-on-surface-variant mb-1">
-              Mes (YYYY-MM)
-            </label>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="text-headline-md font-semibold text-on-surface">
+            Resumen global
+          </h2>
+          <div className="flex flex-wrap items-center gap-3">
             <input
               type="month"
+              aria-label="Mes del resumen global"
               value={mesResumenGlobal}
               onChange={(e) => setMesResumenGlobal(e.target.value)}
-              className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
+              className="px-3 py-1.5 border border-outline-variant rounded-lg focus:outline-none focus:border-secondary bg-surface text-label-md tabular-nums"
             />
-          </div>
-          <button
-            onClick={calcularResumenGlobal}
-            disabled={!mesResumenGlobal || cargandoGlobal}
-            className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 transition-colors"
-          >
-            {cargandoGlobal ? "Calculando..." : "Calcular Global"}
-          </button>
-          {resumenGlobal && (
             <button
-              onClick={() => exportarPdfGlobal()}
-              className="px-4 py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors"
+              onClick={calcularResumenGlobal}
+              disabled={!mesResumenGlobal || cargandoGlobal}
+              className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 transition-colors text-label-md"
             >
-              Descargar PDF
+              {cargandoGlobal ? "Calculando..." : "Calcular"}
             </button>
-          )}
+            {resumenGlobal && (
+              <button
+                onClick={() => exportarPdfGlobal()}
+                className="px-4 py-2 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-colors text-label-md"
+              >
+                Descargar PDF
+              </button>
+            )}
+          </div>
         </div>
 
+        {!resumenGlobal && !cargandoGlobal && (
+          <p className="text-caption text-on-surface-variant">
+            Selecciona un mes y pulsa Calcular para ver salarios, descuentos y netos del mes.
+          </p>
+        )}
+        {cargandoGlobal && !resumenGlobal && (
+          <p className="text-caption text-on-surface-variant">Calculando resumen...</p>
+        )}
+
         {resumenGlobal && (
-          <div className="p-4 bg-surface-container rounded-xl">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="space-y-4">
+            {/* Banda héroe: Neto Global */}
+            <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-tertiary-fixed rounded-xl border border-outline-variant/50">
               <div>
-                <p className="text-label-md text-on-surface-variant">Total Salarios</p>
-                <p className="text-headline-md font-bold text-on-surface">
-                  ${resumenGlobal.totalSalarios.toFixed(2)}
+                <p className="text-label-md font-semibold text-on-surface-variant">
+                  Neto global
+                </p>
+                <p className="mt-1 text-caption text-on-surface-variant tabular-nums">
+                  Descuentos: {formatearMoneda(resumenGlobal.totalDescuentos)} • {empleados.length} empleados
                 </p>
               </div>
-              <div>
-                <p className="text-label-md text-on-surface-variant">Total Adelantos</p>
-                <p className="text-headline-md font-bold text-tertiary">
-                  -${resumenGlobal.totalAdelantos.toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <p className="text-label-md text-on-surface-variant">Total Multas</p>
-                <p className="text-headline-md font-bold text-error">
-                  -${resumenGlobal.totalMultas.toFixed(2)}
-                </p>
-              </div>
-              <div>
-                <p className="text-label-md text-on-surface-variant">Neto Global</p>
-                <p className={`text-headline-md font-bold ${resumenGlobal.netoGlobal >= 0 ? "text-tertiary" : "text-error"}`}>
-                  ${resumenGlobal.netoGlobal.toFixed(2)}
-                </p>
-              </div>
-            </div>
-            <div className="mt-3 pt-3 border-t border-outline-variant">
-              <p className="text-caption text-on-surface-variant">
-                Total descuentos: ${resumenGlobal.totalDescuentos.toFixed(2)} • {empleados.length} empleados
+              <p className={`text-display-price font-bold tabular-nums leading-none ${resumenGlobal.netoGlobal >= 0 ? "text-on-surface" : "text-error"}`}>
+                {formatearMoneda(resumenGlobal.netoGlobal)}
               </p>
             </div>
 
+            {/* KPIs */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="p-4 bg-surface rounded-xl border border-outline-variant/50">
+                <p className="text-label-md text-on-surface-variant">Total Salarios</p>
+                <p className="mt-1 text-headline-md font-bold text-on-surface tabular-nums">
+                  {formatearMoneda(resumenGlobal.totalSalarios)}
+                </p>
+              </div>
+              <div className="p-4 bg-surface rounded-xl border border-outline-variant/50">
+                <p className="text-label-md text-on-surface-variant">Total Adelantos</p>
+                <p className="mt-1 text-headline-md font-bold text-tertiary tabular-nums">
+                  -{formatearMoneda(resumenGlobal.totalAdelantos)}
+                </p>
+              </div>
+              <div className="p-4 bg-surface rounded-xl border border-outline-variant/50">
+                <p className="text-label-md text-on-surface-variant">Total Multas</p>
+                <p className="mt-1 text-headline-md font-bold text-error tabular-nums">
+                  -{formatearMoneda(resumenGlobal.totalMultas)}
+                </p>
+              </div>
+            </div>
+
             {/* Desglose por empleado */}
-            <div className="mt-4 space-y-2">
-              <p className="text-label-md font-medium text-on-surface-variant">Desglose por empleado:</p>
-              {resumenGlobal.empleados.map((emp) => (
-                <div key={emp.id} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
-                  <div>
-                    <p className="font-medium text-on-surface">{emp.nombre}</p>
-                    <p className="text-caption text-on-surface-variant">
-                      Salario: ${emp.salario.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="flex gap-4 text-caption">
-                    {emp.adelantos > 0 && (
-                      <span className="text-tertiary">Adelantos: -${emp.adelantos.toFixed(2)}</span>
-                    )}
-                    {emp.multas > 0 && (
-                      <span className="text-error">Multas: -${emp.multas.toFixed(2)}</span>
-                    )}
-                    <span className={`font-medium ${emp.neto >= 0 ? "text-on-surface" : "text-error"}`}>
-                      Neto: ${emp.neto.toFixed(2)}
-                    </span>
-                  </div>
+            <div className="pt-1">
+              <p className="text-label-md font-medium text-on-surface-variant mb-2">Desglose por empleado</p>
+              {resumenGlobal.empleados.length === 0 ? (
+                <p className="text-caption text-on-surface-variant">Sin empleados en este cálculo.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-caption uppercase tracking-wider text-on-surface-variant border-b border-outline-variant/60">
+                        <th className="text-left font-medium py-2">Empleado</th>
+                        <th className="text-right font-medium py-2">Salario</th>
+                        <th className="text-right font-medium py-2">Adelantos</th>
+                        <th className="text-right font-medium py-2">Multas</th>
+                        <th className="text-right font-medium py-2">Neto</th>
+                      </tr>
+                    </thead>
+                    <tbody className="tabular-nums">
+                      {resumenGlobal.empleados.map((emp) => (
+                        <tr key={emp.id} className="border-b border-outline-variant/30 last:border-0">
+                          <td className="py-2 text-on-surface font-medium">{emp.nombre}</td>
+                          <td className="py-2 text-right text-on-surface-variant">{formatearMoneda(emp.salario)}</td>
+                          <td className="py-2 text-right text-tertiary">
+                            {emp.adelantos > 0 ? `-${formatearMoneda(emp.adelantos)}` : "—"}
+                          </td>
+                          <td className="py-2 text-right text-error">
+                            {emp.multas > 0 ? `-${formatearMoneda(emp.multas)}` : "—"}
+                          </td>
+                          <td className={`py-2 text-right font-semibold ${emp.neto >= 0 ? "text-on-surface" : "text-error"}`}>
+                            {formatearMoneda(emp.neto)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -484,121 +510,140 @@ export default function Nomina() {
 
       {empleadoSeleccionado && (
         <>
-          {/* Resumen */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <Banknote className="w-8 h-8 text-tertiary" />
-                <span className="text-label-md text-tertiary font-medium">Adelantos</span>
-              </div>
-              <p className="text-3xl font-bold text-tertiary">
-                ${totalAdelantos.toFixed(2)}
+          {/* Ficha del empleado */}
+          <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <span className="text-label-md font-semibold text-on-surface-variant">
+                Empleado
+              </span>
+              <span className="text-label-md text-on-surface-variant tabular-nums">
+                Salario mensual:{" "}
+                <span className="font-semibold text-on-surface">
+                  {formatearMoneda(empleadoActual?.salarioMensual ?? 0)}
+                </span>
+              </span>
+            </div>
+            <div className="flex flex-wrap items-baseline gap-3">
+              <p className="text-headline-md font-semibold text-on-surface">
+                {empleadoActual?.nombre ?? "—"}
               </p>
-              <p className="mt-2 text-label-md text-on-surface-variant">
-                {adelantos.length} adelantos registrados
-              </p>
+              <span className="px-2.5 py-0.5 bg-surface-container-high rounded-full text-caption text-on-surface-variant">
+                {empleadoActual?.cargo}
+              </span>
             </div>
 
-            <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <AlertTriangle className="w-8 h-8 text-error" />
-                <span className="text-label-md text-error font-medium">Multas</span>
+            {/* KPIs del mes completo (histórico cargado) */}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between gap-3 p-3 bg-surface rounded-xl border border-outline-variant/50">
+                <span className="flex items-center gap-2 text-label-md text-on-surface-variant">
+                  <Banknote className="w-5 h-5 text-tertiary" />
+                  Adelantos · {adelantos.length}
+                </span>
+                <span className="text-headline-md font-bold text-tertiary tabular-nums">
+                  {formatearMoneda(totalAdelantos)}
+                </span>
               </div>
-              <p className="text-3xl font-bold text-error">
-                ${totalMultas.toFixed(2)}
-              </p>
-              <p className="mt-2 text-label-md text-on-surface-variant">
-                {multas.length} multas registradas
-              </p>
+              <div className="flex items-center justify-between gap-3 p-3 bg-surface rounded-xl border border-outline-variant/50">
+                <span className="flex items-center gap-2 text-label-md text-on-surface-variant">
+                  <AlertTriangle className="w-5 h-5 text-error" />
+                  Multas · {multas.length}
+                </span>
+                <span className="text-headline-md font-bold text-error tabular-nums">
+                  {formatearMoneda(totalMultas)}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Resumen mensual */}
           <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
-            <h2 className="text-headline-md font-semibold text-on-surface mb-4">
-              Resumen Mensual
-            </h2>
-            <div className="flex gap-4 items-end mb-4">
-              <div className="flex-1">
-                <label className="block text-label-md text-on-surface-variant mb-1">
-                  Mes (YYYY-MM)
-                </label>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h2 className="text-headline-md font-semibold text-on-surface">
+                Resumen mensual
+              </h2>
+              <div className="flex flex-wrap items-center gap-3">
                 <input
                   type="month"
+                  aria-label="Mes del resumen mensual"
                   value={mesResumenIndividual}
                   onChange={(e) => setMesResumenIndividual(e.target.value)}
-                  className="w-full px-4 py-2 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
+                  className="px-3 py-1.5 border border-outline-variant rounded-lg focus:outline-none focus:border-secondary bg-surface text-label-md tabular-nums"
                 />
+                <button
+                  onClick={calcularResumenMensual}
+                  disabled={!mesResumenIndividual || cargandoResumen}
+                  className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 transition-colors text-label-md"
+                >
+                  {cargandoResumen ? "Calculando..." : "Calcular"}
+                </button>
               </div>
-              <button
-                onClick={calcularResumenMensual}
-                disabled={!mesResumenIndividual || cargandoResumen}
-                className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 disabled:opacity-50 transition-colors"
-              >
-                {cargandoResumen ? "Calculando..." : "Calcular"}
-              </button>
             </div>
 
+            {!resumenMensual && !cargandoResumen && (
+              <p className="text-caption text-on-surface-variant">
+                Selecciona un mes y pulsa Calcular para ver el detalle de {empleadoActual?.nombre ?? "este empleado"}.
+              </p>
+            )}
+            {cargandoResumen && !resumenMensual && (
+              <p className="text-caption text-on-surface-variant">Calculando resumen...</p>
+            )}
+
             {resumenMensual && (
-              <div className="p-4 bg-surface-container rounded-xl">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-4">
+                {/* Banda héroe: Neto a pagar */}
+                <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-tertiary-fixed rounded-xl border border-outline-variant/50">
                   <div>
-                    <p className="text-label-md text-on-surface-variant">Salario</p>
-                    <p className="text-headline-md font-bold text-on-surface">
-                      ${resumenMensual.salario.toFixed(2)}
+                    <p className="text-label-md font-semibold text-on-surface-variant">
+                      Neto a pagar
+                    </p>
+                    <p className="mt-1 text-caption text-on-surface-variant tabular-nums">
+                      Salario {formatearMoneda(resumenMensual.salario)} − descuentos {formatearMoneda(resumenMensual.totalDescuentos)}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-label-md text-on-surface-variant">Adelantos</p>
-                    <p className="text-headline-md font-bold text-tertiary">
-                      -${resumenMensual.adelantosMes.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-label-md text-on-surface-variant">Multas</p>
-                    <p className="text-headline-md font-bold text-error">
-                      -${resumenMensual.multasMes.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-label-md text-on-surface-variant">Neto a pagar</p>
-                    <p className={`text-headline-md font-bold ${resumenMensual.neto >= 0 ? "text-tertiary" : "text-error"}`}>
-                      ${resumenMensual.neto.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-3 pt-3 border-t border-outline-variant">
-                  <p className="text-caption text-on-surface-variant">
-                    Total descuentos: ${resumenMensual.totalDescuentos.toFixed(2)}
+                  <p className={`text-display-price font-bold tabular-nums leading-none ${resumenMensual.neto >= 0 ? "text-on-surface" : "text-error"}`}>
+                    {formatearMoneda(resumenMensual.neto)}
                   </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-4 bg-surface rounded-xl border border-outline-variant/50">
+                    <p className="text-label-md text-on-surface-variant">Salario</p>
+                    <p className="mt-1 text-headline-md font-bold text-on-surface tabular-nums">
+                      {formatearMoneda(resumenMensual.salario)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-surface rounded-xl border border-outline-variant/50">
+                    <p className="text-label-md text-on-surface-variant">Adelantos</p>
+                    <p className="mt-1 text-headline-md font-bold text-tertiary tabular-nums">
+                      -{formatearMoneda(resumenMensual.adelantosMes)}
+                    </p>
+                  </div>
+                  <div className="p-4 bg-surface rounded-xl border border-outline-variant/50">
+                    <p className="text-label-md text-on-surface-variant">Multas</p>
+                    <p className="mt-1 text-headline-md font-bold text-error tabular-nums">
+                      -{formatearMoneda(resumenMensual.multasMes)}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Acciones */}
-          <div className="flex gap-4 mb-6">
-            <button
-              onClick={() => setModalAdelanto(true)}
-              className="px-4 py-2 bg-tertiary text-on-tertiary rounded-xl hover:bg-tertiary/90 transition-colors"
-            >
-              + Nuevo Adelanto
-            </button>
-            <button
-              onClick={() => setModalMulta(true)}
-              className="px-4 py-2 bg-error text-on-error rounded-xl hover:bg-error/90 transition-colors"
-            >
-              + Nueva Multa
-            </button>
           </div>
 
           {/* Historial */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Adelantos */}
             <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-              <h2 className="text-headline-md font-semibold text-on-surface mb-4">
-                Historial de Adelantos
-              </h2>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className="text-headline-md font-semibold text-on-surface">
+                  Historial de Adelantos
+                </h2>
+                <button
+                  onClick={() => setModalAdelanto(true)}
+                  className="px-3 py-1.5 bg-tertiary text-on-tertiary rounded-lg hover:bg-tertiary/90 transition-colors text-label-md whitespace-nowrap"
+                >
+                  + Nuevo
+                </button>
+              </div>
               {adelantos.length === 0 ? (
                 <div className="flex flex-col items-center py-4">
                   <Banknote className="w-10 h-10 mb-2 text-on-surface-variant/40" />
@@ -611,27 +656,22 @@ export default function Nomina() {
                   {adelantos.map((adelanto) => (
                     <div
                       key={adelanto.id}
-                      className="p-3 bg-surface-container rounded-xl"
+                      className="p-3 bg-surface-container rounded-xl border border-outline-variant/40"
                     >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-on-surface">
-                            ${adelanto.monto.toFixed(2)}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-label-md font-semibold text-on-surface">
+                            {new Date(adelanto.fecha).toLocaleDateString("es-EC")}
                           </p>
-                          <p className="text-label-md text-on-surface-variant">
-                            {new Date(adelanto.fecha).toLocaleDateString("es-EC")} •{" "}
-                            {adelanto.metodoPago}
+                          <p className="mt-0.5 text-caption text-on-surface-variant truncate">
+                            {adelanto.metodoPago} · Desc: {adelanto.mesADescontar}
+                            {adelanto.descripcion ? ` · ${adelanto.descripcion}` : ""}
                           </p>
                         </div>
-                        <span className="text-label-md text-on-surface-variant">
-                          Desc: {adelanto.mesADescontar}
-                        </span>
-                      </div>
-                      {adelanto.descripcion && (
-                        <p className="mt-2 text-label-md text-on-surface-variant">
-                          {adelanto.descripcion}
+                        <p className="text-headline-md font-bold text-on-surface tabular-nums whitespace-nowrap">
+                          {formatearMoneda(adelanto.monto)}
                         </p>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -640,9 +680,17 @@ export default function Nomina() {
 
             {/* Multas */}
             <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-              <h2 className="text-headline-md font-semibold text-on-surface mb-4">
-                Historial de Multas
-              </h2>
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className="text-headline-md font-semibold text-on-surface">
+                  Historial de Multas
+                </h2>
+                <button
+                  onClick={() => setModalMulta(true)}
+                  className="px-3 py-1.5 bg-error text-on-error rounded-lg hover:bg-error/90 transition-colors text-label-md whitespace-nowrap"
+                >
+                  + Nueva
+                </button>
+              </div>
               {multas.length === 0 ? (
                 <div className="flex flex-col items-center py-4">
                   <AlertTriangle className="w-10 h-10 mb-2 text-on-surface-variant/40" />
@@ -655,22 +703,22 @@ export default function Nomina() {
                   {multas.map((multa) => (
                     <div
                       key={multa.id}
-                      className="p-3 bg-error-container/30 rounded-xl"
+                      className="p-3 bg-error-container/30 rounded-xl border border-error/20"
                     >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-medium text-error">
-                            ${multa.monto.toFixed(2)}
-                          </p>
-                          <p className="text-label-md text-on-surface-variant">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-label-md font-semibold text-on-surface">
                             {new Date(multa.fecha).toLocaleDateString("es-EC")}
                           </p>
+                          <p className="mt-0.5 text-caption text-on-surface-variant truncate">
+                            Desc: {multa.mesADescontar}
+                          </p>
                         </div>
-                        <span className="text-label-md text-on-surface-variant">
-                          Desc: {multa.mesADescontar}
-                        </span>
+                        <p className="text-headline-md font-bold text-error tabular-nums whitespace-nowrap">
+                          {formatearMoneda(multa.monto)}
+                        </p>
                       </div>
-                      <p className="mt-2 text-label-md text-on-surface">{multa.motivo}</p>
+                      <p className="mt-1.5 text-label-md text-on-surface">{multa.motivo}</p>
                     </div>
                   ))}
                 </div>
@@ -1017,7 +1065,7 @@ export default function Nomina() {
       <ConfirmModal
         open={modalConfirmarAdelanto}
         titulo="Registrar Adelanto"
-        mensaje={`¿Registrar adelanto de $${(parseFloat(montoAdelanto) || 0).toFixed(2)}?\n\nEmpleado: ${empleados.find(e => e.id === parseInt(empleadoSeleccionado))?.nombre}\nMes a descontar: ${mesADescontarAdelanto}\nMétodo: ${metodoPagoAdelanto}`}
+        mensaje={`¿Registrar adelanto de ${formatearMoneda(parseFloat(montoAdelanto) || 0)}?\n\nEmpleado: ${empleados.find(e => e.id === parseInt(empleadoSeleccionado))?.nombre}\nMes a descontar: ${mesADescontarAdelanto}\nMétodo: ${metodoPagoAdelanto}`}
         textoConfirmar="Registrar Adelanto"
         textoCancelar="Cancelar"
         variante="advertencia"
@@ -1029,7 +1077,7 @@ export default function Nomina() {
       <ConfirmModal
         open={modalConfirmarMulta}
         titulo="Registrar Multa"
-        mensaje={`¿ Registrar multa de $${(parseFloat(montoMulta) || 0).toFixed(2)}?\n\nEmpleado: ${empleados.find(e => e.id === parseInt(empleadoSeleccionado))?.nombre}\nMotivo: ${motivoMulta}\nMes a descontar: ${mesADescontarMulta}`}
+        mensaje={`¿ Registrar multa de ${formatearMoneda(parseFloat(montoMulta) || 0)}?\n\nEmpleado: ${empleados.find(e => e.id === parseInt(empleadoSeleccionado))?.nombre}\nMotivo: ${motivoMulta}\nMes a descontar: ${mesADescontarMulta}`}
         textoConfirmar="Registrar Multa"
         textoCancelar="Cancelar"
         variante="peligro"
