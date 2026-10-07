@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { formatearFecha } from "@pos/shared";
+import { formatearFecha, formatearMoneda } from "@pos/shared";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/auth";
 import type { Producto } from "@pos/shared";
@@ -32,7 +32,6 @@ export default function Nuevo() {
   const [esPersonalizado, setEsPersonalizado] = useState(false);
   const [descripcionPersonalizada, setDescripcionPersonalizada] = useState("");
   const [productoSeleccionado, setProductoSeleccionado] = useState<string>("");
-  const [unidadProducto, setUnidadProducto] = useState<"entero" | "porcion">("entero");
   const [cantidad, setCantidad] = useState("1");
   const [descripcionProducto, setDescripcionProducto] = useState("");
   const [totalManual, setTotalManual] = useState("");
@@ -75,16 +74,13 @@ export default function Nuevo() {
       if (!productoSeleccionado || !cantidad) return;
       const producto = productos.find((p) => p.id === parseInt(productoSeleccionado, 10));
       if (!producto) return;
-      const precio =
-        unidadProducto === "porcion"
-          ? (producto.precioPorcion ?? producto.precioEntero ?? 0)
-          : (producto.precioEntero ?? producto.precioPorcion ?? 0);
+      const precio = producto.precioEntero ?? producto.precioPorcion ?? 0;
       setDetalles([
         ...detalles,
         {
           productoId: producto.id,
           descripcionPersonalizada: descripcionProducto,
-          unidad: unidadProducto,
+          unidad: "entero",
           cantidad: parseInt(cantidad, 10),
           precioUnitario: precio,
           subtotal: precio * parseInt(cantidad, 10),
@@ -250,20 +246,25 @@ export default function Nuevo() {
           <div className="space-y-4">
             <div>
               <label className="block text-label-md text-on-surface-variant mb-1">
-                Total a cobrar
+                Total del pedido
               </label>
               <input
                 type="number"
                 value={totalManual}
                 onChange={(e) => setTotalManual(e.target.value)}
-                placeholder={totalCalculado.toFixed(2)}
+                placeholder={formatearMoneda(totalCalculado)}
                 min="0"
                 step="0.01"
                 max="999999"
-                className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface text-headline-md font-bold"
+                className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface text-headline-md font-bold tabular-nums"
               />
-              <p className="text-caption text-on-surface-variant mt-1">
-                Total de productos: ${totalCalculado.toFixed(2)}
+              <p className="text-caption text-on-surface-variant mt-1 flex items-center gap-2">
+                <span className="tabular-nums">
+                  Productos: {detalles.length} línea{detalles.length === 1 ? "" : "s"} · {formatearMoneda(totalCalculado)}
+                </span>
+                {totalManual !== "" && (parseFloat(totalManual) || 0) !== totalCalculado && (
+                  <span className="px-1.5 py-0.5 bg-secondary/15 text-secondary rounded">Manual</span>
+                )}
               </p>
             </div>
             <div>
@@ -365,19 +366,6 @@ export default function Nuevo() {
                   ))}
                 </select>
               </div>
-              <div className="w-36">
-                <label className="block text-label-md text-on-surface-variant mb-1">
-                  Unidad
-                </label>
-                <select
-                  value={unidadProducto}
-                  onChange={(e) => setUnidadProducto(e.target.value as "entero" | "porcion")}
-                  className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
-                >
-                  <option value="entero">Entero</option>
-                  <option value="porcion">Porción</option>
-                </select>
-              </div>
             </>
           )}
 
@@ -439,23 +427,24 @@ export default function Nuevo() {
                 key={index}
                 className="flex items-center gap-4 p-3 bg-surface-container rounded-xl"
               >
-                <div className="flex-1">
-                  <p className="font-medium text-on-surface">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-on-surface truncate">
                     {detalle.productoId
                       ? productos.find((p) => p.id === detalle.productoId)?.nombre
                       : detalle.descripcionPersonalizada}
                   </p>
-                  {detalle.descripcionPersonalizada && (
-                    <p className="text-label-md text-on-surface-variant italic">
+                  {detalle.productoId !== null && detalle.descripcionPersonalizada && (
+                    <p className="text-label-md text-on-surface-variant italic truncate">
                       {detalle.descripcionPersonalizada}
                     </p>
                   )}
-                  <p className="text-label-md text-on-surface-variant">
-                    {detalle.cantidad} x ${detalle.precioUnitario.toFixed(2)} ({detalle.unidad})
+                  <p className={`text-label-md tabular-nums ${detalle.productoId === null ? "text-on-surface-variant/70" : "text-on-surface-variant"}`}>
+                    {detalle.cantidad} × {detalle.productoId === null ? "Sin precio fijo" : formatearMoneda(detalle.precioUnitario)}
+                    {detalle.productoId !== null && detalle.unidad === "porcion" && " (Porción)"}
                   </p>
                 </div>
-                <p className="font-medium text-on-surface">
-                  ${detalle.subtotal.toFixed(2)}
+                <p className={`min-w-[100px] text-right font-semibold tabular-nums ${detalle.productoId === null ? "text-on-surface-variant/60" : "text-on-surface"}`}>
+                  {detalle.productoId === null ? "—" : formatearMoneda(detalle.subtotal)}
                 </p>
                 <button
                   onClick={() => eliminarDetalle(index)}
@@ -472,27 +461,41 @@ export default function Nuevo() {
       {/* Resumen */}
       <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant mb-6 hover:shadow-md transition-shadow">
         <h2 className="text-headline-md font-semibold text-on-surface mb-4">Resumen del Pedido</h2>
-        <div className="space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-on-surface-variant">Total:</span>
-            <span className="text-on-surface font-medium">
-              ${totalEstimado.toFixed(2)}
-            </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3 self-center">
+            <div className="flex justify-between items-center">
+              <span className="text-on-surface-variant">Total</span>
+              <span className={`tabular-nums ${totalEstimado > 0 ? "text-on-surface font-medium" : "text-on-surface-variant/60"}`}>
+                {formatearMoneda(totalEstimado)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center gap-2">
+              <span className="flex items-center gap-2 text-on-surface-variant">
+                Anticipo
+                {(parseFloat(anticipo) || 0) > 0 && (
+                  <span className="px-2 py-0.5 bg-surface-container text-caption rounded-full text-on-surface-variant">
+                    {metodoPago === "efectivo" ? "Efectivo" : "Transferencia"}
+                  </span>
+                )}
+              </span>
+              <span className={`tabular-nums font-medium ${parseFloat(anticipo) > 0 ? "text-tertiary" : "text-on-surface-variant/60"}`}>
+                {formatearMoneda(parseFloat(anticipo) || 0)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-on-surface-variant">Productos</span>
+              <span className="text-on-surface font-medium tabular-nums">
+                {detalles.length} producto{detalles.length === 1 ? "" : "s"}
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-on-surface-variant">Anticipo:</span>
-            <span className="font-medium text-tertiary">
-              ${(parseFloat(anticipo) || 0).toFixed(2)}
+          <div className="bg-tertiary-fixed rounded-xl p-5 flex flex-col justify-center">
+            <span className="text-label-md font-semibold text-on-surface-variant">Saldo pendiente</span>
+            <span className={`text-display-price leading-none tabular-nums ${saldoPendiente > 0 ? "text-error" : "text-on-tertiary-container"}`}>
+              {formatearMoneda(saldoPendiente)}
             </span>
-          </div>
-          <div className="flex justify-between border-t border-outline-variant pt-3">
-            <span className="text-on-surface font-medium">Saldo pendiente:</span>
-            <span
-              className={`font-bold ${
-                saldoPendiente > 0 ? "text-error" : "text-tertiary"
-              }`}
-            >
-              ${saldoPendiente.toFixed(2)}
+            <span className="mt-2 text-caption text-on-surface-variant tabular-nums">
+              Total {formatearMoneda(totalEstimado)} − anticipo {formatearMoneda(parseFloat(anticipo) || 0)}
             </span>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { formatearFecha } from "@pos/shared";
+import { formatearFecha, formatearMoneda } from "@pos/shared";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/auth";
 import type { Producto } from "@pos/shared";
@@ -27,7 +27,6 @@ export default function Nuevo() {
   const [notas, setNotas] = useState("");
   const [detalles, setDetalles] = useState<DetallePedido[]>([]);
   const [productoSeleccionado, setProductoSeleccionado] = useState<string>("");
-  const [unidadProducto, setUnidadProducto] = useState<"entero" | "porcion">("entero");
   const [cantidad, setCantidad] = useState("1");
   const [precioCustom, setPrecioCustom] = useState("");
   const [descripcionProducto, setDescripcionProducto] = useState("");
@@ -59,9 +58,7 @@ export default function Nuevo() {
     const precioCustomNum = parseFloat(precioCustom);
     const precio = !isNaN(precioCustomNum) && precioCustomNum >= 0
       ? precioCustomNum
-      : (unidadProducto === "porcion"
-          ? (producto.precioPorcion ?? producto.precioEntero ?? 0)
-          : (producto.precioEntero ?? producto.precioPorcion ?? 0));
+      : (producto.precioEntero ?? producto.precioPorcion ?? 0);
     const cant = parseInt(cantidad, 10);
 
     setDetalles([
@@ -69,14 +66,13 @@ export default function Nuevo() {
       {
         productoId: producto.id,
         descripcionPersonalizada: descripcionProducto,
-        unidad: unidadProducto,
+        unidad: "entero",
         cantidad: cant,
         precioUnitario: precio,
         subtotal: precio * cant,
       },
     ]);
     setProductoSeleccionado("");
-    setUnidadProducto("entero");
     setCantidad("1");
     setPrecioCustom("");
     setDescripcionProducto("");
@@ -230,14 +226,6 @@ export default function Nuevo() {
               </option>
             ))}
           </select>
-          <select
-            value={unidadProducto}
-            onChange={(e) => setUnidadProducto(e.target.value as "entero" | "porcion")}
-            className="w-24 px-2 py-2 border border-outline-variant rounded-xl text-sm"
-          >
-            <option value="entero">Entero</option>
-            <option value="porcion">Porción</option>
-          </select>
           <input
             type="number"
             value={cantidad}
@@ -248,7 +236,7 @@ export default function Nuevo() {
           />
           <button
             onClick={agregarDetalle}
-            className="px-3 py-2 bg-tertiary text-on-secondary rounded-xl text-sm"
+            className="px-3 py-2 bg-tertiary text-on-tertiary rounded-xl text-sm"
           >
             +
           </button>
@@ -271,8 +259,8 @@ export default function Nuevo() {
             onChange={(e) => setPrecioCustom(e.target.value)}
             placeholder={
               productoSeleccionado
-                ? `$${(productos.find((p) => p.id === parseInt(productoSeleccionado, 10))?.precioEntero ?? productos.find((p) => p.id === parseInt(productoSeleccionado, 10))?.precioPorcion ?? 0).toFixed(2)}`
-                : "0.00"
+                ? formatearMoneda(productos.find((p) => p.id === parseInt(productoSeleccionado, 10))?.precioEntero ?? productos.find((p) => p.id === parseInt(productoSeleccionado, 10))?.precioPorcion ?? 0)
+                : formatearMoneda(0)
             }
             min="0"
             step="0.01"
@@ -287,17 +275,17 @@ export default function Nuevo() {
                 key={index}
                 className="flex justify-between items-center p-2 bg-surface-container rounded-xl"
               >
-                <div>
-                  <p className="text-sm font-medium text-on-surface">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-on-surface truncate">
                     {productos.find((p) => p.id === detalle.productoId)?.nombre}
                   </p>
-                  <p className="text-xs text-on-surface-variant">
-                    {detalle.cantidad} x ${detalle.precioUnitario.toFixed(2)}
+                  <p className="text-xs text-on-surface-variant tabular-nums">
+                    {detalle.cantidad} × {formatearMoneda(detalle.precioUnitario)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-on-surface">
-                    ${detalle.subtotal.toFixed(2)}
+                  <span className="text-sm font-semibold text-on-surface tabular-nums">
+                    {formatearMoneda(detalle.subtotal)}
                   </span>
                   <button
                     onClick={() => eliminarDetalle(index)}
@@ -316,21 +304,28 @@ export default function Nuevo() {
       <div className="bg-surface-container-lowest p-4 rounded-xl mb-4">
         <div className="space-y-2">
           <div className="flex justify-between">
-            <span className="text-on-surface-variant">Total:</span>
-            <span className="font-medium text-on-surface">
-              ${totalEstimado.toFixed(2)}
+            <span className="text-on-surface-variant">Total</span>
+            <span className={`font-medium tabular-nums ${totalEstimado > 0 ? "text-on-surface" : "text-on-surface-variant/60"}`}>
+              {formatearMoneda(totalEstimado)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-on-surface-variant">Saldo:</span>
-            <span
-              className={`font-medium ${
-                saldoPendiente > 0 ? "text-error" : "text-tertiary"
-              }`}
-            >
-              ${saldoPendiente.toFixed(2)}
+            <span className="text-on-surface-variant">Anticipo</span>
+            <span className={`font-medium tabular-nums ${(parseFloat(anticipo) || 0) > 0 ? "text-tertiary" : "text-on-surface-variant/60"}`}>
+              {formatearMoneda(parseFloat(anticipo) || 0)}
             </span>
           </div>
+        </div>
+        <div className="mt-3 bg-tertiary-fixed rounded-xl p-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-on-surface-variant">Saldo pendiente</p>
+            <p className={`text-headline-lg leading-tight font-bold tabular-nums ${saldoPendiente > 0 ? "text-error" : "text-on-tertiary-container"}`}>
+              {formatearMoneda(saldoPendiente)}
+            </p>
+          </div>
+          <p className="text-xs text-on-surface-variant tabular-nums text-right">
+            {formatearMoneda(totalEstimado)}<br />− {formatearMoneda(parseFloat(anticipo) || 0)}
+          </p>
         </div>
       </div>
 
