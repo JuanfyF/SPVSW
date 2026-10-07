@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { formatearFecha } from "@pos/shared";
+import { formatearFecha, formatearMoneda } from "@pos/shared";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
 import {
@@ -16,7 +16,11 @@ import {
 } from "lucide-react";
 
 interface ResumenDiario {
-  ventas: {
+  ventasMostrador: {
+    efectivo: number; transferencia: number; total: number;
+    cantidadEfectivo: number; cantidadTransferencia: number; cantidadTotal: number;
+  };
+  saldosPedidos: {
     efectivo: number; transferencia: number; total: number;
     cantidadEfectivo: number; cantidadTransferencia: number; cantidadTotal: number;
   };
@@ -40,14 +44,30 @@ interface ResumenDiario {
       categoriaNombre: string;
     }>;
   };
+  adelantos: {
+    efectivo: number; transferencia: number; total: number;
+  };
+  devoluciones?: {
+    efectivo: number; transferencia: number; total: number;
+  };
+  multas: number;
   consolidado: {
     ingresosBrutos: number;
     egresosTotales: number;
     ingresoNeto: number;
   };
-  devoluciones?: {
-    efectivo: number; transferencia: number; total: number;
-  };
+}
+
+function LineaDato({ etiqueta, monto, cantidad }: { etiqueta: string; monto: number; cantidad?: number }) {
+  return (
+    <div className={`flex justify-between ${monto > 0 ? "text-on-surface-variant" : "text-on-surface-variant/60"}`}>
+      <span>{etiqueta}</span>
+      <span className="tabular-nums">
+        {formatearMoneda(monto)}
+        {cantidad != null ? ` (${cantidad})` : ""}
+      </span>
+    </div>
+  );
 }
 
 export default function Dashboard() {
@@ -83,6 +103,7 @@ export default function Dashboard() {
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const gastosCantidad = resumen?.gastos.porCategoria.reduce((acc, cat) => acc + cat.cantidad, 0) ?? 0;
   const cargarDatosRef = useRef<(() => Promise<void>) | null>(null);
   const lastPathnameRef = useRef(location.pathname);
 
@@ -262,235 +283,273 @@ export default function Dashboard() {
       )}
 
       {/* Tarjetas de resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-        {/* Ventas mostrador */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <ShoppingCart className="w-8 h-8 text-tertiary" />
-            <span className="text-label-md text-tertiary font-medium">Ventas</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+        {/* Héroe: ingreso neto del día */}
+        <div className="md:col-span-2 bg-tertiary-fixed rounded-2xl p-6 shadow-sm flex flex-col justify-center">
+          <div className="flex items-center gap-2 mb-1">
+            <CircleDollarSign className="w-5 h-5 text-on-surface-variant" />
+            <span className="text-label-md font-semibold text-on-surface-variant">Ingreso neto del día</span>
           </div>
-          <p className="text-headline-lg font-bold text-on-surface">
-            ${resumen?.ventasMostrador.total.toFixed(2) ?? "0.00"}
+          <p className={`text-display-price leading-none tabular-nums ${
+            (resumen?.consolidado.ingresoNeto ?? 0) > 0
+              ? "text-on-surface"
+              : (resumen?.consolidado.ingresoNeto ?? 0) < 0
+                ? "text-error"
+                : "text-on-surface-variant"
+          }`}>
+            {formatearMoneda(resumen?.consolidado.ingresoNeto ?? 0)}
           </p>
-          <div className="mt-2 text-body-md text-on-surface-variant">
-            <p>Efectivo: ${resumen?.ventasMostrador.efectivo.toFixed(2) ?? "0.00"} ({resumen?.ventasMostrador.cantidadEfectivo ?? 0})</p>
-            <p>Transferencia: ${resumen?.ventasMostrador.transferencia.toFixed(2) ?? "0.00"} ({resumen?.ventasMostrador.cantidadTransferencia ?? 0})</p>
-          </div>
-          <p className="mt-2 text-caption text-on-surface-variant">{resumen?.ventasMostrador.cantidadTotal ?? 0} transacciones</p>
+          <p className="mt-2 text-body-md text-on-surface-variant tabular-nums">
+            Ingresos {formatearMoneda(resumen?.consolidado.ingresosBrutos ?? 0)} − egresos {formatearMoneda(resumen?.consolidado.egresosTotales ?? 0)}
+          </p>
         </div>
 
-        {/* Saldos pedidos */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <Banknote className="w-8 h-8 text-tertiary" />
-            <span className="text-label-md text-tertiary font-medium">Saldos pedidos</span>
+        {/* Ventas mostrador */}
+        <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center gap-2 mb-2">
+            <ShoppingCart className="w-5 h-5 text-tertiary" />
+            <span className="text-label-md font-semibold text-on-surface-variant">Ventas</span>
           </div>
-          <p className="text-headline-lg font-bold text-on-surface">
-            ${resumen?.saldosPedidos.total.toFixed(2) ?? "0.00"}
+          <p className="text-headline-md font-bold text-on-surface tabular-nums">
+            {formatearMoneda(resumen?.ventasMostrador.total ?? 0)}
           </p>
-          <div className="mt-2 text-body-md text-on-surface-variant">
-            <p>Efectivo: ${resumen?.saldosPedidos.efectivo.toFixed(2) ?? "0.00"} ({resumen?.saldosPedidos.cantidadEfectivo ?? 0})</p>
-            <p>Transferencia: ${resumen?.saldosPedidos.transferencia.toFixed(2) ?? "0.00"} ({resumen?.saldosPedidos.cantidadTransferencia ?? 0})</p>
+          <div className="mt-2 space-y-0.5 text-caption">
+            <LineaDato etiqueta="Efectivo" monto={resumen?.ventasMostrador.efectivo ?? 0} cantidad={resumen?.ventasMostrador.cantidadEfectivo ?? 0} />
+            <LineaDato etiqueta="Transferencia" monto={resumen?.ventasMostrador.transferencia ?? 0} cantidad={resumen?.ventasMostrador.cantidadTransferencia ?? 0} />
           </div>
-          <p className="mt-2 text-caption text-on-surface-variant">{resumen?.saldosPedidos.cantidadTotal ?? 0} transacciones</p>
+          <p className="mt-auto pt-2 text-caption text-on-surface-variant/70">
+            {resumen?.ventasMostrador.cantidadTotal ?? 0} transacción{(resumen?.ventasMostrador.cantidadTotal ?? 0) === 1 ? "" : "es"}
+          </p>
         </div>
 
         {/* Pedidos */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <ClipboardList className="w-8 h-8 text-tertiary" />
-            <span className="text-label-md text-tertiary font-medium">Pedidos</span>
+        <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center gap-2 mb-2">
+            <ClipboardList className="w-5 h-5 text-tertiary" />
+            <span className="text-label-md font-semibold text-on-surface-variant">Pedidos</span>
           </div>
-          <p className="text-headline-lg font-bold text-on-surface">
-            ${resumen?.pedidos.total.toFixed(2) ?? "0.00"}
+          <p className="text-headline-md font-bold text-on-surface tabular-nums">
+            {formatearMoneda(resumen?.pedidos.total ?? 0)}
           </p>
-          <div className="mt-2 text-body-md text-on-surface-variant">
-            <p>Efectivo: ${resumen?.pedidos.efectivo.toFixed(2) ?? "0.00"} ({resumen?.pedidos.cantidadEfectivo ?? 0})</p>
-            <p>Transferencia: ${resumen?.pedidos.transferencia.toFixed(2) ?? "0.00"} ({resumen?.pedidos.cantidadTransferencia ?? 0})</p>
+          <div className="mt-2 space-y-0.5 text-caption">
+            <LineaDato etiqueta="Efectivo" monto={resumen?.pedidos.efectivo ?? 0} cantidad={resumen?.pedidos.cantidadEfectivo ?? 0} />
+            <LineaDato etiqueta="Transferencia" monto={resumen?.pedidos.transferencia ?? 0} cantidad={resumen?.pedidos.cantidadTransferencia ?? 0} />
           </div>
-          <p className="mt-2 text-caption text-on-surface-variant">{pedidosPendientes} pedidos activos</p>
+          <p className="mt-auto pt-2 text-caption text-on-surface-variant/70">{pedidosPendientes} pedido{pedidosPendientes === 1 ? "" : "s"} activos</p>
         </div>
 
         {/* Gastos */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <TrendingDown className="w-8 h-8 text-error" />
-            <span className="text-label-md text-error font-medium">Gastos</span>
+        <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingDown className={`w-5 h-5 ${(resumen?.gastos.total ?? 0) > 0 ? "text-error" : "text-on-surface-variant"}`} />
+            <span className={`text-label-md font-semibold ${(resumen?.gastos.total ?? 0) > 0 ? "text-error" : "text-on-surface-variant"}`}>Gastos</span>
           </div>
-          <p className="text-headline-lg font-bold text-error">
-            ${resumen?.gastos.total.toFixed(2) ?? "0.00"}
+          <p className={`text-headline-md font-bold tabular-nums ${(resumen?.gastos.total ?? 0) > 0 ? "text-error" : "text-on-surface-variant"}`}>
+            {formatearMoneda(resumen?.gastos.total ?? 0)}
           </p>
-          <div className="mt-2 text-body-md text-on-surface-variant">
-            <p>Caja: ${resumen?.gastos.caja.toFixed(2) ?? "0.00"}</p>
-            <p>Pedidos: ${resumen?.gastos.pedidos.toFixed(2) ?? "0.00"}</p>
+          <div className="mt-2 space-y-0.5 text-caption">
+            <LineaDato etiqueta="Caja" monto={resumen?.gastos.caja ?? 0} />
+            <LineaDato etiqueta="Pedidos" monto={resumen?.gastos.pedidos ?? 0} />
           </div>
-          {resumen?.gastos.detalle && resumen.gastos.detalle.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-outline-variant max-h-32 overflow-y-auto">
-              {resumen.gastos.detalle.map((g) => (
-                <div key={g.id} className="flex justify-between text-caption text-on-surface-variant py-0.5">
-                  <span className="truncate mr-2">{g.descripcion}</span>
-                  <span className="whitespace-nowrap">${g.monto.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {resumen?.gastos.porCategoria && resumen.gastos.porCategoria.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-outline-variant">
-              <p className="text-caption font-medium text-on-surface-variant mb-1">Por categoría:</p>
-              {resumen.gastos.porCategoria.map((cat) => (
-                <div key={cat.categoriaId} className="flex justify-between text-caption text-on-surface-variant">
-                  <span>{cat.categoriaNombre} ({cat.cantidad})</span>
-                  <span>${cat.total.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <p className="mt-auto pt-2 text-caption text-on-surface-variant/70">
+            {gastosCantidad} gasto{gastosCantidad === 1 ? "" : "s"}
+          </p>
         </div>
 
-        {/* Ingreso neto */}
-        <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <CircleDollarSign className="w-8 h-8 text-tertiary" />
-            <span className="text-label-md text-tertiary font-medium">Ingreso Neto</span>
+        {/* Saldos pedidos */}
+        <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant hover:shadow-md transition-shadow flex flex-col">
+          <div className="flex items-center gap-2 mb-2">
+            <Banknote className="w-5 h-5 text-tertiary" />
+            <span className="text-label-md font-semibold text-on-surface-variant">Saldos pedidos</span>
           </div>
-          <p className={`text-headline-lg font-bold ${
-            (resumen?.consolidado.ingresoNeto ?? 0) >= 0
-              ? "text-tertiary"
-              : "text-error"
-          }`}>
-            ${resumen?.consolidado.ingresoNeto.toFixed(2) ?? "0.00"}
+          <p className="text-headline-md font-bold text-on-surface tabular-nums">
+            {formatearMoneda(resumen?.saldosPedidos.total ?? 0)}
           </p>
-          <p className="mt-2 text-body-md text-on-surface-variant">ingreso del día</p>
+          <div className="mt-2 space-y-0.5 text-caption">
+            <LineaDato etiqueta="Efectivo" monto={resumen?.saldosPedidos.efectivo ?? 0} cantidad={resumen?.saldosPedidos.cantidadEfectivo ?? 0} />
+            <LineaDato etiqueta="Transferencia" monto={resumen?.saldosPedidos.transferencia ?? 0} cantidad={resumen?.saldosPedidos.cantidadTransferencia ?? 0} />
+          </div>
+          <p className="mt-auto pt-2 text-caption text-on-surface-variant/70">
+            {resumen?.saldosPedidos.cantidadTotal ?? 0} transacción{(resumen?.saldosPedidos.cantidadTotal ?? 0) === 1 ? "" : "es"}
+          </p>
         </div>
       </div>
+
+      {/* Gastos de hoy */}
+      {resumen && resumen.gastos.total > 0 && (
+        <div className="mb-8 bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
+          <div className="flex items-center gap-3 mb-4">
+            <TrendingDown className="w-5 h-5 text-error" />
+            <h2 className="text-headline-md font-semibold text-on-surface">Gastos de hoy</h2>
+            <span className="ml-auto text-label-md font-bold text-error tabular-nums">
+              {formatearMoneda(resumen.gastos.total)}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+            {resumen.gastos.porCategoria.length > 0 && (
+              <div>
+                <p className="text-label-md font-semibold text-on-surface-variant mb-2">Por categoría</p>
+                <div className="space-y-1">
+                  {resumen.gastos.porCategoria.map((cat) => (
+                    <div key={cat.categoriaId} className="flex justify-between text-body-md text-on-surface">
+                      <span>
+                        {cat.categoriaNombre} <span className="text-caption text-on-surface-variant">({cat.cantidad})</span>
+                      </span>
+                      <span className="tabular-nums">{formatearMoneda(cat.total)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {resumen.gastos.detalle && resumen.gastos.detalle.length > 0 && (
+              <div>
+                <p className="text-label-md font-semibold text-on-surface-variant mb-2">Detalle</p>
+                <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                  {resumen.gastos.detalle.map((g) => (
+                    <div key={g.id} className="flex justify-between text-body-md text-on-surface gap-2">
+                      <span className="truncate">{g.descripcion}</span>
+                      <span className="whitespace-nowrap tabular-nums">{formatearMoneda(g.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Accesos rápidos */}
       <div className="mb-8">
         <h2 className="text-headline-md font-semibold text-on-surface mb-4">Accesos Rápidos</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <button
             onClick={() => navigate("/venta")}
-            className="p-4 bg-secondary text-on-secondary rounded-2xl hover:bg-secondary/90 active:scale-[0.98] transition-all shadow-sm"
+            className="flex items-center gap-2.5 px-4 py-3 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 active:scale-[0.98] transition-all shadow-sm"
           >
-            <ShoppingCart className="w-6 h-6 mb-2" />
-            <span className="font-medium">Nueva Venta</span>
+            <ShoppingCart className="w-5 h-5 shrink-0" />
+            <span className="font-medium whitespace-nowrap">Nueva Venta</span>
           </button>
           <button
             onClick={() => navigate("/pedidos/nuevo")}
-            className="p-4 bg-tertiary text-on-tertiary rounded-2xl hover:bg-tertiary/90 active:scale-[0.98] transition-all shadow-sm"
+            className="flex items-center gap-2.5 px-4 py-3 bg-tertiary text-on-tertiary rounded-xl hover:bg-tertiary/90 active:scale-[0.98] transition-all shadow-sm"
           >
-            <ClipboardList className="w-6 h-6 mb-2" />
-            <span className="font-medium">Nuevo Pedido</span>
+            <ClipboardList className="w-5 h-5 shrink-0" />
+            <span className="font-medium whitespace-nowrap">Nuevo Pedido</span>
           </button>
           <button
             onClick={() => navigate("/stock")}
-            className="p-4 bg-surface-container text-on-surface rounded-2xl hover:bg-surface-container-high transition-all"
+            className="flex items-center gap-2.5 px-4 py-3 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-all"
           >
-            <Package className="w-6 h-6 mb-2" />
+            <Package className="w-5 h-5 shrink-0" />
             <span className="font-medium">Stock</span>
           </button>
           <button
             onClick={() => navigate("/reportes")}
-            className="p-4 bg-surface-container text-on-surface rounded-2xl hover:bg-surface-container-high transition-all"
+            className="flex items-center gap-2.5 px-4 py-3 bg-surface-container text-on-surface rounded-xl hover:bg-surface-container-high transition-all"
           >
-            <BarChart3 className="w-6 h-6 mb-2" />
+            <BarChart3 className="w-5 h-5 shrink-0" />
             <span className="font-medium">Reportes</span>
           </button>
         </div>
       </div>
 
       {/* Resumen de pedidos pendientes */}
-      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-outline-variant">
-        <h2 className="text-headline-md font-semibold text-on-surface mb-4">Pedidos Pendientes</h2>
-        {pedidosPendientes === 0 ? (
-          <div className="flex flex-col items-center py-4">
-            <ClipboardList className="w-10 h-10 mb-2 text-on-surface-variant/40" />
-            <p className="text-on-surface-variant text-center">
-              No hay pedidos pendientes
+      <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-outline-variant flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <ClipboardList className="w-5 h-5 shrink-0 text-on-surface-variant" />
+          <div className="min-w-0">
+            <p className="text-label-md font-semibold text-on-surface">Pedidos Pendientes</p>
+            <p className="text-body-md text-on-surface-variant truncate">
+              {pedidosPendientes === 0 ? (
+                "No hay pedidos pendientes"
+              ) : (
+                <>
+                  <span className="font-semibold text-on-surface tabular-nums">{pedidosPendientes}</span> pedido{pedidosPendientes === 1 ? "" : "s"} activos
+                </>
+              )}
             </p>
           </div>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-4xl font-bold text-secondary">{pedidosPendientes}</p>
-            <p className="text-on-surface-variant">pedidos activos</p>
-            <button
-              onClick={() => navigate("/pedidos")}
-              className="mt-4 px-4 py-2 text-secondary hover:text-secondary/80 transition-colors"
-            >
-              Ver todos →
-            </button>
-          </div>
+        </div>
+        {pedidosPendientes > 0 && (
+          <button
+            onClick={() => navigate("/pedidos")}
+            className="px-4 py-2 text-label-md font-medium text-secondary hover:text-secondary/80 transition-colors whitespace-nowrap"
+          >
+            Ver todos →
+          </button>
         )}
       </div>
 
-      {/* Diferencias de stock pendientes */}
-      {diferenciasStock.length > 0 && (
-        <div className="mt-6 bg-surface-container rounded-2xl p-6 shadow-sm border border-outline-variant">
-          <div className="flex items-center gap-3 mb-4">
-            <AlertTriangle className="w-6 h-6 text-error" />
-            <h2 className="text-headline-md font-semibold text-on-surface">Diferencias de Stock Pendientes</h2>
-          </div>
-          <p className="text-body-md text-on-surface-variant mb-4">
-            Se detectaron diferencias durante el cierre de caja. Revisa el conteo físico.
-          </p>
-          <div className="space-y-2">
-            {diferenciasStock.map((d) => (
-              <div key={`${d.productoId}-${d.unidad}`} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
-                <div>
-                  <p className="font-medium text-on-surface">{d.productoNombre}</p>
-                  <p className="text-caption text-on-surface-variant">
-                    {d.unidad === "entero" ? "Entero" : "Porción"} • Esperado: {d.esperado} • Conteo: {d.conteoFisico}
-                  </p>
-                </div>
-                <span className={`text-lg font-bold ${d.diferencia < 0 ? "text-error" : "text-tertiary"}`}>
-                  {d.diferencia > 0 ? "+" : ""}{d.diferencia}
-                </span>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => navigate("/stock")}
-            className="mt-4 px-4 py-2 text-on-surface-variant hover:text-on-surface transition-colors"
-          >
-            Ver stock →
-          </button>
-        </div>
-      )}
-
-      {/* Cierres de caja con diferencias pendientes de revisión */}
-      {cierresPendientes.length > 0 && (
+      {/* Pendientes de revisión */}
+      {(diferenciasStock.length > 0 || cierresPendientes.length > 0) && (
         <div className="mt-6 bg-error-container/30 rounded-2xl p-6 shadow-sm border border-error/20">
           <div className="flex items-center gap-3 mb-4">
-            <Search className="w-6 h-6 text-error" />
-            <h2 className="text-headline-md font-semibold text-on-surface">Diferencias Pendientes de Revisión</h2>
+            <AlertTriangle className="w-6 h-6 text-error" />
+            <h2 className="text-headline-md font-semibold text-on-surface">Pendientes de revisión</h2>
           </div>
           <p className="text-body-md text-on-surface-variant mb-4">
-            Cierres de caja con diferencias que aún no han sido revisados.
+            Movimientos que requieren tu atención antes del siguiente cierre.
           </p>
-          <div className="space-y-2">
-            {cierresPendientes.map((c) => (
-              <div key={c.id} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
-                <div>
-                  <p className="font-medium text-on-surface">{c.cajeroNombre}</p>
-                  <p className="text-caption text-on-surface-variant">
-                    {c.fechaApertura}
-                    {c.tieneDiferenciaStock && " • Diferencia de stock"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`font-bold ${c.diferenciaEfectivo !== 0 ? "text-error" : "text-on-surface-variant"}`}>
-                    ${Math.abs(c.diferenciaEfectivo).toFixed(2)}
-                  </span>
-                  <button
-                    onClick={() => navigate("/reportes")}
-                    className="px-3 py-1 text-xs bg-secondary text-on-secondary rounded-lg hover:bg-secondary/90 transition-colors"
-                  >
-                    Revisar
-                  </button>
-                </div>
+
+          {diferenciasStock.length > 0 && (
+            <div className="mb-4">
+              <p className="text-label-md font-semibold text-on-surface mb-2">Diferencias de stock</p>
+              <div className="space-y-2">
+                {diferenciasStock.map((d) => (
+                  <div key={`${d.productoId}-${d.unidad}`} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
+                    <div>
+                      <p className="font-medium text-on-surface">{d.productoNombre}</p>
+                      <p className="text-caption text-on-surface-variant tabular-nums">
+                        {d.unidad === "entero" ? "Entero" : "Porción"} • Esperado: {d.esperado} • Conteo: {d.conteoFisico}
+                      </p>
+                    </div>
+                    <span className={`text-body-md font-bold tabular-nums ${d.diferencia < 0 ? "text-error" : "text-tertiary"}`}>
+                      {d.diferencia > 0 ? "+" : ""}{d.diferencia}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+              <button
+                onClick={() => navigate("/stock")}
+                className="mt-3 px-4 py-2 text-label-md font-medium text-on-surface-variant hover:text-on-surface transition-colors"
+              >
+                Ver stock →
+              </button>
+            </div>
+          )}
+
+          {cierresPendientes.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Search className="w-4 h-4 text-error" />
+                <p className="text-label-md font-semibold text-on-surface">Cierres de caja</p>
+              </div>
+              <div className="space-y-2">
+                {cierresPendientes.map((c) => (
+                  <div key={c.id} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
+                    <div>
+                      <p className="font-medium text-on-surface">{c.cajeroNombre}</p>
+                      <p className="text-caption text-on-surface-variant">
+                        {c.fechaApertura}
+                        {c.tieneDiferenciaStock && " • Diferencia de stock"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`font-bold tabular-nums ${c.diferenciaEfectivo !== 0 ? "text-error" : "text-on-surface-variant"}`}>
+                        {formatearMoneda(Math.abs(c.diferenciaEfectivo))}
+                      </span>
+                      <button
+                        onClick={() => navigate("/reportes")}
+                        className="px-3 py-1 text-xs bg-secondary text-on-secondary rounded-lg hover:bg-secondary/90 transition-colors"
+                      >
+                        Revisar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -500,42 +559,49 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 mb-4">
             <Users className="w-6 h-6 text-secondary" />
             <h2 className="text-headline-md font-semibold text-on-surface">Nómina del Mes</h2>
+            <button
+              onClick={() => navigate("/nomina")}
+              className="ml-auto text-label-md font-medium text-secondary hover:text-secondary/80 transition-colors"
+            >
+              Ver nómina completa →
+            </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="p-3 bg-surface-container rounded-xl">
+          <div className="flex gap-8 mb-4">
+            <div>
               <p className="text-caption text-on-surface-variant">Adelantos</p>
-              <p className="text-headline-md font-bold text-on-surface">
-                ${resumenNomina.totalAdelantos.toFixed(2)}
+              <p className={`text-headline-md font-bold tabular-nums ${resumenNomina.totalAdelantos > 0 ? "text-on-surface" : "text-on-surface-variant/60"}`}>
+                {formatearMoneda(resumenNomina.totalAdelantos)}
               </p>
             </div>
-            <div className="p-3 bg-surface-container rounded-xl">
+            <div>
               <p className="text-caption text-on-surface-variant">Multas</p>
-              <p className="text-headline-md font-bold text-error">
-                ${resumenNomina.totalMultas.toFixed(2)}
+              <p className={`text-headline-md font-bold tabular-nums ${resumenNomina.totalMultas > 0 ? "text-error" : "text-on-surface-variant/60"}`}>
+                {formatearMoneda(resumenNomina.totalMultas)}
               </p>
             </div>
           </div>
-          <div className="space-y-2">
-            {resumenNomina.empleados.map((emp) => (
-              <div key={emp.id} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
-                <p className="font-medium text-on-surface">{emp.nombre}</p>
-                <div className="flex gap-4 text-caption">
-                  {emp.adelantos > 0 && (
-                    <span className="text-on-surface-variant">Adelantos: ${emp.adelantos.toFixed(2)}</span>
-                  )}
-                  {emp.multas > 0 && (
-                    <span className="text-error">Multas: ${emp.multas.toFixed(2)}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => navigate("/nomina")}
-            className="mt-4 px-4 py-2 text-on-surface-variant hover:text-on-surface transition-colors"
-          >
-            Ver nómina completa →
-          </button>
+          <table className="w-full text-body-md">
+            <thead>
+              <tr className="text-caption uppercase text-on-surface-variant">
+                <th className="text-left font-medium pb-2">Empleado</th>
+                <th className="text-right font-medium pb-2">Adelantos</th>
+                <th className="text-right font-medium pb-2">Multas</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resumenNomina.empleados.map((emp) => (
+                <tr key={emp.id} className="border-t border-outline-variant/50">
+                  <td className="py-2.5 text-on-surface">{emp.nombre}</td>
+                  <td className={`py-2.5 text-right tabular-nums ${emp.adelantos > 0 ? "text-on-surface" : "text-on-surface-variant/60"}`}>
+                    {emp.adelantos > 0 ? formatearMoneda(emp.adelantos) : "—"}
+                  </td>
+                  <td className={`py-2.5 text-right tabular-nums ${emp.multas > 0 ? "text-error font-medium" : "text-on-surface-variant/60"}`}>
+                    {emp.multas > 0 ? formatearMoneda(emp.multas) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
