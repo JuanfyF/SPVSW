@@ -20,6 +20,7 @@
 
 export { crearServicioAuth } from "./modules/auth";
 export { crearServicioUsuarios } from "./modules/usuarios";
+export type { ActorUsuario } from "./modules/usuarios";
 export { crearServicioEmpleados } from "./modules/empleados";
 export { crearServicioProductos } from "./modules/productos";
 export { crearServicioStock } from "./modules/stock";

@@ -24,6 +24,8 @@ export default function Usuarios() {
   const { usuario } = useAuthStore();
   const navigate = useNavigate();
   const esAdmin = usuario ? esRolAdmin(usuario.rol) : false;
+  const esPropietario = usuario?.rol === "propietario";
+  const MSJ_GESTION_PROPIETARIO = "Solo el propietario puede gestionar su cuenta";
 
   useEffect(() => {
     if (usuario && !esAdmin) {
@@ -272,16 +274,24 @@ export default function Usuarios() {
                           setPinError("");
                           setModalPin(true);
                         }}
-                        className="px-3 py-1.5 text-sm border border-outline-variant text-on-surface-variant rounded-lg hover:bg-surface-container-high transition-colors"
+                        disabled={!esPropietario && u.rol === "propietario"}
+                        title={!esPropietario && u.rol === "propietario" ? MSJ_GESTION_PROPIETARIO : undefined}
+                        className="px-3 py-1.5 text-sm border border-outline-variant text-on-surface-variant rounded-lg hover:bg-surface-container-high transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Cambiar PIN
                       </button>
                       {u.activo && u.id !== usuario?.id && (
                         <button
                           onClick={() => handleDesactivar(u)}
-                          disabled={esRolAdmin(u.rol) && adminsActivos <= 1}
+                          disabled={(esRolAdmin(u.rol) && adminsActivos <= 1) || (!esPropietario && u.rol === "propietario")}
                           className="px-3 py-1.5 text-sm text-error border border-error/30 rounded-lg hover:bg-error-container/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={esRolAdmin(u.rol) && adminsActivos <= 1 ? "No se puede desactivar el último admin/cajero" : ""}
+                          title={
+                            !esPropietario && u.rol === "propietario"
+                              ? MSJ_GESTION_PROPIETARIO
+                              : esRolAdmin(u.rol) && adminsActivos <= 1
+                                ? "No se puede desactivar el último admin/cajero"
+                                : ""
+                          }
                         >
                           Desactivar
                         </button>
@@ -340,7 +350,7 @@ export default function Usuarios() {
                   onChange={(e) => setRolCrear(e.target.value)}
                   className="w-full px-4 py-3 border border-outline-variant rounded-xl focus:outline-none focus:border-secondary bg-surface"
                 >
-                  {ROLES.map((r) => (
+                  {(esPropietario ? ROLES : ROLES.filter((r) => r.valor !== "propietario")).map((r) => (
                     <option key={r.valor} value={r.valor}>{r.label}</option>
                   ))}
                 </select>

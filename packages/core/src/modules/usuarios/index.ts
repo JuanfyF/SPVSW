@@ -8,7 +8,33 @@ import { PosDatabase, usuarios, auditLog, eq, and, count, sql } from "@pos/db";
 import { CrearUsuarioInput, CrearUsuarioSchema, CambiarPinSchema, ActualizarUsuarioSchema, IdSchema } from "@pos/shared";
 import { crearHashPin } from "@pos/shared";
 
+/** Actor autenticado que ejecuta la operación (para control de acceso). */
+export interface ActorUsuario {
+  id: number;
+  rol: string;
+}
+
 export function crearServicioUsuarios(db: PosDatabase) {
+  /**
+   * Denegación de gestión sobre la cuenta del propietario.
+   * Regla: el cajero gestiona usuarios, salvo la cuenta del propietario.
+   */
+  function denegarGestionPropietario(actor: ActorUsuario, operacion: string) {
+    try {
+      db.insert(auditLog).values({
+        evento: "permiso_denegado",
+        usuarioId: actor.id,
+        detalle: JSON.stringify({ operacion, motivo: "gestion_propietario_restringida" }),
+        origen: "core",
+      });
+    } catch { /* audit logging es best-effort */ }
+    throw new Error("El cajero no puede gestionar la cuenta del propietario");
+  }
+
+  function esCajero(actor: ActorUsuario) {
+    return actor.rol === "cajero";
+  }
+
   return {
     /**
      * Lista todos los usuarios activos.
@@ -49,8 +75,11 @@ export function crearServicioUsuarios(db: PosDatabase) {
     /**
      * Crea un nuevo usuario (retorna sin pinHash).
      */
-    async crear(datos: CrearUsuarioInput) {
+    async crear(datos: CrearUsuarioInput, actor: ActorUsuario) {
       const validados = CrearUsuarioSchema.parse(datos);
+      if (esCajero(actor) && validados.rol === "propietario") {
+        denegarGestionPropietario(actor, "crear_propietario");
+      }
       const pinHash = await crearHashPin(validados.pin);
 
       const existente = await db.select({ id: usuarios.id }).from(usuarios).where(eq(usuarios.nombre, validados.nombre)).limit(1);
@@ -73,9 +102,19 @@ export function crearServicioUsuarios(db: PosDatabase) {
      */
     async actualizar(
       id: number,
-      datos: Partial<Pick<CrearUsuarioInput, "nombre" | "rol">>
+      datos: Partial<Pick<CrearUsuarioInput, "nombre" | "rol">>,
+      actor: ActorUsuario
     ) {
       IdSchema.parse(id);
+      if (esCajero(actor)) {
+        if (datos.rol === "propietario") {
+          denegarGestionPropietario(actor, "ascender_a_propietario");
+        }
+        const objetivo = await this.obtenerPorId(id);
+        if (objetivo?.rol === "propietario") {
+          denegarGestionPropietario(actor, "actualizar_propietario");
+        }
+      }
       const validados = ActualizarUsuarioSchema.parse(datos);
       const resultado = await db
         .update(usuarios)
@@ -93,10 +132,14 @@ export function crearServicioUsuarios(db: PosDatabase) {
      * Desactiva un usuario (soft delete).
      * No permite desactivar el último usuario admin/cajero activo.
      */
-    async desactivar(id: number) {
+    async desactivar(id: number, actor: ActorUsuario) {
       IdSchema.parse(id);
       const usuario = await this.obtenerPorId(id);
       if (!usuario) return;
+
+      if (esCajero(actor) && usuario.rol === "propietario") {
+        denegarGestionPropietario(actor, "desactivar_propietario");
+      }
 
       const esAdmin = usuario.rol === "propietario" || usuario.rol === "cajero";
       if (esAdmin) {
@@ -124,15 +167,19 @@ export function crearServicioUsuarios(db: PosDatabase) {
     /**
      * Cambia el PIN de un usuario y limpia la bandera debeCambiarPin.
      */
-    async cambiarPin(id: number, nuevoPin: string) {
+    async cambiarPin(id: number, nuevoPin: string, actor: ActorUsuario) {
       CambiarPinSchema.parse({ nuevoPin, confirmarPin: nuevoPin });
       const existe = await db
-        .select({ id: usuarios.id })
+        .select({ id: usuarios.id, rol: usuarios.rol })
         .from(usuarios)
         .where(eq(usuarios.id, id))
         .limit(1);
-      if (existe.length === 0) {
+      const [usuario] = existe;
+      if (!usuario) {
         throw new Error("Usuario no encontrado");
+      }
+      if (esCajero(actor) && usuario.rol === "propietario") {
+        denegarGestionPropietario(actor, "cambiar_pin_propietario");
       }
       const pinHash = await crearHashPin(nuevoPin);
       await db

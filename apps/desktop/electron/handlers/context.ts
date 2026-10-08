@@ -48,9 +48,10 @@ export interface HandlerContext {
   getDb: () => DbType | null;
   getMainWindow: () => BrowserWindow | null;
   reiniciarTimeoutSesion: () => void;
-  safeHandler: <T extends (...args: any[]) => Promise<any>>(fn: T, opts?: { auth?: boolean; admin?: boolean }) => T;
+  safeHandler: <T extends (...args: any[]) => Promise<any>>(fn: T, opts?: { auth?: boolean; admin?: boolean; gestores?: boolean }) => T;
   requireAuth: () => void;
   requireAdmin: () => void;
+  requireGestor: () => void;
   limpiarSesionesTimeout: () => void;
   logAuditoria: (evento: string, usuarioId?: number, detalle?: Record<string, unknown>) => void;
   notificarCambio: () => void;
@@ -102,13 +103,30 @@ function _requireAdmin(): void {
   }
 }
 
+/** Gestión de usuarios: permitido a propietario y cajero (Opción A). */
+function _requireGestor(): void {
+  _requireAuth();
+  if (_usuarioActual!.rol !== "propietario" && _usuarioActual!.rol !== "cajero") {
+    try {
+      _db?.insert(auditLog).values({
+        evento: "permiso_denegado",
+        usuarioId: _usuarioActual!.id,
+        detalle: JSON.stringify({ rol: _usuarioActual!.rol, operacion: "gestion_usuarios" }),
+        origen: "desktop",
+      });
+    } catch { /* audit logging es best-effort */ }
+    throw new Error("No tiene permisos para gestionar usuarios.");
+  }
+}
+
 function _safeHandler<T extends (...args: any[]) => Promise<any>>(
   fn: T,
-  opts?: { auth?: boolean; admin?: boolean }
+  opts?: { auth?: boolean; admin?: boolean; gestores?: boolean }
 ): T {
   return (async (...args: any[]) => {
     try {
-      if (opts?.admin) _requireAdmin();
+      if (opts?.gestores) _requireGestor();
+      else if (opts?.admin) _requireAdmin();
       else if (opts?.auth) _requireAuth();
       if (_usuarioActual) _reiniciarTimeoutSesion();
       return await fn(...args);
@@ -153,6 +171,7 @@ export const ctx: HandlerContext = {
   safeHandler: _safeHandler,
   requireAuth: _requireAuth,
   requireAdmin: _requireAdmin,
+  requireGestor: _requireGestor,
   limpiarSesionesTimeout: _limpiarSesionesTimeout,
   logAuditoria: _logAuditoria,
   notificarCambio: _notificarCambio,
