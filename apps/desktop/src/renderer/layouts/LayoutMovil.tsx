@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/auth";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { Clock, Home, ClipboardList, Package, User } from "lucide-react";
 import Onboarding, { shouldShowOnboarding } from "../components/Onboarding";
+import { useConfigStore, nombreVisible } from "../store/config";
 
 const menuItems = [
   { path: "/movil", label: "Inicio", icon: <Home className="w-5 h-5" /> },
@@ -53,6 +54,11 @@ export default function LayoutMovil() {
 
   const [mostrarOnboarding, setMostrarOnboarding] = useState(() => shouldShowOnboarding());
 
+  const { nombreNegocio, cargar } = useConfigStore();
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
+
   if (!usuario) return null;
 
   if (mostrarOnboarding) {
@@ -91,7 +97,7 @@ export default function LayoutMovil() {
       {/* Header */}
       <header className="bg-secondary text-on-secondary p-4 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold">Sweet Bakery</h1>
+          <h1 className="text-lg font-bold">{nombreVisible(nombreNegocio)}</h1>
           {usuario && (
             <p className="text-sm text-on-secondary/80">{usuario.nombre}</p>
           )}

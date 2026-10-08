@@ -1004,8 +1004,17 @@ export interface PosAPI {
   sistema: {
     getDbPath: () => Promise<string>;
     getVersion: () => Promise<string>;
+    getRedLocal: () => Promise<{ ipLocal: string | null; urlMovil: string | null }>;
     backup: (rutaDestino: string) => Promise<{ ok: boolean; ruta: string }>;
     restore: (rutaBackup: string) => Promise<{ ok: boolean }>;
+  };
+
+  // ============================================================
+  // CONFIGURACIÓN DEL NEGOCIO
+  // ============================================================
+  configuracion: {
+    obtener: () => Promise<{ nombreNegocio: string }>;
+    guardar: (datos: { nombreNegocio: string }) => Promise<{ nombreNegocio: string }>;
   };
 
   // Eventos push del main process

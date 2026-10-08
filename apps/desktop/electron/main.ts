@@ -45,11 +45,13 @@ import {
   crearServicioGastos,
   crearServicioNomina,
   crearServicioReportes,
+  crearServicioConfiguracion,
 } from "@pos/core";
 
 // ─── Handler imports ─────────────────────────────────
 import { registrarAuthHandlers } from "./handlers/auth";
 import { registrarUsuariosHandlers } from "./handlers/usuarios";
+import { registrarConfiguracionHandlers } from "./handlers/configuracion";
 import { registrarEmpleadosHandlers } from "./handlers/empleados";
 import { registrarProductosHandlers } from "./handlers/productos";
 import { registrarCajaHandlers } from "./handlers/caja";
@@ -67,6 +69,7 @@ let db: ReturnType<typeof createDbWithSqlite>["db"] | null = null;
 function registrarHandlers() {
   registrarAuthHandlers();
   registrarUsuariosHandlers();
+  registrarConfiguracionHandlers();
   registrarEmpleadosHandlers();
   registrarProductosHandlers();
   registrarCajaHandlers();
@@ -159,6 +162,7 @@ app.whenReady().then(async () => {
     gastos: crearServicioGastos(db),
     nomina: crearServicioNomina(db),
     reportes: crearServicioReportes(db),
+    configuracion: crearServicioConfiguracion(db),
   };
 
   // Inicializar contexto de handlers

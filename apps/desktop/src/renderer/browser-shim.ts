@@ -88,6 +88,22 @@
       },
     },
 
+    // Stub dev-web: asume ya configurado para no mostrar el wizard en el shim
+    configuracion: {
+      async obtener() {
+        return { nombreNegocio: "Sweet Bakery" };
+      },
+      async guardar(datos: { nombreNegocio: string }) {
+        return datos;
+      },
+    },
+
+    sistema: {
+      async getRedLocal() {
+        return { ipLocal: null, urlMovil: null };
+      },
+    },
+
     productos: {
       async listar() {
         const data = await api("GET", "/api/productos");

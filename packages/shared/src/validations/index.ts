@@ -139,6 +139,14 @@ export const CambiarPinSchema = z.object({
   path: ["nuevoPin"],
 });
 
+export const GuardarConfiguracionSchema = z.object({
+  nombreNegocio: z
+    .string()
+    .trim()
+    .min(1, "El nombre del negocio es requerido")
+    .max(100, "El nombre no puede tener más de 100 caracteres"),
+});
+
 // ============================================================
 // ESQUEMAS DE ENTRADA — EMPLEADOS
 // ============================================================
@@ -421,6 +429,7 @@ export type LoginInput = z.infer<typeof LoginSchema>;
 export type CrearUsuarioInput = z.infer<typeof CrearUsuarioSchema>;
 export type ActualizarUsuarioInput = z.infer<typeof ActualizarUsuarioSchema>;
 export type CambiarPinInput = z.infer<typeof CambiarPinSchema>;
+export type GuardarConfiguracionInput = z.infer<typeof GuardarConfiguracionSchema>;
 export type CrearEmpleadoInput = z.infer<typeof CrearEmpleadoSchema>;
 export type ActualizarEmpleadoInput = z.infer<typeof ActualizarEmpleadoSchema>;
 export type CrearProductoInput = z.infer<typeof CrearProductoSchema>;

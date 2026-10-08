@@ -1,13 +1,70 @@
-import { HelpCircle, Download } from "lucide-react";
+import { useState } from "react";
+import { HelpCircle, Download, Smartphone, Copy, Check } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { generarGuiaUsuario } from "@pos/shared";
+import { useConfigStore } from "../../store/config";
 
 export default function Ayuda() {
+  const { red } = useConfigStore();
+  const [copiado, setCopiado] = useState(false);
+
+  const handleCopiar = async () => {
+    if (!red?.urlMovil) return;
+    try {
+      await navigator.clipboard.writeText(red.urlMovil);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      // Clipboard no disponible
+    }
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-8">
       <div className="flex items-center gap-3">
         <HelpCircle className="w-8 h-8 text-primary" />
         <h1 className="text-2xl font-bold text-on-surface">Ayuda</h1>
       </div>
+
+      {/* Celular de pasteleras */}
+      <section className="bg-surface-container-low rounded-2xl p-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Smartphone className="w-6 h-6 text-secondary" />
+          <h2 className="text-lg font-bold text-on-surface">Celular de pasteleras</h2>
+        </div>
+        <p className="text-on-surface-variant text-sm mb-4">
+          Las pasteleras acceden al sistema desde el navegador de su celular
+          (misma WiFi que esta computadora) usando este enlace. Puede escanear
+          el código QR o copiar la dirección:
+        </p>
+        {red?.urlMovil ? (
+          <div className="flex flex-col sm:flex-row items-start gap-6">
+            <div className="bg-white p-3 rounded-xl border border-outline-variant shrink-0">
+              <QRCodeSVG value={red.urlMovil} size={132} />
+            </div>
+            <div className="space-y-3">
+              <p className="font-mono text-sm text-on-surface break-all">
+                {red.urlMovil}
+              </p>
+              <p className="text-caption text-on-surface-variant">
+                IP de esta computadora: {red.ipLocal}
+              </p>
+              <button
+                onClick={handleCopiar}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant text-on-surface-variant rounded-xl hover:bg-surface-container transition-colors text-sm"
+              >
+                {copiado ? <Check className="w-4 h-4 text-tertiary" /> : <Copy className="w-4 h-4" />}
+                {copiado ? "Copiado" : "Copiar enlace"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-on-surface-variant bg-surface-container rounded-xl p-4 text-sm">
+            No se pudo detectar la dirección de red. Verifique que la computadora
+            esté conectada a la WiFi e intente de nuevo.
+          </p>
+        )}
+      </section>
 
       {/* Acerca de */}
       <section className="bg-surface-container-low rounded-2xl p-6">

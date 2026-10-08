@@ -457,3 +457,14 @@ export const comprobantes = sqliteTable("comprobantes", {
   ultimoError: text("ultimo_error"),
   ...camposAuditoria,
 });
+
+/* ============================================================
+   11. CONFIGURACIÓN DEL NEGOCIO (fila única, id = 1)
+   Datos de identidad usados en PDFs, layouts y login.
+   ============================================================ */
+
+export const configuracion = sqliteTable("configuracion", {
+  id: integer("id").primaryKey(),
+  nombreNegocio: text("nombre_negocio").notNull().default(""),
+  ...camposAuditoria,
+});

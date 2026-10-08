@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronRight, ChevronLeft, Check, ShoppingCart, Package, DollarSign, HelpCircle } from "lucide-react";
+import { useConfigStore, nombreVisible } from "../store/config";
 
 const ONBOARDING_KEY = "sweetbakery_onboarding_completado";
 
@@ -56,7 +57,10 @@ const pasos: Paso[] = [
 export default function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [pasoActual, setPasoActual] = useState(0);
   const totalPasos = pasos.length;
+  const { nombreNegocio } = useConfigStore();
   const paso = pasos[pasoActual];
+  const tituloPaso =
+    pasoActual === 0 ? `Bienvenido a ${nombreVisible(nombreNegocio)}` : paso.titulo;
 
   const handleSiguiente = () => {
     if (pasoActual < totalPasos - 1) {
@@ -87,7 +91,7 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
         </div>
 
         {/* Título */}
-        <h1 className="text-2xl font-bold text-on-surface mb-3">{paso.titulo}</h1>
+        <h1 className="text-2xl font-bold text-on-surface mb-3">{tituloPaso}</h1>
 
         {/* Descripción */}
         <p className="text-on-surface-variant mb-8">{paso.descripcion}</p>

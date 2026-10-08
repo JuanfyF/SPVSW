@@ -42,6 +42,15 @@ contextBridge.exposeInMainWorld("pos", {
   },
 
   // ============================================================
+  // CONFIGURACIÓN DEL NEGOCIO
+  // ============================================================
+  configuracion: {
+    obtener: () => invoke("configuracion:obtener"),
+    guardar: (datos: { nombreNegocio: string }) =>
+      invoke("configuracion:guardar", datos),
+  },
+
+  // ============================================================
   // EMPLEADOS
   // ============================================================
   empleados: {
@@ -202,6 +211,7 @@ contextBridge.exposeInMainWorld("pos", {
   sistema: {
     getDbPath: () => invoke("sistema:getDbPath"),
     getVersion: () => invoke("sistema:getVersion"),
+    getRedLocal: () => invoke("sistema:getRedLocal"),
     backup: (rutaDestino: string) => invoke("sistema:backup", rutaDestino),
     restore: (rutaBackup: string) => invoke("sistema:restore", rutaBackup),
   },

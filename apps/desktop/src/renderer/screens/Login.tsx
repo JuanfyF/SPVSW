@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth";
 import { KeyRound, Copy, Check } from "lucide-react";
+import { useConfigStore, nombreVisible } from "../store/config";
 
 export default function Login() {
   const [pin, setPin] = useState("");
@@ -9,6 +10,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { setUsuario, setSesionCaja } = useAuthStore();
+  const { nombreNegocio, cargar } = useConfigStore();
+
+  // Nombre del negocio en el encabezado (endpoint público, sin sesión)
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
 
   // Estado para recuperación de PIN
   const [modalRecuperacion, setModalRecuperacion] = useState(false);
@@ -143,7 +150,7 @@ export default function Login() {
             alt="Sweet Bakery"
             className="w-28 h-28 rounded-full object-cover mx-auto mb-4 shadow-lg"
           />
-          <h1 className="text-3xl font-bold text-primary">Sweet Bakery</h1>
+          <h1 className="text-3xl font-bold text-primary">{nombreVisible(nombreNegocio)}</h1>
           <p className="text-on-surface-variant mt-2">Acceso de Escritorio</p>
           <p className="text-on-surface-variant/60 text-sm mt-1">Propietario / Cajero</p>
         </div>

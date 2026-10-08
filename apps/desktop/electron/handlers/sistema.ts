@@ -1,8 +1,9 @@
 /**
- * Handlers IPC de sistema (backup, restore, ruta DB, versión).
+ * Handlers IPC de sistema (backup, restore, ruta DB, versión, red local).
  */
 import { app } from "electron";
 import path from "node:path";
+import os from "node:os";
 import { ipcMain } from "electron";
 import { ctx } from "./context";
 
@@ -14,6 +15,22 @@ export function registrarSistemaHandlers() {
 
   ipcMain.handle("sistema:getVersion", ctx.safeHandler(async () => {
     return app.getVersion();
+  }));
+
+  /** IP local de la LAN (IPv4 no interna) para acceso del celular. */
+  ipcMain.handle("sistema:getRedLocal", ctx.safeHandler(async () => {
+    const interfaces = os.networkInterfaces();
+    for (const nombre of Object.keys(interfaces)) {
+      for (const interfaz of interfaces[nombre] ?? []) {
+        if (interfaz.family === "IPv4" && !interfaz.internal) {
+          return {
+            ipLocal: interfaz.address,
+            urlMovil: `http://${interfaz.address}:3000/movil`,
+          };
+        }
+      }
+    }
+    return { ipLocal: null, urlMovil: null };
   }));
 
   ipcMain.handle("sistema:backup", ctx.safeHandler(async (_event, rutaDestino: string) => {

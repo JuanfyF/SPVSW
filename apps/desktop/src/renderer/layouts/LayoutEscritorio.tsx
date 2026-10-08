@@ -17,6 +17,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 import Onboarding, { shouldShowOnboarding } from "../components/Onboarding";
+import ConfiguracionInicial from "../components/ConfiguracionInicial";
+import { useConfigStore, nombreVisible } from "../store/config";
 
 const menuItemsAdmin = [
   { path: "/", label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -109,7 +111,35 @@ export default function LayoutEscritorio() {
 
   const [mostrarOnboarding, setMostrarOnboarding] = useState(() => shouldShowOnboarding());
 
+  // Configuración del negocio (nombre + red local para el celular de pasteleras)
+  const { nombreNegocio, cargada, cargar } = useConfigStore();
+  useEffect(() => {
+    void cargar();
+  }, [cargar]);
+
+  // Latch: se activa solo si el propietario entra con el nombre vacío y se
+  // mantiene aunque guardar() actualice el store (evita desmontar el wizard).
+  const [mostrarWizardConfig, setMostrarWizardConfig] = useState(false);
+  useEffect(() => {
+    if (usuario?.rol === "propietario" && cargada && nombreNegocio.trim() === "") {
+      setMostrarWizardConfig(true);
+    }
+  }, [usuario?.rol, cargada, nombreNegocio]);
+
   if (!usuario) return null;
+
+  // El asistente de configuración tiene prioridad sobre el tutorial
+  if (mostrarWizardConfig) {
+    return (
+      <ConfiguracionInicial
+        onComplete={() => {
+          setMostrarWizardConfig(false);
+          void useConfigStore.getState().cargar();
+          setMostrarOnboarding(false);
+        }}
+      />
+    );
+  }
 
   if (mostrarOnboarding) {
     return <Onboarding onComplete={() => setMostrarOnboarding(false)} />;
@@ -155,7 +185,7 @@ export default function LayoutEscritorio() {
               className="w-12 h-12 rounded-full object-cover"
             />
             <div>
-              <h1 className="text-lg font-bold text-primary">Sweet Bakery</h1>
+              <h1 className="text-lg font-bold text-primary">{nombreVisible(nombreNegocio)}</h1>
               {usuario && (
                 <p className="text-sm text-on-surface-variant">{usuario.nombre}</p>
               )}

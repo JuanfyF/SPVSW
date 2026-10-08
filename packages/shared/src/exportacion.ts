@@ -341,6 +341,17 @@ export function formatearReporteNomina(resumenGlobal: {
 
 let pdfMakeCache: any = null;
 
+/** Nombre del negocio para encabezados/pie de PDFs (lo setea el renderer al cargar config). */
+let nombreNegocioPdf = "Sweet Bakery";
+
+export function setNombreNegocioPdf(nombre: string): void {
+  nombreNegocioPdf = nombre.trim() || "Sweet Bakery";
+}
+
+export function getNombreNegocioPdf(): string {
+  return nombreNegocioPdf;
+}
+
 async function initPdfMake() {
   if (pdfMakeCache) return pdfMakeCache;
   const pdfMakeModule = await import("pdfmake/build/pdfmake");
@@ -381,7 +392,7 @@ async function crearDocumentoPdf(opts: {
     pageSize: "A4",
     pageOrientation: (opts.orientation ?? "portrait") as "portrait" | "landscape",
     footer: (currentPage: number, pageCount: number) => ({
-      text: `Página ${currentPage} de ${pageCount}  |  Sweet Bakery — ${opts.titulo}`,
+      text: `Página ${currentPage} de ${pageCount}  |  ${nombreNegocioPdf} — ${opts.titulo}`,
       alignment: "center" as const,
       fontSize: 8,
       color: "#888888",
@@ -437,7 +448,7 @@ export async function generarPdf(datos: DatosExportacion): Promise<void> {
     titulo: datos.titulo,
     orientation: "landscape",
     content: [
-      { text: "Sweet Bakery", style: "header" },
+      { text: nombreNegocioPdf, style: "header" },
       { text: datos.titulo, style: "subheader" },
       {
         text: Object.entries(datos.filtros)
@@ -502,7 +513,7 @@ export async function generarPdfCierreCaja(data: DatosCierreCaja): Promise<void>
   const neto = totalIngresos - totalEgresos;
 
   const content: any[] = [
-    { text: "Sweet Bakery", style: "header" },
+    { text: nombreNegocioPdf, style: "header" },
     { text: "Reporte de Cierre de Caja", style: "subheader" },
     {
       text: `Sesión #${data.sesionId}  ·  ${data.fechaApertura} → ${data.fechaCierre}  ·  Cajero: ${data.cajeroNombre}`,
@@ -734,7 +745,7 @@ export async function generarPdfNomina(data: DatosNomina): Promise<void> {
   const timestamp = crearTimestamp();
 
   const content: any[] = [
-    { text: "Sweet Bakery", style: "header" },
+    { text: nombreNegocioPdf, style: "header" },
     { text: "Reporte de Nómina", style: "subheader" },
     {
       text: `Período: ${data.mes}`,
@@ -870,7 +881,7 @@ export async function generarPdfPedidos(data: DatosPedidosPdf): Promise<void> {
   const timestamp = crearTimestamp();
 
   const content: any[] = [
-    { text: "Sweet Bakery", style: "header" },
+    { text: nombreNegocioPdf, style: "header" },
     { text: "Reporte de Pedidos", style: "subheader" },
     {
       text: `Generado: ${timestamp}`,
@@ -1021,7 +1032,7 @@ export async function generarPdfDiario(data: DatosReporteDiario): Promise<void> 
   const timestamp = crearTimestamp();
 
   const content: any[] = [
-    { text: "Sweet Bakery", style: "header" },
+    { text: nombreNegocioPdf, style: "header" },
     { text: `Reporte Diario de Caja`, style: "subheader" },
     { text: `Fecha: ${data.fecha}`, fontSize: 9, margin: [0, 0, 0, 10] as [number, number, number, number] },
   ];
@@ -1114,7 +1125,7 @@ export async function generarPdfRango(data: DatosReporteRango): Promise<void> {
   const neto = data.consolidado?.ingresoNeto ?? (data.ventas.total + (data.pedidos?.total ?? 0) - data.gastos.total - (data.adelantos?.total ?? 0) - (data.devoluciones?.total ?? 0));
 
   const content: any[] = [
-    { text: "Sweet Bakery", style: "header" },
+    { text: nombreNegocioPdf, style: "header" },
     { text: "Reporte por Rango de Fechas", style: "subheader" },
     { text: `Desde: ${data.fechaInicio}  |  Hasta: ${data.fechaFin}`, fontSize: 9, margin: [0, 0, 0, 10] as [number, number, number, number] },
   ];
@@ -1213,7 +1224,7 @@ export async function generarPdfCierresHistorial(data: DatosCierresHistorial): P
   const timestamp = crearTimestamp();
 
   const content: any[] = [
-    { text: "Sweet Bakery", style: "header" },
+    { text: nombreNegocioPdf, style: "header" },
     { text: "Historial de Cierres de Caja", style: "subheader" },
     { text: `Desde: ${data.fechaInicio}  |  Hasta: ${data.fechaFin}`, fontSize: 9, margin: [0, 0, 0, 10] as [number, number, number, number] },
   ];
@@ -1292,7 +1303,7 @@ export async function generarPdfProductosTop(data: DatosProductosTop): Promise<v
   const timestamp = crearTimestamp();
 
   const content: any[] = [
-    { text: "Sweet Bakery", style: "header" },
+    { text: nombreNegocioPdf, style: "header" },
     { text: "Productos Más Vendidos", style: "subheader" },
   ];
 
@@ -1356,7 +1367,7 @@ export async function generarGuiaUsuario(): Promise<void> {
 
   const content: any[] = [
       // Portada
-      { text: "Sweet Bakery", style: "title", margin: [0, 80, 0, 10] as [number, number, number, number] },
+      { text: nombreNegocioPdf, style: "title", margin: [0, 80, 0, 10] as [number, number, number, number] },
       { text: "Guía de Usuario", style: "subtitle", margin: [0, 0, 0, 20] as [number, number, number, number] },
       { text: "Sistema de Punto de Venta para Pastelería", fontSize: 12, color: "#666666", margin: [0, 0, 0, 5] as [number, number, number, number] },
       { text: "Versión 1.0", fontSize: 10, color: "#888888" },
@@ -1545,7 +1556,7 @@ export function imprimirRecibo(datos: DatosRecibo): void {
 </head>
 <body>
   <div class="header">
-    <h1>Sweet Bakery</h1>
+    <h1>${nombreNegocioPdf}</h1>
     <p>Recibo de Venta</p>
   </div>
   <div class="info">
@@ -1571,7 +1582,7 @@ export function imprimirRecibo(datos: DatosRecibo): void {
   </div>
   <div class="footer">
     <p>¡Gracias por su compra!</p>
-    <p>Sweet Bakery — Pastelería Artesanal</p>
+    <p>${nombreNegocioPdf} — Pastelería Artesanal</p>
   </div>
 </body>
 </html>`;

@@ -19,6 +19,7 @@ import {
   crearServicioGastos,
   crearServicioNomina,
   crearServicioReportes,
+  crearServicioConfiguracion,
 } from "@pos/core";
 
 export interface UsuarioActual {
@@ -39,6 +40,7 @@ export interface Servicios {
   gastos: ReturnType<typeof crearServicioGastos>;
   nomina: ReturnType<typeof crearServicioNomina>;
   reportes: ReturnType<typeof crearServicioReportes>;
+  configuracion: ReturnType<typeof crearServicioConfiguracion>;
 }
 
 export interface HandlerContext {
