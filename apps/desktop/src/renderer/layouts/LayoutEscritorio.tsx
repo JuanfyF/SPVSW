@@ -28,7 +28,7 @@ const menuItemsAdmin = [
   { path: "/nomina", label: "Nómina", icon: <Users className="w-5 h-5" /> },
   { path: "/reportes", label: "Reportes", icon: <BarChart3 className="w-5 h-5" /> },
   { path: "/usuarios", label: "Usuarios", icon: <KeyRound className="w-5 h-5" /> },
-  { path: "/backup", label: "Backup", icon: <HardDrive className="w-5 h-5" /> },
+  { path: "/backup", label: "Backup", icon: <HardDrive className="w-5 h-5" />, soloPropietario: true },
   { path: "/ayuda", label: "Ayuda", icon: <HelpCircle className="w-5 h-5" /> },
 ];
 
@@ -57,7 +57,12 @@ export default function LayoutEscritorio() {
   const { usuario, sesionCaja, logout } = useAuthStore();
 
   const esAdmin = usuario?.rol === "propietario" || usuario?.rol === "cajero";
-  const menuItems = esAdmin ? menuItemsAdmin : menuItemsPastelera;
+  const menuBase = esAdmin ? menuItemsAdmin : menuItemsPastelera;
+  const menuItems = menuBase.filter((item) =>
+    "soloPropietario" in item && item.soloPropietario
+      ? usuario?.rol === "propietario"
+      : true
+  );
 
   useEffect(() => {
     if (!usuario) {

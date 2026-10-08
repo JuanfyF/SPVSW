@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/auth";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ShieldAlert } from "lucide-react";
 import ConfirmModal from "../../components/ConfirmModal";
 
 export default function BackupRestore() {
@@ -14,10 +14,28 @@ export default function BackupRestore() {
 
   if (usuario?.rol !== "propietario") {
     return (
-      <div className="p-6 max-w-7xl mx-auto">
-        <p className="text-error">Solo el propietario puede acceder a esta sección.</p>
-        <button onClick={() => navigate("/")} className="mt-4 btn-primary">
-          Volver
+      <div className="p-6 min-h-full flex flex-col items-center justify-center text-center">
+        <div className="w-16 h-16 rounded-full bg-error-container text-on-error-container flex items-center justify-center mb-4">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h1 className="text-headline-lg font-bold text-on-surface mb-2">
+          Sección restringida
+        </h1>
+        <p className="text-on-surface font-medium">
+          Esta sección es exclusiva del propietario.
+        </p>
+        <p className="text-caption text-on-surface-variant mt-1 max-w-sm">
+          Los backups afectan todos los datos del negocio, por lo que solo quien
+          administra el sistema puede gestionarlos.
+        </p>
+        <p className="text-caption text-on-surface-variant mt-3">
+          Si necesitas una copia de seguridad, solicítasela al propietario.
+        </p>
+        <button
+          onClick={() => navigate("/")}
+          className="mt-6 px-6 py-3 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors font-medium"
+        >
+          Volver al Dashboard
         </button>
       </div>
     );
