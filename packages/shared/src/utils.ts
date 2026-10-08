@@ -151,3 +151,53 @@ export function formatearMoneda(valor: number | null | undefined): string {
   return v < 0 ? `-$${abs}` : `$${abs}`;
 }
 
+/**
+ * Convierte el body de una GitHub Release (markdown o HTML renderizado)
+ * a texto plano para mostrarlo en diálogos nativos de Electron.
+ * Devuelve "" si no hay notas o si GitHub indica "No content.".
+ */
+export function formatearNotasRelease(notas: string | null | undefined): string {
+  if (!notas) return "";
+  const limpio = notas.trim();
+  if (!limpio || limpio === "No content.") return "";
+
+  let texto = limpio;
+
+  // Entidades primero: un body escapado (&lt;h2&gt;) queda como HTML real
+  texto = texto
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&");
+
+  // Ruta HTML (el feed Atom de GitHub entrega el body renderizado)
+  if (/<\/?[a-z][^>]*>/i.test(texto)) {
+    texto = texto.replace(/<(?:https?:\/\/|mailto:)[^>\s]+>/gi, (m) => m.slice(1, -1));
+    texto = texto.replace(
+      /<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi,
+      (_m, contenido: string) => `${contenido.toUpperCase()}\n\n`
+    );
+    texto = texto.replace(/<br\s*\/?>/gi, "\n");
+    texto = texto.replace(/<li[^>]*>/gi, "• ");
+    texto = texto.replace(/<\/(p|div|tr|ul|ol|li|h[1-6])\s*>/gi, "\n");
+    texto = texto.replace(/<[^>]+>/g, "");
+  }
+
+  // Ruta markdown
+  texto = texto.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
+  texto = texto.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+  texto = texto.replace(/^#{1,6}\s+(.+)$/gm, (_m, t: string) => t.toUpperCase());
+  texto = texto.replace(/\*\*([^*]+)\*\*/g, "$1");
+  texto = texto.replace(/__([^_]+)__/g, "$1");
+  texto = texto.replace(/^(\s*)[-*+]\s+/gm, "$1• ");
+  texto = texto.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1$2");
+  texto = texto.replace(/`([^`\n]+)`/g, "$1");
+  texto = texto.replace(/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/gm, "");
+
+  texto = texto.replace(/[ \t]+\n/g, "\n");
+  texto = texto.replace(/\n{3,}/g, "\n\n");
+  return texto.trim();
+}
+

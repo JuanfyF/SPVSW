@@ -7,8 +7,26 @@
 
 import { autoUpdater, UpdateInfo } from "electron-updater";
 import { app, BrowserWindow, dialog } from "electron";
+import { formatearNotasRelease } from "@pos/shared";
 
 let mainWindow: BrowserWindow | null = null;
+
+/** Máximo de caracteres de release notes en el diálogo (Linux corta detalles largos). */
+const LIMITE_NOTAS = 1200;
+
+function detalleConNotas(info: UpdateInfo): string {
+  const crudas = info.releaseNotes;
+  const texto = Array.isArray(crudas)
+    ? crudas.map((n) => n.note).join("\n\n")
+    : crudas;
+  const notas = formatearNotasRelease(texto);
+  const cta = "¿Desea descargar e instalar la actualización ahora? La app se reiniciará.";
+  if (!notas) return cta;
+  const recortadas = notas.length > LIMITE_NOTAS
+    ? `${notas.slice(0, LIMITE_NOTAS)}…`
+    : notas;
+  return `${recortadas}\n\n${cta}`;
+}
 
 /**
  * Configurar y ejecutar auto-updater.
@@ -29,12 +47,13 @@ export function setupAutoUpdater(win: BrowserWindow) {
   // Eventos
   autoUpdater.on("update-available", async (info: UpdateInfo) => {
     console.log(`[Updater] Actualización disponible: v${info.version}`);
+    console.log(`[Updater] Notas: ${detalleConNotas(info).slice(0, 400)}`);
 
     const response = await dialog.showMessageBox(win, {
       type: "info",
       title: "Actualización disponible",
       message: `Hay una nueva versión de Sweet Bakery disponible (v${info.version}).`,
-      detail: "¿Desea descargar e instalar la actualización ahora? La app se reiniciará.",
+      detail: detalleConNotas(info),
       buttons: ["Descargar", "Más tarde"],
       defaultId: 0,
       cancelId: 1,
@@ -90,8 +109,9 @@ export function setupAutoUpdater(win: BrowserWindow) {
     }
   });
 
-  // Buscar actualizaciones al iniciar
-  autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+  // Buscar actualizaciones al iniciar (sin notificación nativa: el diálogo
+  // "Actualización disponible" ya informa con el detalle de las notas)
+  autoUpdater.checkForUpdates().catch((err) => {
     console.error("[Updater] Error al buscar actualizaciones:", err);
   });
 }
