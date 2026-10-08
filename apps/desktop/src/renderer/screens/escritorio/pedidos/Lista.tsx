@@ -4,8 +4,9 @@ import {
   generarPdfPedidos,
   ListarPedidosFechaSchema,
   formatearFecha,
+  formatearMoneda,
 } from "@pos/shared";
-import { ClipboardList, Phone } from "lucide-react";
+import { ClipboardList, Phone, CalendarDays, Check, FileDown } from "lucide-react";
 
 interface Pedido {
   id: number;
@@ -38,6 +39,11 @@ const coloresEstado: Record<string, string> = {
 };
 
 const hoy = () => formatearFecha(new Date());
+
+const formatearEstado = (estado: string) => {
+  const texto = estado.replace("_", " ");
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+};
 
 export default function Lista() {
   const navigate = useNavigate();
@@ -117,6 +123,16 @@ export default function Lista() {
     return coincideEstado && coincideBusqueda;
   });
 
+  const resumen = pedidosFiltrados.reduce(
+    (acc, p) => {
+      acc.total += p.totalEstimado;
+      acc.porCobrar += p.saldoPendiente > 0 ? p.saldoPendiente : 0;
+      acc.cobrado += p.totalEstimado - p.saldoPendiente;
+      return acc;
+    },
+    { total: 0, porCobrar: 0, cobrado: 0 }
+  );
+
   const formatearFecha = (fecha: string) => {
     return new Date(fecha + "T12:00:00").toLocaleDateString("es-EC", {
       day: "2-digit",
@@ -170,13 +186,69 @@ export default function Lista() {
           <h1 className="text-headline-lg font-bold text-on-surface">Pedidos</h1>
           <p className="text-on-surface-variant">{pedidosFiltrados.length} pedidos {filtroFecha === "hoy" ? "de hoy" : filtroFecha === "rango" ? "en rango" : "activos"}</p>
         </div>
-        <button
-          onClick={() => navigate("/pedidos/nuevo")}
-          className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors"
-        >
-          + Nuevo Pedido
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={exportarPdf}
+            disabled={pedidosFiltrados.length === 0}
+            className="px-4 py-2 bg-primary text-on-primary rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors flex items-center gap-2"
+          >
+            <FileDown className="w-4 h-4" />
+            Descargar PDF
+          </button>
+          <button
+            onClick={() => navigate("/pedidos/nuevo")}
+            className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors"
+          >
+            + Nuevo Pedido
+          </button>
+        </div>
       </div>
+
+      {/* Franja de resumen */}
+      {pedidosFiltrados.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant">
+            <p className="text-caption text-on-surface-variant">Pedidos</p>
+            <p
+              className={`text-headline-md font-semibold tabular-nums ${
+                pedidosFiltrados.length > 0 ? "text-on-surface" : "text-on-surface-variant/60"
+              }`}
+            >
+              {pedidosFiltrados.length}
+            </p>
+          </div>
+          <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant">
+            <p className="text-caption text-on-surface-variant">Total vendido</p>
+            <p
+              className={`text-headline-md font-semibold tabular-nums ${
+                resumen.total > 0 ? "text-on-surface" : "text-on-surface-variant/60"
+              }`}
+            >
+              {formatearMoneda(resumen.total)}
+            </p>
+          </div>
+          <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant">
+            <p className="text-caption text-on-surface-variant">Por cobrar</p>
+            <p
+              className={`text-headline-md font-semibold tabular-nums ${
+                resumen.porCobrar > 0 ? "text-error" : "text-on-surface-variant/60"
+              }`}
+            >
+              {formatearMoneda(resumen.porCobrar)}
+            </p>
+          </div>
+          <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant">
+            <p className="text-caption text-on-surface-variant">Cobrado</p>
+            <p
+              className={`text-headline-md font-semibold tabular-nums ${
+                resumen.cobrado > 0 ? "text-on-surface" : "text-on-surface-variant/60"
+              }`}
+            >
+              {formatearMoneda(resumen.cobrado)}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Filtros de fecha */}
       <div className="flex items-end gap-4 mb-4">
@@ -235,14 +307,6 @@ export default function Lista() {
             </div>
           </>
         )}
-
-        <button
-          onClick={exportarPdf}
-          disabled={pedidosFiltrados.length === 0}
-          className="px-4 py-2 bg-primary text-on-primary rounded-xl hover:bg-primary/90 disabled:opacity-50 transition-colors"
-        >
-          Descargar PDF
-        </button>
       </div>
 
       {/* Búsqueda + filtro estado */}
@@ -283,55 +347,78 @@ export default function Lista() {
               onClick={() => navigate(`/pedidos/${pedido.id}`)}
               className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant cursor-pointer hover:border-secondary/50 hover:shadow-md transition-shadow"
             >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <p className="text-label-md text-on-surface-variant">#{pedido.id}</p>
-                  <p className="font-medium text-on-surface">{pedido.cliente}</p>
+              <div className="flex justify-between items-start gap-3">
+                <div className="min-w-0">
+                  <p className="text-caption text-on-surface-variant">#{pedido.id}</p>
+                  <p className="text-headline-md font-semibold text-on-surface truncate">
+                    {pedido.cliente}
+                  </p>
+                  {pedido.descripcion && (
+                    <p className="text-label-md text-on-surface-variant truncate">
+                      {pedido.descripcion}
+                    </p>
+                  )}
                 </div>
                 <span
-                  className={`px-3 py-1 rounded-full text-caption font-medium ${
+                  className={`shrink-0 px-3 py-1 rounded-full text-caption font-medium ${
                     coloresEstado[pedido.estado] || "bg-surface-container text-on-surface-variant"
                   }`}
                 >
-                  {pedido.estado.replace("_", " ")}
+                  {formatearEstado(pedido.estado)}
                 </span>
               </div>
 
-              <div className="space-y-2 text-label-md">
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Entrega:</span>
-                  <span className="text-on-surface">
-                    {formatearFecha(pedido.fechaEntrega)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Total:</span>
-                  <span className="text-on-surface font-medium">
-                    ${pedido.totalEstimado.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Saldo:</span>
-                  <div className="flex items-center gap-2">
-                    {pedido.saldoPendiente <= 0 && (
-                      <span className="text-caption font-medium px-2 py-1 rounded-full bg-tertiary-container text-on-tertiary-container">
-                        Pago completo
-                      </span>
-                    )}
-                    <span
-                      className={`font-medium ${
-                        pedido.saldoPendiente > 0 ? "text-error" : "text-tertiary"
-                      }`}
-                    >
-                      ${pedido.saldoPendiente.toFixed(2)}
+              <div className="mt-3 flex justify-between items-center gap-3">
+                <span className="text-label-md text-on-surface-variant flex items-center gap-1 min-w-0">
+                  <CalendarDays className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{formatearFecha(pedido.fechaEntrega)}</span>
+                  {pedido.fechaEntrega === hoy() && (
+                    <span className="px-1.5 py-0.5 rounded-full bg-secondary/15 text-secondary text-caption font-medium">
+                      Hoy
                     </span>
-                  </div>
+                  )}
+                </span>
+                <div className="text-right shrink-0">
+                  <p className="text-caption text-on-surface-variant">Total</p>
+                  <p className="text-label-md font-semibold text-on-surface tabular-nums">
+                    {formatearMoneda(pedido.totalEstimado)}
+                  </p>
+                  {pedido.anticipo > 0 && (
+                    <p className="text-caption text-on-surface-variant tabular-nums">
+                      Anticipo {formatearMoneda(pedido.anticipo)}
+                    </p>
+                  )}
                 </div>
+              </div>
+
+              <div
+                className={`mt-3 flex justify-between items-center px-3 py-2 rounded-xl ${
+                  pedido.saldoPendiente > 0
+                    ? "bg-error-container/40"
+                    : "bg-tertiary-fixed"
+                }`}
+              >
+                <span
+                  className={`text-label-md font-medium flex items-center gap-1 ${
+                    pedido.saldoPendiente > 0
+                      ? "text-on-error-container"
+                      : "text-on-tertiary-container"
+                  }`}
+                >
+                  {pedido.saldoPendiente > 0 ? "Saldo pendiente" : "Pagado"}
+                  {pedido.saldoPendiente <= 0 && <Check className="w-4 h-4" />}
+                </span>
+                {pedido.saldoPendiente > 0 && (
+                  <span className="text-headline-md font-bold text-error tabular-nums">
+                    {formatearMoneda(pedido.saldoPendiente)}
+                  </span>
+                )}
               </div>
 
               {pedido.telefono && (
                 <p className="mt-3 text-label-md text-on-surface-variant flex items-center gap-1">
-                  <Phone className="w-4 h-4" /> {pedido.telefono}
+                  <Phone className="w-4 h-4" />{" "}
+                  <span className="tabular-nums">{pedido.telefono}</span>
                 </p>
               )}
             </div>
