@@ -13,7 +13,7 @@
  * Los handlers IPC están divididos por dominio en handlers/*.ts
  * siguiendo SRP. Este archivo orquesta la inicialización.
  */
-import { app, BrowserWindow, dialog } from "electron";
+import { app, BrowserWindow, dialog, shell } from "electron";
 import path from "node:path";
 import { randomInt } from "node:crypto";
 import { crearMenuPrincipal, setVentanaPrincipal } from "./menu";
@@ -27,7 +27,6 @@ app.commandLine.appendSwitch("disable-gpu");
 app.commandLine.appendSwitch("disable-software-rasterizer");
 app.commandLine.appendSwitch("ozone-platform=x11");
 app.commandLine.appendSwitch("in-process-gpu");
-app.commandLine.appendSwitch("no-sandbox");
 
 import { createDbWithSqlite, migrate } from "@pos/db";
 import { usuarios } from "@pos/db";
@@ -85,6 +84,16 @@ function registrarHandlers() {
   registrarAuditoriaHandlers();
 }
 
+/**
+ * Orígenes a los que la ventana principal puede navegar por su cuenta:
+ * el dev server de Vite (desarrollo) o el bundle local file:// (producción).
+ * Cualquier otro destino se bloquea (will-navigate) — la app es una SPA
+ * local y no debe salir a internet sin decisión explícita del usuario.
+ */
+function esOrigenPermitido(url: string): boolean {
+  return url.startsWith("http://localhost:5173") || url.startsWith("file://");
+}
+
 async function crearVentanaPrincipal() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -96,13 +105,36 @@ async function crearVentanaPrincipal() {
     },
   });
 
+  // Bloquea popups (window.open / target=_blank): los http(s) abren en el
+  // navegador del sistema, el resto se deniega. Sin esto, cualquier XSS
+  // (ej. recibo) podía abrir ventanas con la app cargada.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      void shell.openExternal(url);
+    }
+    return { action: "deny" };
+  });
+
+  // Bloquea navegación de la SPA a orígenes externos (link inyectado,
+  // redirección, etc.). In-page (#/) no dispara will-navigate.
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    if (!esOrigenPermitido(url)) {
+      event.preventDefault();
+      console.warn(`[Seguridad] Navegación bloqueada hacia: ${url}`);
+    }
+  });
+
   // Content Security Policy (CSP) — OWASP A05
   mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
+        // Sincronizado con el meta CSP de src/renderer/index.html
+        // (+ frame-ancestors, que los meta ignoran). En desarrollo se
+        // permite script inline ('unsafe-inline') porque el preamble de
+        // react-refresh de Vite es inline — el build de producción no lo es.
         "Content-Security-Policy": [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:3000"
+          `default-src 'self'; script-src 'self'${process.env.NODE_ENV === "development" ? " 'unsafe-inline'" : ""}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' http://localhost:3000; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`
         ],
       },
     });

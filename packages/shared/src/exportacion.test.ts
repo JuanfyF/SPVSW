@@ -1,9 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import {
+  escapeHtml,
   formatearReporteCierres,
   formatearReporteDiario,
   formatearReporteProductos,
   generarCsv,
+  imprimirRecibo,
 } from "./exportacion";
 
 describe("formatearReporteCierres", () => {
@@ -185,5 +187,92 @@ describe("generarCsv", () => {
     };
     const csv = generarCsv(datos);
     expect(csv).not.toContain("Total");
+  });
+});
+
+describe("escapeHtml", () => {
+  it("escapa etiquetas para inyección HTML", () => {
+    expect(escapeHtml("<script>alert(1)</script>")).toBe(
+      "&lt;script&gt;alert(1)&lt;/script&gt;"
+    );
+  });
+
+  it("escapa ampersands primero (sin doble codificación)", () => {
+    expect(escapeHtml("A & B < C")).toBe("A &amp; B &lt; C");
+  });
+
+  it("escapa comillas simples y dobles", () => {
+    expect(escapeHtml(`"x" y'z`)).toBe("&quot;x&quot; y&#39;z");
+  });
+
+  it("deja texto normal intacto", () => {
+    expect(escapeHtml("Torta de chocolate")).toBe("Torta de chocolate");
+  });
+});
+
+describe("imprimirRecibo - XSS", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function capturarHtmlRecibo(datos: Parameters<typeof imprimirRecibo>[0]) {
+    let html = "";
+    vi.stubGlobal("window", {
+      open: vi.fn().mockReturnValue({
+        document: {
+          write: (h: string) => {
+            html = h;
+          },
+          close: vi.fn(),
+        },
+        focus: vi.fn(),
+        print: vi.fn(),
+      }),
+    });
+    imprimirRecibo(datos);
+    return html;
+  }
+
+  it("escapa producto, cajero y fecha antes de document.write", () => {
+    const html = capturarHtmlRecibo({
+      ventaId: 1,
+      fecha: "2026-10-12",
+      cajero: `<script>window.opener.pos.sistema.backup()</script>`,
+      metodoPago: "efectivo",
+      items: [
+        {
+          nombre: `<img src=x onerror="alert(1)">`,
+          unidad: "entero",
+          cantidad: 1,
+          precioUnitario: 5,
+          subtotal: 5,
+        },
+      ],
+      total: 5,
+    });
+
+    // Ningún markup del usuario llega crudo al DOM del recibo
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain("<img src=x");
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+    // El contenido sigue visible (solo escapado)
+    expect(html).toContain("Cajero: ");
+  });
+
+  it("recibo normal se imprime igual", () => {
+    const html = capturarHtmlRecibo({
+      ventaId: 42,
+      fecha: "2026-10-12 10:00",
+      cajero: "Ana",
+      metodoPago: "efectivo",
+      items: [
+        { nombre: "Torta", unidad: "entero", cantidad: 2, precioUnitario: 25, subtotal: 50 },
+      ],
+      total: 50,
+    });
+    expect(html).toContain("Torta");
+    expect(html).toContain("Cajero: Ana");
+    expect(html).toContain("TOTAL: $50.00");
   });
 });

@@ -12,17 +12,17 @@ export function registrarVentasHandlers() {
     ctx.logAuditoria("venta_creada", undefined, { ventaId: resultado.id, total: resultado.total, metodoPago: resultado.metodoPago });
     ctx.notificarCambio();
     return resultado;
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("ventas:listarPorSesion", ctx.safeHandler(async (_event, sesionCajaId: number) => {
     return servicios.ventas.listarPorSesion(sesionCajaId);
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("ventas:obtenerDetalle", ctx.safeHandler(async (_event, ventaId: number) => {
     return servicios.ventas.obtenerDetalle(ventaId);
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("ventas:obtenerPorId", ctx.safeHandler(async (_event, id: number) => {
     return servicios.ventas.obtenerPorId(id);
-  }, { auth: true }));
+  }, { gestores: true }));
 }

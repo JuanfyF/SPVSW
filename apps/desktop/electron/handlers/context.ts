@@ -104,15 +104,19 @@ function _requireAdmin(): void {
   }
 }
 
-/** Gestión de usuarios: permitido a propietario y cajero (Opción A). */
+/**
+ * Operaciones de gestión (ventas, gastos, nómina, empleados, reportes,
+ * productos escritura, pedidos de cobro, caja): propietario y cajero.
+ * La pastelera solo tiene stock + pedidos de producción.
+ */
 function _requireGestor(): void {
   _requireAuth();
   if (_usuarioActual!.rol !== "propietario" && _usuarioActual!.rol !== "cajero") {
     _logAuditoria("permiso_denegado", _usuarioActual!.id, {
       rol: _usuarioActual!.rol,
-      operacion: "gestion_usuarios",
+      operacion: "gestion",
     });
-    throw new Error("No tiene permisos para gestionar usuarios.");
+    throw new Error("No tiene permisos para realizar esta acción.");
   }
 }
 

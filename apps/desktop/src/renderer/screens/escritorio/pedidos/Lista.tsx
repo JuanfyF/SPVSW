@@ -7,6 +7,7 @@ import {
   formatearMoneda,
 } from "@pos/shared";
 import { ClipboardList, Phone, CalendarDays, Check, FileDown } from "lucide-react";
+import { useAuthStore } from "../../../store/auth";
 
 interface Pedido {
   id: number;
@@ -47,6 +48,10 @@ const formatearEstado = (estado: string) => {
 
 export default function Lista() {
   const navigate = useNavigate();
+  const { usuario } = useAuthStore();
+  // La pastelera solo consulta pedidos de producción (sin crear/cobrar);
+  // coincide con el gate IPC pedidos:crear → gestores (propietario/cajero).
+  const esGestor = usuario?.rol === "propietario" || usuario?.rol === "cajero";
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [filtroEstado, setFiltroEstado] = useState("todos");
   const [busqueda, setBusqueda] = useState("");
@@ -195,12 +200,14 @@ export default function Lista() {
             <FileDown className="w-4 h-4" />
             Descargar PDF
           </button>
-          <button
-            onClick={() => navigate("/pedidos/nuevo")}
-            className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors"
-          >
-            + Nuevo Pedido
-          </button>
+          {esGestor && (
+            <button
+              onClick={() => navigate("/pedidos/nuevo")}
+              className="px-4 py-2 bg-secondary text-on-secondary rounded-xl hover:bg-secondary/90 transition-colors"
+            >
+              + Nuevo Pedido
+            </button>
+          )}
         </div>
       </div>
 

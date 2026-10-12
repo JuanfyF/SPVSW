@@ -5,6 +5,11 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { Package, Printer, ShoppingBag, Star } from "lucide-react";
 import { imprimirRecibo, formatearMoneda, type DatosRecibo } from "@pos/shared";
 import type { Producto } from "@pos/shared";
+import {
+  agregarLineaPagada,
+  agregarLineaCortesia,
+  cantidadesPorProducto,
+} from "./venta-mostrador-logic";
 
 const RECARGO_LLEVAR = 0.10; // Costo del repostero para llevar
 
@@ -160,35 +165,14 @@ export default function VentaMostrador() {
       precio = precio + RECARGO_LLEVAR;
     }
 
-    setCarrito((prev) => {
-      const existente = prev.find(
-        (item) => item.productoId === producto.id && item.unidad === unidad
-      );
-
-      if (existente) {
-        return prev.map((item) =>
-          item.productoId === producto.id && item.unidad === unidad
-            ? {
-                ...item,
-                cantidad: item.cantidad + 1,
-                subtotal: (item.cantidad + 1) * item.precioUnitario,
-              }
-            : item
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            productoId: producto.id,
-            nombre: producto.nombre,
-            unidad,
-            cantidad: 1,
-            precioUnitario: precio,
-            subtotal: precio,
-          },
-        ];
-      }
-    });
+    setCarrito((prev) =>
+      agregarLineaPagada(prev, {
+        productoId: producto.id,
+        nombre: producto.nombre,
+        unidad,
+        precioUnitario: precio,
+      })
+    );
   };
 
   const agregarCortesia = (producto: Producto) => {
@@ -198,35 +182,13 @@ export default function VentaMostrador() {
       unidad = "porcion";
     }
 
-    setCarrito((prev) => {
-      const existente = prev.find(
-        (item) => item.productoId === producto.id && item.unidad === unidad
-      );
-
-      if (existente) {
-        return prev.map((item) =>
-          item.productoId === producto.id && item.unidad === unidad
-            ? {
-                ...item,
-                cantidad: item.cantidad + 1,
-                subtotal: 0,
-              }
-            : item
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            productoId: producto.id,
-            nombre: producto.nombre,
-            unidad,
-            cantidad: 1,
-            precioUnitario: 0,
-            subtotal: 0,
-          },
-        ];
-      }
-    });
+    setCarrito((prev) =>
+      agregarLineaCortesia(prev, {
+        productoId: producto.id,
+        nombre: producto.nombre,
+        unidad,
+      })
+    );
   };
 
   const eliminarDelCarrito = (index: number) => {
@@ -288,18 +250,24 @@ export default function VentaMostrador() {
     const esCortesia = total === 0;
 
     try {
-      // Verificar stock antes de confirmar la venta
-      for (const item of carrito) {
+      // Verificar stock antes de confirmar la venta.
+      // Se agrega por producto+unidad: el carrito puede tener la misma
+      // unidad en línea pagada Y en línea de cortesía ($0); chequear línea
+      // por línea daría falsos positivos contra el stock real.
+      for (const req of cantidadesPorProducto(carrito).values()) {
         const resultado = await window.pos.stock.verificarDisponibilidad(
-          item.productoId,
+          req.productoId,
           sesionCaja.id,
-          item.unidad,
-          item.cantidad
+          req.unidad,
+          req.cantidad
         );
         if (!resultado.suficiente) {
+          const nombre = carrito.find(
+            (l) => l.productoId === req.productoId && l.unidad === req.unidad
+          )?.nombre;
           throw new Error(
-            `Stock insuficiente para "${item.nombre}": ` +
-            `disponible ${resultado.disponible}, solicitado ${item.cantidad}`
+            `Stock insuficiente para "${nombre ?? req.productoId}": ` +
+            `disponible ${resultado.disponible}, solicitado ${req.cantidad}`
           );
         }
       }

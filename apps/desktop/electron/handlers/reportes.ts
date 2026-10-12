@@ -9,21 +9,21 @@ export function registrarReportesHandlers() {
 
   ipcMain.handle("reportes:reporteDiario", ctx.safeHandler(async (_event, fecha: string) => {
     return servicios.reportes.reporteDiario(fecha);
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("reportes:reportePorFechas", ctx.safeHandler(async (_event, fechaInicio: string, fechaFin: string) => {
     return servicios.reportes.reportePorFechas(fechaInicio, fechaFin);
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("reportes:listarCierresPorRango", ctx.safeHandler(async (_event, fechaInicio: string, fechaFin: string) => {
     return servicios.reportes.listarCierresPorRango(fechaInicio, fechaFin);
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("reportes:reportePedidosPendientes", ctx.safeHandler(async () => {
     return servicios.reportes.reportePedidosPendientes();
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("reportes:reporteProductosMasVendidos", ctx.safeHandler(async (_event, fechaInicio: string, fechaFin: string) => {
     return servicios.reportes.reporteProductosMasVendidos(fechaInicio, fechaFin);
-  }, { auth: true }));
+  }, { gestores: true }));
 }

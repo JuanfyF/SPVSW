@@ -155,4 +155,84 @@ describe("crearServicioVentas", () => {
       expect(insertCalls[1].unidad).toBe("entero");
     });
   });
+
+  describe("crear - stock agregado por producto+unidad", () => {
+    function crearMockStock(disponibleInicial: number) {
+      let callIdx = 0;
+      const resultados: any[] = [
+        [{ id: 1, estado: "abierta" }],                       // sesion
+        [{ id: 1 }],                                          // producto
+        [{ cantidadInicial: disponibleInicial, cantidadAgregada: 0 }], // stockDiario
+        [{ total: 0 }],                                       // vendido
+        [{ total: 0 }],                                       // mermas
+        [{ total: 0 }],                                       // cortesias
+        [{ enteras: 0, porciones: 0 }],                       // cortesProducto
+      ];
+      const insertCalls: any[] = [];
+      const mockDb: any = {
+        select: vi.fn().mockImplementation(() => {
+          const data = resultados[callIdx++] ?? [];
+          return {
+            from: vi.fn().mockReturnValue({
+              where: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue(data),
+                then: (r: any, j?: any) => Promise.resolve(data).then(r, j),
+              }),
+              innerJoin: vi.fn().mockReturnValue({
+                where: vi.fn().mockResolvedValue(data),
+              }),
+              then: (r: any, j?: any) => Promise.resolve(data).then(r, j),
+            }),
+          };
+        }),
+        insert: vi.fn().mockImplementation(() => ({
+          values: vi.fn().mockImplementation((vals: any) => {
+            insertCalls.push(vals);
+            return { returning: vi.fn().mockResolvedValue([{ id: 1 }]) };
+          }),
+        })),
+      };
+      return { mockDb, insertCalls };
+    }
+
+    it("falla si dos líneas del mismo producto superan el stock en conjunto", async () => {
+      const { mockDb, insertCalls } = crearMockStock(1); // stock: 1, pedido: 1 + 1
+      const { crearServicioVentas } = await import("./index");
+      const servicio = crearServicioVentas(mockDb);
+
+      await expect(
+        servicio.crear({
+          sesionCajaId: 1,
+          total: 0,
+          metodoPago: "efectivo",
+          tipoOrigen: "cortesia",
+          detalles: [
+            { productoId: 1, unidad: "entero", cantidad: 1, precioUnitario: 10, subtotal: 10 },
+            { productoId: 1, unidad: "entero", cantidad: 1, precioUnitario: 0, subtotal: 0 },
+          ],
+        })
+      ).rejects.toThrow("Stock insuficiente");
+      // Falla ANTES de insertar (nada de medias ventas)
+      expect(insertCalls.length).toBe(0);
+    });
+
+    it("permite líneas separadas cuando el stock agregado alcanza", async () => {
+      const { mockDb, insertCalls } = crearMockStock(5); // stock: 5, pedido: 1 + 1
+      const { crearServicioVentas } = await import("./index");
+      const servicio = crearServicioVentas(mockDb);
+
+      await servicio.crear({
+        sesionCajaId: 1,
+        total: 10,
+        metodoPago: "efectivo",
+        tipoOrigen: "mostrador",
+        detalles: [
+          { productoId: 1, unidad: "entero", cantidad: 1, precioUnitario: 10, subtotal: 10 },
+          { productoId: 1, unidad: "entero", cantidad: 1, precioUnitario: 0, subtotal: 0 },
+        ],
+      });
+      // ventas + 2 ventaDetalle
+      expect(insertCalls.length).toBe(3);
+    });
+  });
 });

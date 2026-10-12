@@ -51,3 +51,14 @@ export function crearRateLimiter(opts?: {
     },
   };
 }
+
+/**
+ * Presupuesto GLOBAL de reset de PIN por proceso.
+ * El local-server corre dentro del proceso de Electron: si cada superficie
+ * crea su propia instancia, un atacante multiplica los intentos (2 + 2 = 4/h).
+ * Desktop (IPC) y servidor (HTTP) deben compartir esta misma instancia.
+ */
+export const rateLimitPinReset = crearRateLimiter({
+  maxIntentos: 2,
+  ventanaMs: 60 * 60 * 1000,
+});

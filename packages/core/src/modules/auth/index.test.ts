@@ -188,6 +188,67 @@ describe("ServicioAuth", () => {
     });
   });
 
+  describe("restablecerPinPublico (reset sin autenticación)", () => {
+    it("resetea PIN de pastelera activa, registra expiración con resetadoPor null", async () => {
+      mockDb._pushWhereData([{ id: 7, nombre: "Ana", rol: "pastelera", activo: true }]);
+      const resultado = await servicio.restablecerPinPublico(7);
+      expect(resultado.pinTemporal).toMatch(/^\d{6}$/);
+      expect(new Date(resultado.expiracion).getTime()).toBeGreaterThan(Date.now());
+      // Nunca retorna nombre (evita enumerar usuarios en la respuesta)
+      expect(resultado).not.toHaveProperty("nombre");
+      // Fila en pinResetLog: de ahí login lee la expiración real de 24 h
+      expect(mockDb.values).toHaveBeenCalledWith(
+        expect.objectContaining({ usuarioId: 7, resetadoPor: null, utilizado: false })
+      );
+      expect(mockDb.set).toHaveBeenCalledWith(
+        expect.objectContaining({ debeCambiarPin: true, pinHash: expect.any(String) })
+      );
+    });
+
+    it("rechaza rol propietario con mensaje genérico y sin escribir nada", async () => {
+      mockDb._pushWhereData([{ id: 1, nombre: "Dueña", rol: "propietario", activo: true }]);
+      await expect(servicio.restablecerPinPublico(1)).rejects.toThrow(
+        "No se puede restablecer este PIN"
+      );
+      expect(mockDb.insert).not.toHaveBeenCalled();
+      expect(mockDb.update).not.toHaveBeenCalled();
+    });
+
+    it("rechaza rol cajero", async () => {
+      mockDb._pushWhereData([{ id: 2, nombre: "Caja", rol: "cajero", activo: true }]);
+      await expect(servicio.restablecerPinPublico(2)).rejects.toThrow(
+        "No se puede restablecer este PIN"
+      );
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+
+    it("rechaza pastelera inactiva", async () => {
+      mockDb._pushWhereData([{ id: 3, nombre: "Baja", rol: "pastelera", activo: false }]);
+      await expect(servicio.restablecerPinPublico(3)).rejects.toThrow(
+        "No se puede restablecer este PIN"
+      );
+      expect(mockDb.insert).not.toHaveBeenCalled();
+    });
+
+    it("mensaje idéntico cuando el usuario no existe (sin enumeración)", async () => {
+      mockDb._pushWhereData([]);
+      await expect(servicio.restablecerPinPublico(999)).rejects.toThrow(
+        "No se puede restablecer este PIN"
+      );
+      expect(mockDb.insert).not.toHaveBeenCalled();
+      expect(mockDb.update).not.toHaveBeenCalled();
+    });
+
+    it("rechaza id inválido sin tocar la base", async () => {
+      await expect(servicio.restablecerPinPublico("abc")).rejects.toThrow();
+      expect(mockDb.select).not.toHaveBeenCalled();
+    });
+
+    it("rechaza id no positivo", async () => {
+      await expect(servicio.restablecerPinPublico(0)).rejects.toThrow();
+    });
+  });
+
   describe("marcarPinTemporalUtilizado", () => {
     it("debería marcar logs activos como utilizados", async () => {
       await servicio.marcarPinTemporalUtilizado(1);

@@ -9,17 +9,17 @@ export function registrarEmpleadosHandlers() {
 
   ipcMain.handle("empleados:listar", ctx.safeHandler(async () => {
     return servicios.empleados.listar();
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("empleados:obtenerPorId", ctx.safeHandler(async (_event, id: number) => {
     return servicios.empleados.obtenerPorId(id);
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("empleados:crear", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.empleados.crear(datos as any);
     ctx.logAuditoria("empleado_creado", undefined, { empleadoId: resultado?.id, nombre: resultado?.nombre, cargo: resultado?.cargo, salarioMensual: resultado?.salarioMensual });
     return resultado;
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("empleados:actualizar", ctx.safeHandler(async (_event, id: number, datos: unknown) => {
     const resultado = await servicios.empleados.actualizar(id, datos as any);
@@ -31,11 +31,11 @@ export function registrarEmpleadosHandlers() {
       ...(cambios.salarioMensual !== undefined ? { salarioMensual: cambios.salarioMensual } : {}),
     });
     return resultado;
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("empleados:desactivar", ctx.safeHandler(async (_event, id: number) => {
     const resultado = await servicios.empleados.desactivar(id);
     ctx.logAuditoria("empleado_desactivado", undefined, { empleadoId: id });
     return resultado;
-  }, { auth: true }));
+  }, { gestores: true }));
 }

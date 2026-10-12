@@ -26,7 +26,6 @@ linux:
   icon: public/icon.png
   executableArgs:
     - --in-process-gpu
-    - --no-sandbox
   artifactName: "${productName}-${version}.${ext}"
 win:
   target:

@@ -11,8 +11,8 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "dev:electron": "NODE_ENV=development tsx scripts/build-electron.ts && fuser -k 3000/tcp 2>/dev/null; NODE_ENV=development NODE_OPTIONS='--import tsx/cjs' electron . --no-sandbox --disable-dev-shm-usage",
-    "dev:mobile": "NODE_ENV=development tsx scripts/build-electron.ts && (fuser -k 3000/tcp 2>/dev/null; fuser -k 5173/tcp 2>/dev/null; sleep 1) && vite --host & sleep 4 && NODE_ENV=development NODE_OPTIONS='--import tsx/cjs' electron . --no-sandbox --disable-dev-shm-usage",
+    "dev:electron": "NODE_ENV=development tsx scripts/build-electron.ts && fuser -k 3000/tcp 2>/dev/null; NODE_ENV=development NODE_OPTIONS='--import tsx/cjs' electron . --disable-dev-shm-usage",
+    "dev:mobile": "NODE_ENV=development tsx scripts/build-electron.ts && (fuser -k 3000/tcp 2>/dev/null; fuser -k 5173/tcp 2>/dev/null; sleep 1) && vite --host & sleep 4 && NODE_ENV=development NODE_OPTIONS='--import tsx/cjs' electron . --disable-dev-shm-usage",
     "build:main": "tsx scripts/build-electron.ts",
     "build:renderer": "vite build",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",

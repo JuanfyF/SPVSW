@@ -63,6 +63,10 @@ export function registrarUsuariosHandlers() {
   }, { gestores: true }));
 
   ipcMain.handle("usuarios:cambiarPin", ctx.safeHandler(async (_event, id: number, nuevoPin: string) => {
+    // Auto-cambio (pantalla forzada tras un reset de PIN, ej. pastelera
+    // con debeCambiarPin) permitido a cualquier rol; cambiar el PIN de
+    // OTRO usuario requiere propietario/cajero.
+    if (id !== ctx.getUsuarioActual()?.id) ctx.requireGestor();
     return servicios.usuarios.cambiarPin(id, nuevoPin, actorActual());
-  }, { gestores: true }));
+  }, { auth: true }));
 }

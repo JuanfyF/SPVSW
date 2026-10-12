@@ -1519,11 +1519,25 @@ export interface DatosRecibo {
   total: number;
 }
 
+/**
+ * Escapa HTML para datos interpolados en el recibo (document.write).
+ * Sin esto, un nombre de producto/cajero con <script> roba la sesión:
+ * el popup tiene window.opener.pos con toda la API del POS.
+ */
+export function escapeHtml(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function imprimirRecibo(datos: DatosRecibo): void {
   const filasHtml = datos.items.map(item => `
     <tr>
-      <td>${item.nombre}</td>
-      <td>${item.unidad}</td>
+      <td>${escapeHtml(item.nombre)}</td>
+      <td>${escapeHtml(item.unidad)}</td>
       <td style="text-align:center">${item.cantidad}</td>
       <td style="text-align:right">$${item.precioUnitario.toFixed(2)}</td>
       <td style="text-align:right">$${item.subtotal.toFixed(2)}</td>
@@ -1556,13 +1570,13 @@ export function imprimirRecibo(datos: DatosRecibo): void {
 </head>
 <body>
   <div class="header">
-    <h1>${nombreNegocioPdf}</h1>
+    <h1>${escapeHtml(nombreNegocioPdf)}</h1>
     <p>Recibo de Venta</p>
   </div>
   <div class="info">
     <span>Venta: #${datos.ventaId}</span>
-    <span>Fecha: ${datos.fecha}</span>
-    <span>Cajero: ${datos.cajero}</span>
+    <span>Fecha: ${escapeHtml(datos.fecha)}</span>
+    <span>Cajero: ${escapeHtml(datos.cajero)}</span>
     <span>Pago: ${datos.metodoPago === "efectivo" ? "Efectivo" : "Transferencia"}</span>
   </div>
   <table>
@@ -1582,7 +1596,7 @@ export function imprimirRecibo(datos: DatosRecibo): void {
   </div>
   <div class="footer">
     <p>¡Gracias por su compra!</p>
-    <p>${nombreNegocioPdf} — Pastelería Artesanal</p>
+    <p>${escapeHtml(nombreNegocioPdf)} — Pastelería Artesanal</p>
   </div>
 </body>
 </html>`;

@@ -1,7 +1,6 @@
 import path from "path";
 import express from "express";
-import { PosDatabase, usuarios as usuariosTable } from "@pos/db";
-import { eq } from "@pos/db";
+import { PosDatabase } from "@pos/db";
 import {
   crearServicioAuth,
   crearServicioStock,
@@ -13,7 +12,7 @@ import {
   crearServicioVentas,
   crearServicioUsuarios,
 } from "@pos/core";
-import { crearRateLimiter, crearHashPin } from "@pos/shared";
+import { crearRateLimiter, rateLimitPinReset } from "@pos/shared";
 import { stockRoutes, stockAdminRoutes } from "./routes/stock.routes";
 import { pedidosRoutes, pedidosAdminRoutes } from "./routes/pedidos.routes";
 import { gastosRoutes } from "./routes/gastos.routes";
@@ -48,8 +47,10 @@ interface OpcionesServidor {
 }
 
 // ─── Rate limiting para login ──────────────────────────
+// El reset de PIN usa rateLimitPinReset (@pos/shared): instancia compartida
+// con el handler IPC de desktop porque ambos corren en el MISMO proceso.
 const rateLimit = crearRateLimiter();
-const resetRateLimit = crearRateLimiter({ maxIntentos: 2, ventanaMs: 60 * 60 * 1000 });
+const recoveryListRate = crearRateLimiter();
 
 export function startLocalServer(opciones: OpcionesServidor) {
   const app = express();
@@ -201,32 +202,60 @@ export function startLocalServer(opciones: OpcionesServidor) {
     }
   });
 
-  // ─── Restablecer PIN (público, rate-limited) ──────────
-  app.post("/auth/restablecer-pin", async (req, res) => {
+  // ─── Listado público para recuperación de PIN (solo pasteleras) ─
+  // Espejo de IPC usuarios:listarPublico — la pantalla de login móvil
+  // lo pide ANTES de autenticarse.
+  app.get("/auth/usuarios-recuperacion", async (_req, res) => {
     try {
-      const ip = req.ip || req.socket.remoteAddress || "unknown";
-      const { permitido } = resetRateLimit.verificar(ip);
+      const { permitido } = recoveryListRate.verificar("pin-recovery");
+      if (!permitido) {
+        return res.status(429).json({ error: "Demasiadas solicitudes. Espere 15 minutos." });
+      }
+      const usuariosService = crearServicioUsuarios(opciones.db);
+      const todos = await usuariosService.listar();
+      const pasteleras = todos
+        .filter((u: any) => u.rol === "pastelera" && u.activo)
+        .map((u: any) => ({ id: u.id, nombre: u.nombre, rol: u.rol }));
+      res.json({ usuarios: pasteleras });
+    } catch (error) {
+      res.status(500).json({ error: "Error al obtener usuarios" });
+    }
+  });
+
+  // ─── Restablecer PIN (público, rate-limited, solo pastelera) ─
+  // La validación de rol/IdSchema y el registro en pinResetLog (expiración
+  // real de 24 h + debeCambiarPin) viven en @pos/core.restablecerPinPublico.
+  app.post("/auth/restablecer-pin", async (req, res) => {
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    try {
+      const { permitido } = rateLimitPinReset.verificar("pin-reset-publico");
       if (!permitido) {
         return res.status(429).json({ error: "Demasiadas solicitudes. Espere 1 hora." });
       }
 
       const { usuarioId } = req.body;
-      if (!usuarioId) {
-        return res.status(400).json({ error: "usuarioId es requerido" });
-      }
+      const resultado = await servicios.auth.restablecerPinPublico(usuarioId);
 
-      const crypto = await import("crypto");
-      const pinTemporal = String(crypto.randomInt(100000, 999999));
-      const pinHash = await crearHashPin(pinTemporal);
-      const expiracion = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      logAuditoriaLS("pin_reset_publico", undefined, {
+        usuarioResetId: typeof usuarioId === "number" ? usuarioId : undefined,
+        expiracion: resultado.expiracion,
+        ip,
+      });
 
-      await opciones.db.update(usuariosTable).set({ pinHash }).where(eq(usuariosTable.id, usuarioId));
-
-      logAuditoriaLS("pin_reset_publico", usuarioId, { expiracion, ip });
-
-      res.json({ pinTemporal, expiracion });
+      res.json(resultado);
     } catch (error) {
-      res.status(500).json({ error: "Error al restablecer PIN" });
+      // ZodError (usuarioId inválido) → 400; resto (no existe / rol no
+      // permitido / inactivo) → mismo mensaje genérico, sin enumeración.
+      const esErrorValidacion =
+        typeof error === "object" && error !== null && "issues" in error;
+      if (esErrorValidacion) {
+        return res.status(400).json({ error: "usuarioId inválido" });
+      }
+      logAuditoriaLS("permiso_denegado", undefined, {
+        operacion: "reset_pin_publico",
+        ip,
+      });
+      res.status(403).json({ error: "No se puede restablecer este PIN" });
     }
   });
 

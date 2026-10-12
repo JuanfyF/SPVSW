@@ -11,7 +11,7 @@
 
 import { PosDatabase, usuarios, pinResetLog, eq, sql } from "@pos/db";
 import { crearHashPin, verificarPin, esPinDebil } from "@pos/shared";
-import { CrearUsuarioInput, CrearUsuarioSchema, LoginSchema } from "@pos/shared";
+import { CrearUsuarioInput, CrearUsuarioSchema, LoginSchema, IdSchema } from "@pos/shared";
 
 const PIN_TEMPORAL_EXPIRACION_MS = 24 * 60 * 60 * 1000; // 24 horas
 const PIN_TEMPORALDigitos = 6;
@@ -27,6 +27,39 @@ function generarPinAleatorio(): string {
     pin = String(((array[0] ?? 0) % range) + min);
   } while (esPinDebil(pin));
   return pin;
+}
+
+/**
+ * Aplica un reset de PIN: genera temporal, registra en pinResetLog
+ * (de donde login lee la expiración de 24 h) y actualiza el usuario.
+ * Compartido por el reset admin y el reset público de pasteleras.
+ */
+async function aplicarResetPin(
+  db: PosDatabase,
+  usuario: { id: number; nombre: string },
+  resetadoPor: number | null
+) {
+  const pinTemporal = generarPinAleatorio();
+  const pinTemporalHash = await crearHashPin(pinTemporal);
+  const expiracion = new Date(Date.now() + PIN_TEMPORAL_EXPIRACION_MS).toISOString();
+
+  await db.insert(pinResetLog).values({
+    usuarioId: usuario.id,
+    resetadoPor,
+    pinTemporalHash,
+    expiracion,
+    utilizado: false,
+  });
+
+  await db
+    .update(usuarios)
+    .set({
+      pinHash: pinTemporalHash,
+      debeCambiarPin: true,
+    })
+    .where(eq(usuarios.id, usuario.id));
+
+  return { pinTemporal, expiracion, nombre: usuario.nombre };
 }
 
 export function crearServicioAuth(db: PosDatabase) {
@@ -108,33 +141,32 @@ export function crearServicioAuth(db: PosDatabase) {
         throw new Error("Usuario no encontrado");
       }
 
-      const pinTemporal = generarPinAleatorio();
-      const pinTemporalHash = await crearHashPin(pinTemporal);
-      const expiracion = new Date(Date.now() + PIN_TEMPORAL_EXPIRACION_MS).toISOString();
+      return aplicarResetPin(db, usuario[0]!, actorId);
+    },
 
-      // Registrar en log de auditoría
-      await db.insert(pinResetLog).values({
-        usuarioId,
-        resetadoPor: actorId,
-        pinTemporalHash,
-        expiracion,
-        utilizado: false,
-      });
+    /**
+     * Reset de PIN SIN autenticación (pantalla de recuperación móvil).
+     * SEGURIDAD: solo rol "pastelera" — propietario y cajero se recuperan
+     * con sesión vía restablecerPin (admin). Mismo mensaje para "no existe"
+     * y "rol no permitido" (sin enumeración de usuarios).
+     * El PIN temporal expira en 24 h (fila en pinResetLog) y fuerza el cambio.
+     */
+    async restablecerPinPublico(usuarioId: unknown) {
+      const id = IdSchema.parse(usuarioId);
 
-      // Actualizar PIN del usuario y marcar que debe cambiarlo
-      await db
-        .update(usuarios)
-        .set({
-          pinHash: pinTemporalHash,
-          debeCambiarPin: true,
-        })
-        .where(eq(usuarios.id, usuarioId));
+      const usuario = await db
+        .select()
+        .from(usuarios)
+        .where(eq(usuarios.id, id))
+        .limit(1);
 
-      return {
-        pinTemporal,
-        expiracion,
-        nombre: usuario[0]!.nombre,
-      };
+      const u = usuario[0];
+      if (!u || !u.activo || u.rol !== "pastelera") {
+        throw new Error("No se puede restablecer este PIN");
+      }
+
+      const resultado = await aplicarResetPin(db, u, null);
+      return { pinTemporal: resultado.pinTemporal, expiracion: resultado.expiracion };
     },
 
     /**

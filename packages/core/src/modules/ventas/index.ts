@@ -41,17 +41,30 @@ export function crearServicioVentas(db: PosDatabase) {
 
       // Validar stock FUERA de la transacción (better-sqlite3 no soporta async en transaction)
       if (!skipStockCheck) {
+        // Agregar cantidades por producto+unidad antes de verificar: los
+        // detalles pueden repetir clave (línea pagada + línea de cortesía $0
+        // en VentaMostrador) y chequearlos por separado daría falsos positivos.
+        const requerido = new Map<string, { productoId: number; unidad: CrearVentaInput["detalles"][number]["unidad"]; cantidad: number }>();
         for (const detalle of validados.detalles) {
+          const key = `${detalle.productoId}:${detalle.unidad}`;
+          const actual = requerido.get(key);
+          if (actual) {
+            actual.cantidad += detalle.cantidad;
+          } else {
+            requerido.set(key, { productoId: detalle.productoId, unidad: detalle.unidad, cantidad: detalle.cantidad });
+          }
+        }
+        for (const req of requerido.values()) {
           const stock = await this.verificarStock(
-            detalle.productoId,
+            req.productoId,
             validados.sesionCajaId,
-            detalle.unidad,
-            detalle.cantidad
+            req.unidad,
+            req.cantidad
           );
           if (!stock.suficiente) {
             throw new Error(
-              `Stock insuficiente para producto ${detalle.productoId}: ` +
-                `disponible ${stock.disponible}, solicitado ${detalle.cantidad}`
+              `Stock insuficiente para producto ${req.productoId}: ` +
+                `disponible ${stock.disponible}, solicitado ${req.cantidad}`
             );
           }
         }

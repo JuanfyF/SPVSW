@@ -2,11 +2,8 @@
  * Handlers IPC de autenticación y sesión.
  */
 import { ipcMain } from "electron";
-import { usuarios, eq } from "@pos/db";
-import { crearRateLimiter, crearHashPin } from "@pos/shared";
+import { crearRateLimiter, rateLimitPinReset } from "@pos/shared";
 import { ctx } from "./context";
-
-const resetRateLimit = crearRateLimiter({ maxIntentos: 2, ventanaMs: 60 * 60 * 1000 });
 
 export function registrarAuthHandlers() {
   const servicios = ctx.getServicios();
@@ -63,27 +60,26 @@ export function registrarAuthHandlers() {
     return resultado;
   }, { admin: true }));
 
-  ipcMain.handle("auth:restablecerPinPublico", ctx.safeHandler(async (_event, usuarioId: number) => {
-    const { permitido } = resetRateLimit.verificar("pin-reset-publico");
+  ipcMain.handle("auth:restablecerPinPublico", ctx.safeHandler(async (_event, usuarioId: unknown) => {
+    const { permitido } = rateLimitPinReset.verificar("pin-reset-publico");
     if (!permitido) {
-      ctx.logAuditoria("pin_reset_bloqueado", undefined, { usuarioId, razon: "rate_limit" });
+      ctx.logAuditoria("pin_reset_bloqueado", undefined, { razon: "rate_limit" });
       throw new Error("Demasiadas solicitudes. Espere 1 hora.");
     }
 
-    const crypto = await import("crypto");
-    const pinTemporal = String(crypto.randomInt(100000, 999999));
-    const pinHash = await crearHashPin(pinTemporal);
-    const expiracion = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
-    const db = ctx.getDb();
-    if (!db) throw new Error("Base de datos no disponible");
-    await db
-      .update(usuarios)
-      .set({ pinHash, debeCambiarPin: true })
-      .where(eq(usuarios.id, usuarioId));
-
-    ctx.logAuditoria("pin_reset_publico", undefined, { usuarioId, expiracion });
-
-    return { pinTemporal, expiracion };
+    try {
+      const resultado = await servicios.auth.restablecerPinPublico(usuarioId);
+      ctx.logAuditoria("pin_reset_publico", undefined, {
+        usuarioResetId: typeof usuarioId === "number" ? usuarioId : undefined,
+        expiracion: resultado.expiracion,
+      });
+      return resultado;
+    } catch (err) {
+      ctx.logAuditoria("permiso_denegado", undefined, {
+        operacion: "reset_pin_publico",
+        usuarioId: typeof usuarioId === "number" ? usuarioId : undefined,
+      });
+      throw new Error("No se puede restablecer este PIN");
+    }
   }));
 }

@@ -36,16 +36,19 @@ echo "Extracting $APPIMAGE_NAME..."
 "$APPIMAGE_PATH" --appimage-extract >/dev/null 2>&1
 mv squashfs-root "$WORKDIR/appdir"
 
-# Patch AppRun: always pass --no-sandbox --in-process-gpu
-sed -i 's|exec "\$BIN" "\${args\[@\]}"|exec "\$BIN" --no-sandbox --in-process-gpu "\${args[@]}"|' \
+# Patch AppRun: always pass --in-process-gpu (GPU deshabilitado en la app).
+# NOTA (2026-10-12): --no-sandbox se eliminó tras probar empíricamente que
+# el sandbox de Chromium funciona en este equipo. Si en algún equipo la app
+# falla con "No usable sandbox!", reinstaurarlo aquí y en electron/main.ts.
+sed -i 's|exec "\$BIN" "\${args\[@\]}"|exec "\$BIN" --in-process-gpu "\${args[@]}"|' \
   "$WORKDIR/appdir/AppRun"
 
 # Also handle the no-args case
-sed -i 's|exec "\$BIN"$|exec "$BIN" --no-sandbox --in-process-gpu|' \
+sed -i 's|exec "\$BIN"$|exec "$BIN" --in-process-gpu|' \
   "$WORKDIR/appdir/AppRun"
 
 echo "Patched AppRun:"
-grep -A4 'atexit()' "$WORKDIR/appdir/AppImage" 2>/dev/null || grep 'exec.*BIN.*no-sandbox' "$WORKDIR/appdir/AppRun"
+grep -A4 'atexit()' "$WORKDIR/appdir/AppImage" 2>/dev/null || grep 'exec.*BIN.*in-process-gpu' "$WORKDIR/appdir/AppRun"
 
 echo "Repackaging..."
 ARCH=x86_64 "$TOOL" "$WORKDIR/appdir" "$APPIMAGE_PATH" 2>&1 | grep -v "^$"

@@ -83,7 +83,7 @@
         return data.usuarios;
       },
       async listarPublico() {
-        const data = await api("GET", "/api/usuarios");
+        const data = await api("GET", "/auth/usuarios-recuperacion");
         return data.usuarios;
       },
     },

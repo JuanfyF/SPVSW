@@ -12,7 +12,7 @@ export function registrarPedidosHandlers() {
     const resultado = await servicios.pedidos.crear(datos as any);
     ctx.logAuditoria("pedido_creado", undefined, { pedidoId: resultado.id, cliente: resultado.cliente, totalEstimado: resultado.totalEstimado });
     return resultado;
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("pedidos:marcarListo", ctx.safeHandler(async (_event, pedidoId: number) => {
     const resultado = await servicios.pedidos.marcarListo(pedidoId);
@@ -84,13 +84,13 @@ export function registrarPedidosHandlers() {
 
     ctx.notificarCambio();
     return { exito: true };
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("pedidos:revertirEntrega", ctx.safeHandler(async (_event, pedidoId: number) => {
     await servicios.pedidos.revertirEntrega(pedidoId);
     ctx.logAuditoria("pedido_entrega_revertida", undefined, { pedidoId });
     return { exito: true };
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("pedidos:cancelar", ctx.safeHandler(async (
     _event,
@@ -110,7 +110,7 @@ export function registrarPedidosHandlers() {
     );
     ctx.logAuditoria("pedido_cancelado", usuarioActual.id, { pedidoId, motivo, metodoDevolucion });
     return resultado;
-  }, { auth: true }));
+  }, { gestores: true }));
 
   ipcMain.handle("pedidos:listarPorEstado", ctx.safeHandler(async (_event, estado: string) => {
     return servicios.pedidos.listarPorEstado(estado);
