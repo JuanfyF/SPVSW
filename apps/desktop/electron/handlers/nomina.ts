@@ -10,12 +10,14 @@ export function registrarNominaHandlers() {
   ipcMain.handle("nomina:registrarAdelanto", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.nomina.registrarAdelanto(datos as any);
     ctx.logAuditoria("adelanto_registrado", undefined, { adelantoId: resultado?.id, empleadoId: resultado?.empleadoId, monto: resultado?.monto });
+    ctx.notificarCambio();
     return resultado;
   }, { gestores: true }));
 
   ipcMain.handle("nomina:registrarMulta", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.nomina.registrarMulta(datos as any);
     ctx.logAuditoria("multa_registrada", undefined, { multaId: resultado?.id, empleadoId: resultado?.empleadoId, monto: resultado?.monto, motivo: resultado?.motivo });
+    ctx.notificarCambio();
     return resultado;
   }, { gestores: true }));
 
@@ -42,6 +44,7 @@ export function registrarNominaHandlers() {
   ipcMain.handle("nomina:crearEmpleado", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.nomina.crearEmpleado(datos as any);
     ctx.logAuditoria("empleado_creado", undefined, { empleadoId: resultado?.id, nombre: resultado?.nombre, cargo: resultado?.cargo });
+    ctx.notificarCambio();
     return resultado;
   }, { gestores: true }));
 }

@@ -7,8 +7,8 @@
     "dev": "pnpm --filter @pos/desktop dev & pnpm --filter @pos/desktop dev:electron",
     "dev:vite": "pnpm --filter @pos/desktop dev",
     "dev:electron": "pnpm --filter @pos/desktop dev:electron",
-    "db:generate": "pnpm --filter @pos/db drizzle-kit generate",
-    "db:migrate": "pnpm --filter @pos/db drizzle-kit migrate",
+    "db:generate": "pnpm --filter @pos/db generate",
+    "db:migrate": "pnpm --filter @pos/db migrate",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
@@ -28,6 +28,11 @@
       "better-sqlite3",
       "electron",
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "proxy-addr": "^2.0.8",
+      "qs": "^6.16.0",
+      "js-yaml": "^4.3.2"
+    }
   }
 }

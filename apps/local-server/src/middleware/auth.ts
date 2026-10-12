@@ -23,36 +23,40 @@ export interface SesionUsuario {
 
 interface SesionConTimestamp {
   sesion: SesionUsuario;
-  creadoEn: number;
+  ultimoUso: number;
 }
 
 // Almacenamiento temporal de sesiones con timestamps para TTL
 const sesiones = new Map<string, SesionConTimestamp>();
 
-// TTL de sesiones: 4 horas (en ms)
+// TTL de sesiones: 4 horas desde el ÚLTIMO uso (renovación deslizante).
+// Coherente con el escritorio: la sesión viva se mantiene mientras la usen.
 const SESION_TTL_MS = 4 * 60 * 60 * 1000;
 
 // Intervalo de limpieza: cada 10 minutos
 const LIMPIEZA_INTERVALO_MS = 10 * 60 * 1000;
 
 /**
- * Limpia sesiones expiradas.
+ * Limpia sesiones expiradas (4 h desde el último uso).
  */
 function limpiarSesionesExpiradas() {
   const ahora = Date.now();
   for (const [token, datos] of sesiones.entries()) {
-    if (ahora - datos.creadoEn > SESION_TTL_MS) {
+    if (ahora - datos.ultimoUso > SESION_TTL_MS) {
       sesiones.delete(token);
     }
   }
 }
 
-// Iniciar limpieza periódica
-setInterval(limpiarSesionesExpiradas, LIMPIEZA_INTERVALO_MS);
+// Iniciar limpieza periódica (unref: no debe mantener vivo el proceso)
+const intervaloLimpieza = setInterval(limpiarSesionesExpiradas, LIMPIEZA_INTERVALO_MS);
+if (typeof intervaloLimpieza === "object" && "unref" in intervaloLimpieza) {
+  intervaloLimpieza.unref();
+}
 
 /**
  * Middleware que valida autenticación (token Bearer).
- * Rechaza sesiones expiradas (TTL).
+ * Rechaza sesiones expiradas (TTL deslizante de 4 h).
  */
 export function authMiddleware(auth: ReturnType<typeof crearServicioAuth>) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -72,11 +76,12 @@ export function authMiddleware(auth: ReturnType<typeof crearServicioAuth>) {
       return res.status(401).json({ error: "Sesión inválida o expirada" });
     }
 
-    // Verificar TTL
-    if (Date.now() - datos.creadoEn > SESION_TTL_MS) {
+    // Verificar TTL y renovar (deslizante)
+    if (Date.now() - datos.ultimoUso > SESION_TTL_MS) {
       sesiones.delete(token);
       return res.status(401).json({ error: "Sesión expirada" });
     }
+    datos.ultimoUso = Date.now();
 
     (req as any).usuario = datos.sesion;
     next();
@@ -119,7 +124,7 @@ export function requerirRol(...rolesPermitidos: string[]) {
  */
 export function crearSesion(usuario: SesionUsuario): string {
   const token = randomUUID();
-  sesiones.set(token, { sesion: usuario, creadoEn: Date.now() });
+  sesiones.set(token, { sesion: usuario, ultimoUso: Date.now() });
   return token;
 }
 

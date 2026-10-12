@@ -301,3 +301,42 @@ describe("montoCobradoEntrega", () => {
     expect(montoCobradoEntrega({ saldoPendiente: 0 })).toBe(0);
   });
 });
+
+describe("listarDetallesLote", () => {
+  it("retorna [] sin tocar la DB si la lista de ids está vacía", async () => {
+    const mockDb = crearMockDb();
+    const servicio = crearServicioPedidos(mockDb as any);
+
+    expect(await servicio.listarDetallesLote([])).toEqual([]);
+    expect(mockDb.select).not.toHaveBeenCalled();
+  });
+
+  it("filtra ids inválidos y retorna [] si ninguno es válido", async () => {
+    const mockDb = crearMockDb();
+    const servicio = crearServicioPedidos(mockDb as any);
+
+    expect(await servicio.listarDetallesLote([-1, 0, NaN, 1.5])).toEqual([]);
+    expect(mockDb.select).not.toHaveBeenCalled();
+  });
+
+  it("hace UNA sola query con leftJoin + where (sin N+1)", async () => {
+    const filas = [
+      { id: 10, pedidoId: 5, productoId: 1, cantidad: 2 },
+      { id: 11, pedidoId: 7, productoId: 2, cantidad: 1 },
+    ];
+    const whereFn = vi.fn().mockResolvedValue(filas);
+    const leftJoinFn = vi.fn().mockReturnValue({ where: whereFn });
+    const fromFn = vi.fn().mockReturnValue({ leftJoin: leftJoinFn });
+    const mockDb = crearMockDb();
+    mockDb.select.mockReturnValue({ from: fromFn });
+
+    const servicio = crearServicioPedidos(mockDb as any);
+    const resultado = await servicio.listarDetallesLote([5, 7]);
+
+    expect(mockDb.select).toHaveBeenCalledTimes(1);
+    expect(fromFn).toHaveBeenCalledTimes(1);
+    expect(leftJoinFn).toHaveBeenCalledTimes(1);
+    expect(whereFn).toHaveBeenCalledTimes(1);
+    expect(resultado).toEqual(filas);
+  });
+});

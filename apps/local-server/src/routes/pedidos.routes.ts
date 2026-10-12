@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { crearServicioPedidos } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
 import { logAuditoriaLS } from "../middleware/auditoria";
+import { responderError } from "../middleware/errores";
 
 /**
  * Rutas de pedidos para el servidor local (vista de producción).
@@ -37,23 +38,30 @@ export function pedidosRoutes(
           estado: p.estado,
         }));
 
-        const pedidosConDetalles = await Promise.all(
-          pedidosProduccion.map(async (p) => {
-            const detalles = await pedidos.obtenerDetalle(p.id);
-            return {
-              ...p,
-              detalles: detalles.map((d) => ({
-                productoId: d.productoId,
-                descripcion: d.descripcionPersonalizada,
-                cantidad: d.cantidad,
-              })),
-            };
-          })
+        // Una sola query de detalles para todos los pedidos (inArray),
+        // en vez de una query por pedido (N+1 sobre SQLite sincrónico).
+        const todosDetalles = await pedidos.listarDetallesLote(
+          pedidosProduccion.map((p) => p.id)
         );
+        const detallesPorPedido = new Map<number, typeof todosDetalles>();
+        for (const d of todosDetalles) {
+          const lista = detallesPorPedido.get(d.pedidoId) ?? [];
+          lista.push(d);
+          detallesPorPedido.set(d.pedidoId, lista);
+        }
+
+        const pedidosConDetalles = pedidosProduccion.map((p) => ({
+          ...p,
+          detalles: (detallesPorPedido.get(p.id) ?? []).map((d) => ({
+            productoId: d.productoId,
+            descripcion: d.descripcionPersonalizada,
+            cantidad: d.cantidad,
+          })),
+        }));
 
         res.json({ pedidos: pedidosConDetalles });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener pedidos de producción" });
+        responderError(res, error, "Error al obtener pedidos de producción");
       }
     }
   );
@@ -64,8 +72,11 @@ export function pedidosRoutes(
     requerirRol("propietario", "cajero", "pastelera"),
     async (req: Request, res: Response) => {
       try {
-        const id = req.params.id as string;
-        const pedido = await pedidos.obtenerPorId(parseInt(id, 10));
+        const id = parseInt(req.params.id as string, 10);
+        if (!Number.isSafeInteger(id) || id <= 0) {
+          return res.status(400).json({ error: "id inválido" });
+        }
+        const pedido = await pedidos.obtenerPorId(id);
 
         if (!pedido) {
           return res.status(404).json({ error: "Pedido no encontrado" });
@@ -111,7 +122,7 @@ export function pedidosRoutes(
           detalles: detallesLimpios,
         });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener el pedido" });
+        responderError(res, error, "Error al obtener el pedido");
       }
     }
   );
@@ -123,7 +134,10 @@ export function pedidosRoutes(
     requerirRol("propietario", "cajero", "pastelera"),
     async (req: Request, res: Response) => {
       try {
-        const id = req.params.id as string;
+        const id = parseInt(req.params.id as string, 10);
+        if (!Number.isSafeInteger(id) || id <= 0) {
+          return res.status(400).json({ error: "id inválido" });
+        }
         const { estado } = req.body;
         const usuario = (req as any).usuario;
 
@@ -133,7 +147,7 @@ export function pedidosRoutes(
           });
         }
 
-        const pedido = await pedidos.obtenerPorId(parseInt(id, 10));
+        const pedido = await pedidos.obtenerPorId(id);
         if (!pedido) {
           return res.status(404).json({ error: "Pedido no encontrado" });
         }
@@ -152,7 +166,7 @@ export function pedidosRoutes(
 
         res.json({ mensaje: "Estado actualizado correctamente" });
       } catch (error) {
-        res.status(500).json({ error: "Error al actualizar el estado" });
+        responderError(res, error, "Error al actualizar el estado");
       }
     }
   );
@@ -189,8 +203,8 @@ export function pedidosAdminRoutes(
         }
 
         res.json({ pedidos: activos });
-      } catch (error: any) {
-        res.status(500).json({ error: "Error al listar pedidos" });
+      } catch (error) {
+        responderError(res, error, "Error al listar pedidos");
       }
     }
   );
@@ -209,8 +223,7 @@ export function pedidosAdminRoutes(
         });
         res.json({ pedido });
       } catch (error) {
-        console.error("Error al crear el pedido:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(400).json({ error: "Error al crear el pedido" });
+        responderError(res, error, "Error al crear el pedido", "Error al crear el pedido");
       }
     }
   );

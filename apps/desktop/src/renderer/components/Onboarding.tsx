@@ -58,7 +58,9 @@ export default function Onboarding({ onComplete }: { onComplete: () => void }) {
   const [pasoActual, setPasoActual] = useState(0);
   const totalPasos = pasos.length;
   const { nombreNegocio } = useConfigStore();
-  const paso = pasos[pasoActual];
+  // El índice está acotado por handleSiguiente/handleAnterior; el fallback
+  // evita `possibly undefined` con noUncheckedIndexedAccess.
+  const paso = pasos[pasoActual] ?? pasos[0]!;
   const tituloPaso =
     pasoActual === 0 ? `Bienvenido a ${nombreVisible(nombreNegocio)}` : paso.titulo;
 

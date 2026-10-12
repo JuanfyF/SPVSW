@@ -10,6 +10,7 @@ export function registrarStockHandlers() {
   ipcMain.handle("stock:registrarStock", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.stock.registrarStock(datos as any);
     ctx.logAuditoria("stock_registrado", undefined, { productoId: (datos as any).productoId, cantidadInicial: (datos as any).cantidadInicial });
+    ctx.notificarCambio();
     return resultado;
   }, { auth: true }));
 
@@ -18,12 +19,14 @@ export function registrarStockHandlers() {
   ) => {
     const resultado = await servicios.stock.registrarReposicion(productoId, sesionCajaId, cantidad, unidad);
     ctx.logAuditoria("stock_reposicion", undefined, { productoId, sesionCajaId, cantidad, unidad });
+    ctx.notificarCambio();
     return resultado;
   }, { auth: true }));
 
   ipcMain.handle("stock:registrarCorte", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.stock.registrarCorte(datos as any);
     ctx.logAuditoria("stock_corte", undefined, { productoId: (datos as any).productoId, porcionesObtenidas: (datos as any).porcionesObtenidas });
+    ctx.notificarCambio();
     return resultado;
   }, { auth: true }));
 
@@ -34,12 +37,14 @@ export function registrarStockHandlers() {
   ipcMain.handle("stock:registrarMerma", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.stock.registrarMerma(datos as any);
     ctx.logAuditoria("stock_merma", undefined, { productoId: (datos as any).productoId, cantidad: (datos as any).cantidad, motivo: (datos as any).motivo });
+    ctx.notificarCambio();
     return resultado;
   }, { auth: true }));
 
   ipcMain.handle("stock:registrarCortesia", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.stock.registrarCortesia(datos as any);
     ctx.logAuditoria("stock_cortesia", undefined, { productoId: (datos as any).productoId, cantidad: (datos as any).cantidad });
+    ctx.notificarCambio();
     return resultado;
   }, { auth: true }));
 
@@ -60,6 +65,7 @@ export function registrarStockHandlers() {
   ) => {
     await servicios.stock.conciliarStock(sesionCajaId, conteoFisicoPorProducto as any);
     ctx.logAuditoria("stock_conciliado", undefined, { sesionCajaId, productos: (conteoFisicoPorProducto as any[]).length });
+    ctx.notificarCambio();
   }, { auth: true }));
 
   ipcMain.handle("stock:calcularVendido", ctx.safeHandler(async (

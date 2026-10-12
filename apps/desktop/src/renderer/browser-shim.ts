@@ -138,6 +138,11 @@
       async listarPorSesionEntrega(_sesionCajaId: number): Promise<any[]> {
         return [];
       },
+      // La entrega real (cobra saldo y registra venta) vive solo en el
+      // handler IPC de desktop; el local-server solo admite en_proceso/listo.
+      async entregar(_pedidoId: number, _sesionCajaEntregaId: number, _metodoPagoSaldo?: string): Promise<void> {
+        throw new Error("La entrega de pedidos no está disponible en modo web (solo desktop).");
+      },
     },
 
     stock: {
@@ -166,6 +171,10 @@
       return () => {};
     },
     onSesionAviso: (_cb: () => void) => {
+      return () => {};
+    },
+    // Sin push IPC en dev-web; el polling local cubre la recarga manual.
+    onCambio: (_cb: () => void) => {
       return () => {};
     },
     extenderSesion: async () => {

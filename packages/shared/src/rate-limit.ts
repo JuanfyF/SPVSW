@@ -5,6 +5,12 @@ export interface RateLimitResult {
 
 export interface RateLimiter {
   verificar(key: string): RateLimitResult;
+  /**
+   * Libera la cuota de una key tras un éxito. Un login (u otra operación
+   * sensible) correcto no debe consumir intentos: sin esto, 5 logins
+   * válidos dejan bloqueado al usuario 15 minutos.
+   */
+  exito(key: string): void;
   destroy(): void;
 }
 
@@ -43,6 +49,10 @@ export function crearRateLimiter(opts?: {
 
       datos.count++;
       return { permitido: true, restantes: MAX_INTENTOS - datos.count };
+    },
+
+    exito(key: string): void {
+      intentos.delete(key);
     },
 
     destroy() {

@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { crearServicioGastos } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
 import { logAuditoriaLS } from "../middleware/auditoria";
+import { responderError, parseIdQuery } from "../middleware/errores";
 
 /**
  * Rutas de gastos para el servidor local.
@@ -16,16 +17,14 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
     requerirRol("propietario", "cajero"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
-        const data = await gastos.listarPorSesion(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const data = await gastos.listarPorSesion(sesionCajaId);
         res.json({ gastos: data });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener gastos" });
+        responderError(res, error, "Error al obtener gastos");
       }
     }
   );
@@ -39,7 +38,7 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
         const categorias = await gastos.listarCategorias();
         res.json({ categorias });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener categorías" });
+        responderError(res, error, "Error al obtener categorías");
       }
     }
   );
@@ -63,8 +62,7 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
         });
         res.json({ gasto });
       } catch (error) {
-        console.error("Error al crear gasto:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al crear gasto" });
+        responderError(res, error, "Error al crear gasto", "Error al crear gasto");
       }
     }
   );
@@ -84,8 +82,7 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
         logAuditoriaLS("categoria_gasto_creada", usuario.usuarioId, { nombre, categoriaId: categoria?.id });
         res.json({ categoria });
       } catch (error) {
-        console.error("Error al crear categoría:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al crear categoría" });
+        responderError(res, error, "Error al crear categoría", "Error al crear categoría");
       }
     }
   );

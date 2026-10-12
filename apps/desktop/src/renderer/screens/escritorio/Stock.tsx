@@ -200,7 +200,7 @@ export default function Stock() {
                     key: `${producto.id}-entero`,
                   });
                 }
-                if (stockPorcion || producto.tipoVenta === "porcion" || producto.tipoVenta === "porcion_llevar" || producto.tipoVenta === "ambos") {
+                if (stockPorcion || producto.tipoVenta === "porcion" || producto.tipoVenta === "ambos") {
                   rows.push({
                     unidad: "porcion",
                     label: "Porción",

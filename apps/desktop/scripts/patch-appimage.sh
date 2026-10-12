@@ -40,15 +40,29 @@ mv squashfs-root "$WORKDIR/appdir"
 # NOTA (2026-10-12): --no-sandbox se eliminó tras probar empíricamente que
 # el sandbox de Chromium funciona en este equipo. Si en algún equipo la app
 # falla con "No usable sandbox!", reinstaurarlo aquí y en electron/main.ts.
-sed -i 's|exec "\$BIN" "\${args\[@\]}"|exec "\$BIN" --in-process-gpu "\${args[@]}"|' \
+#
+# Runtime AppImage 12.x (electron-builder ≥26): AppRun define NO_SANDBOX=()
+# con auto-detección de user namespaces y tiene DOS líneas exec:
+#   exec "$BIN" "${NO_SANDBOX[@]}"              (sin args)
+#   exec "$BIN" "${NO_SANDBOX[@]}" "${args[@]}" (con args)
+sed -i 's|exec "\$BIN" "\${NO_SANDBOX\[@\]}" "\${args\[@\]}"|exec "$BIN" --in-process-gpu "${NO_SANDBOX[@]}" "${args[@]}"|' \
+  "$WORKDIR/appdir/AppRun"
+sed -i 's|exec "\$BIN" "\${NO_SANDBOX\[@\]}"$|exec "$BIN" --in-process-gpu "${NO_SANDBOX[@]}"|' \
   "$WORKDIR/appdir/AppRun"
 
-# Also handle the no-args case
+# Compat con el template viejo del runtime 1.x (por si se reintegra)
+sed -i 's|exec "\$BIN" "\${args\[@\]}"|exec "\$BIN" --in-process-gpu "\${args[@]}"|' \
+  "$WORKDIR/appdir/AppRun"
 sed -i 's|exec "\$BIN"$|exec "$BIN" --in-process-gpu|' \
   "$WORKDIR/appdir/AppRun"
 
 echo "Patched AppRun:"
-grep -A4 'atexit()' "$WORKDIR/appdir/AppImage" 2>/dev/null || grep 'exec.*BIN.*in-process-gpu' "$WORKDIR/appdir/AppRun"
+if ! grep -q 'exec.*in-process-gpu' "$WORKDIR/appdir/AppRun"; then
+  echo "ERROR: el patch de AppRun no encontró las líneas exec esperadas." >&2
+  echo "El formato de AppRun cambió; revisar patch-appimage.sh." >&2
+  exit 1
+fi
+grep -n 'exec.*in-process-gpu' "$WORKDIR/appdir/AppRun"
 
 echo "Repackaging..."
 ARCH=x86_64 "$TOOL" "$WORKDIR/appdir" "$APPIMAGE_PATH" 2>&1 | grep -v "^$"

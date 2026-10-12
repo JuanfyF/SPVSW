@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { crearServicioVentas } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
 import { logAuditoriaLS } from "../middleware/auditoria";
+import { responderError, parseIdQuery, parseNumeroQuery } from "../middleware/errores";
 
 /**
  * Rutas de ventas para el servidor local.
@@ -16,16 +17,14 @@ export function ventasRoutes(ventas: ReturnType<typeof crearServicioVentas>): Ro
     requerirRol("propietario", "cajero"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
-        const data = await ventas.listarPorSesion(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const data = await ventas.listarPorSesion(sesionCajaId);
         res.json({ ventas: data });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener ventas" });
+        responderError(res, error, "Error al obtener ventas");
       }
     }
   );
@@ -36,19 +35,22 @@ export function ventasRoutes(ventas: ReturnType<typeof crearServicioVentas>): Ro
     requerirRol("propietario", "cajero"),
     async (req: Request, res: Response) => {
       try {
-        const { productoId, sesionCajaId, unidad, cantidad } = req.query;
-        if (!productoId || !sesionCajaId || !unidad || !cantidad) {
+        const productoId = parseIdQuery(req.query.productoId);
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
+        const unidad = req.query.unidad;
+        const cantidad = parseNumeroQuery(req.query.cantidad);
+        if (!productoId || !sesionCajaId || !unidad || cantidad === null) {
           return res.status(400).json({ error: "Faltan parámetros requeridos" });
         }
         const resultado = await ventas.verificarStock(
-          parseInt(productoId as string, 10),
-          parseInt(sesionCajaId as string, 10),
+          productoId,
+          sesionCajaId,
           unidad as "entero" | "porcion" | "porcion_llevar",
-          parseFloat(cantidad as string)
+          cantidad
         );
         res.json(resultado);
       } catch (error) {
-        res.status(500).json({ error: "Error al verificar stock" });
+        responderError(res, error, "Error al verificar stock");
       }
     }
   );
@@ -59,13 +61,17 @@ export function ventasRoutes(ventas: ReturnType<typeof crearServicioVentas>): Ro
     requerirRol("propietario", "cajero"),
     async (req: Request, res: Response) => {
       try {
-        const venta = await ventas.obtenerPorId(parseInt(req.params.id as string, 10));
+        const id = parseIdQuery(req.params.id);
+        if (!id) {
+          return res.status(400).json({ error: "id inválido" });
+        }
+        const venta = await ventas.obtenerPorId(id);
         if (!venta) {
           return res.status(404).json({ error: "Venta no encontrada" });
         }
         res.json({ venta });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener venta" });
+        responderError(res, error, "Error al obtener venta");
       }
     }
   );
@@ -76,10 +82,14 @@ export function ventasRoutes(ventas: ReturnType<typeof crearServicioVentas>): Ro
     requerirRol("propietario", "cajero"),
     async (req: Request, res: Response) => {
       try {
-        const detalle = await ventas.obtenerDetalle(parseInt(req.params.id as string, 10));
+        const id = parseIdQuery(req.params.id);
+        if (!id) {
+          return res.status(400).json({ error: "id inválido" });
+        }
+        const detalle = await ventas.obtenerDetalle(id);
         res.json({ detalle });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener detalle" });
+        responderError(res, error, "Error al obtener detalle");
       }
     }
   );
@@ -99,8 +109,7 @@ export function ventasRoutes(ventas: ReturnType<typeof crearServicioVentas>): Ro
         });
         res.json({ venta });
       } catch (error) {
-        console.error("Error al crear venta:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al crear venta" });
+        responderError(res, error, "Error al crear venta", "Error al crear venta");
       }
     }
   );

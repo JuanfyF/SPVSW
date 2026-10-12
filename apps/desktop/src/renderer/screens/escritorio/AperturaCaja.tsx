@@ -179,7 +179,7 @@ export default function AperturaCaja() {
               {productos.map((producto) => {
                 const stock = stockInicial[producto.id] || { entero: "0", porcion: "0" };
                 const muestraEntero = producto.tipoVenta === "entero" || producto.tipoVenta === "ambos";
-                const muestraPorcion = producto.tipoVenta === "porcion" || producto.tipoVenta === "porcion_llevar" || producto.tipoVenta === "ambos";
+                const muestraPorcion = producto.tipoVenta === "porcion" || producto.tipoVenta === "ambos";
                 return (
                   <tr key={producto.id} className="border-b border-outline-variant/50">
                     <td className="p-4 font-medium text-on-surface">{producto.nombre}</td>
@@ -189,10 +189,10 @@ export default function AperturaCaja() {
                           type="number"
                           value={stock.entero}
                           onChange={(e) =>
-                            setStockInicial((prev) => ({
-                              ...prev,
-                              [producto.id]: { ...prev[producto.id], entero: e.target.value },
-                            }))
+                            setStockInicial((prev) => {
+                              const actual = prev[producto.id] ?? { entero: "0", porcion: "0" };
+                              return { ...prev, [producto.id]: { ...actual, entero: e.target.value } };
+                            })
                           }
                           min="0"
                           max="99999"
@@ -208,10 +208,10 @@ export default function AperturaCaja() {
                           type="number"
                           value={stock.porcion}
                           onChange={(e) =>
-                            setStockInicial((prev) => ({
-                              ...prev,
-                              [producto.id]: { ...prev[producto.id], porcion: e.target.value },
-                            }))
+                            setStockInicial((prev) => {
+                              const actual = prev[producto.id] ?? { entero: "0", porcion: "0" };
+                              return { ...prev, [producto.id]: { ...actual, porcion: e.target.value } };
+                            })
                           }
                           min="0"
                           max="99999"

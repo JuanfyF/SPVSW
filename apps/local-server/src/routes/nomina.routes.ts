@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { crearServicioNomina } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
 import { logAuditoriaLS } from "../middleware/auditoria";
+import { responderError, parseIdQuery } from "../middleware/errores";
 
 /**
  * Rutas de nómina para el servidor local.
@@ -19,7 +20,7 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
         const empleados = await nomina.listarEmpleadosActivos();
         res.json({ empleados });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener empleados" });
+        responderError(res, error, "Error al obtener empleados");
       }
     }
   );
@@ -40,8 +41,7 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
         });
         res.json({ empleado });
       } catch (error) {
-        console.error("Error al crear empleado:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al crear empleado" });
+        responderError(res, error, "Error al crear empleado", "Error al crear empleado");
       }
     }
   );
@@ -52,16 +52,14 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
     requerirRol("propietario"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
-        const adelantos = await nomina.listarAdelantosPorSesion(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const adelantos = await nomina.listarAdelantosPorSesion(sesionCajaId);
         res.json({ adelantos });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener adelantos" });
+        responderError(res, error, "Error al obtener adelantos");
       }
     }
   );
@@ -84,8 +82,7 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
         });
         res.json({ adelanto });
       } catch (error) {
-        console.error("Error al registrar adelanto:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al registrar adelanto" });
+        responderError(res, error, "Error al registrar adelanto", "Error al registrar adelanto");
       }
     }
   );
@@ -96,16 +93,14 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
     requerirRol("propietario"),
     async (req: Request, res: Response) => {
       try {
-        const { empleadoId } = req.query;
+        const empleadoId = parseIdQuery(req.query.empleadoId);
         if (!empleadoId) {
           return res.status(400).json({ error: "empleadoId es requerido" });
         }
-        const multas = await nomina.listarMultasPorEmpleado(
-          parseInt(empleadoId as string, 10)
-        );
+        const multas = await nomina.listarMultasPorEmpleado(empleadoId);
         res.json({ multas });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener multas" });
+        responderError(res, error, "Error al obtener multas");
       }
     }
   );
@@ -129,8 +124,7 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
         });
         res.json({ multa });
       } catch (error) {
-        console.error("Error al registrar multa:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al registrar multa" });
+        responderError(res, error, "Error al registrar multa", "Error al registrar multa");
       }
     }
   );
@@ -141,17 +135,15 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
     requerirRol("propietario"),
     async (req: Request, res: Response) => {
       try {
-        const { empleadoId, mes } = req.query;
-        if (!empleadoId || !mes) {
+        const empleadoId = parseIdQuery(req.query.empleadoId);
+        const mes = req.query.mes;
+        if (!empleadoId || typeof mes !== "string" || !mes) {
           return res.status(400).json({ error: "empleadoId y mes son requeridos" });
         }
-        const descuentos = await nomina.calcularDescuentosMes(
-          parseInt(empleadoId as string, 10),
-          mes as string
-        );
+        const descuentos = await nomina.calcularDescuentosMes(empleadoId, mes);
         res.json(descuentos);
       } catch (error) {
-        res.status(500).json({ error: "Error al calcular descuentos" });
+        responderError(res, error, "Error al calcular descuentos");
       }
     }
   );

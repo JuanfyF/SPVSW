@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatearMoneda, formatearNotasRelease } from "./utils";
+import { formatearMoneda, formatearNotasRelease, formatearFecha, formatearHora } from "./utils";
 
 describe("formatearMoneda", () => {
   it("formatea cero", () => {
@@ -94,5 +94,35 @@ describe("formatearNotasRelease", () => {
 
   it("texto sin formato se conserva tal cual", () => {
     expect(formatearNotasRelease("Solo texto plano.")).toBe("Solo texto plano.");
+  });
+});
+
+describe("formatearFecha", () => {
+  it("usa el día LOCAL (no el UTC de toISOString)", () => {
+    // 2026-01-01 20:00 en Ecuador (UTC-5) es 2026-01-02 01:00 UTC:
+    // formatearFecha debe devolver 2026-01-01.
+    expect(formatearFecha(new Date(2026, 0, 1, 20, 0))).toBe("2026-01-01");
+  });
+
+  it("cero-pads mes y día", () => {
+    expect(formatearFecha(new Date(2026, 2, 5, 12, 0))).toBe("2026-03-05");
+  });
+
+  it("cambia de año correctamente", () => {
+    expect(formatearFecha(new Date(2025, 11, 31, 23, 59))).toBe("2025-12-31");
+  });
+});
+
+describe("formatearHora", () => {
+  it("cero-pads horas y minutos", () => {
+    expect(formatearHora(new Date(2026, 0, 1, 9, 5))).toBe("09:05");
+  });
+
+  it("formato 24h", () => {
+    expect(formatearHora(new Date(2026, 0, 1, 23, 45))).toBe("23:45");
+  });
+
+  it("medianoche", () => {
+    expect(formatearHora(new Date(2026, 0, 1, 0, 0))).toBe("00:00");
   });
 });

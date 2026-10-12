@@ -20,6 +20,30 @@ import { crearMenuPrincipal, setVentanaPrincipal } from "./menu";
 import { setupAutoUpdater } from "./updater";
 import { initContext, setMainWindow } from "./handlers/context";
 
+// ─── Single-instance lock (D3) ─────────────────────────
+// Dos copias = dos servidores locales apuntando a la MISMA SQLite →
+// bloqueos y riesgo de corrupción. La segunda instancia solo enfoca
+// la ventana existente.
+const tieneInstanciaPrincipal = app.requestSingleInstanceLock();
+if (!tieneInstanciaPrincipal) {
+  app.quit();
+}
+app.on("second-instance", () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
+// Errores no capturados: registrarlos sin tumbar el proceso (POS debe
+// seguir operando; un crash total pierde la venta en curso).
+process.on("uncaughtException", (err) => {
+  console.error("Excepción no capturada:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("Promesa rechazada sin manejar:", reason);
+});
+
 // Desactivar aceleración de hardware y GPU
 process.env.ELECTRON_DISABLE_GPU = "1";
 app.disableHardwareAcceleration();
@@ -66,6 +90,7 @@ import { registrarAuditoriaHandlers } from "./handlers/auditoria";
 
 let mainWindow: BrowserWindow | null = null;
 let db: ReturnType<typeof createDbWithSqlite>["db"] | null = null;
+let servidorLocal: ReturnType<typeof startLocalServer> | null = null;
 
 function registrarHandlers() {
   registrarAuthHandlers();
@@ -143,14 +168,33 @@ async function crearVentanaPrincipal() {
   setVentanaPrincipal(mainWindow);
   setMainWindow(mainWindow);
 
-  if (process.env.NODE_ENV === "development") {
-    await mainWindow.loadURL("http://localhost:5173");
-  } else {
-    await mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+  // La ventana destruida no debe quedar referenciada por el menú/contexto
+  // (dialogs con parent destruido → crash en algunas plataformas).
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+    setVentanaPrincipal(null);
+    setMainWindow(null);
+  });
+
+  try {
+    if (process.env.NODE_ENV === "development") {
+      await mainWindow.loadURL("http://localhost:5173");
+    } else {
+      await mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
+    }
+  } catch (err) {
+    // Ventana en blanco silenciosa: al menos diagnosticar + avisar.
+    console.error("Error al cargar la interfaz:", err);
+    await dialog.showErrorBox(
+      "Error al cargar",
+      "No se pudo cargar la interfaz de la aplicación. Reinicie el programa."
+    );
   }
 }
 
 app.whenReady().then(async () => {
+  if (!tieneInstanciaPrincipal) return;
+
   const dbPath = path.join(app.getPath("userData"), "pos.sqlite");
 
   const { db: dbInstance } = createDbWithSqlite(dbPath);
@@ -231,7 +275,20 @@ app.whenReady().then(async () => {
 
   registrarHandlers();
   crearMenuPrincipal();
-  startLocalServer({ port: 3000, db });
+
+  // Servidor local para pasteleras (mobile). Si el puerto está ocupado,
+  // avisar al usuario: sin esto solo queda un console.error invisible.
+  servidorLocal = startLocalServer({ port: 3000, db });
+  servidorLocal.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EADDRINUSE") {
+      dialog.showErrorBox(
+        "Puerto 3000 en uso",
+        "El servidor local para los teléfonos de las pasteleras no pudo iniciarse " +
+          "porque el puerto 3000 ya está ocupado por otro programa.\n\n" +
+          "El escritorio seguirá funcionando, pero el móvil no podrá conectarse."
+      );
+    }
+  });
 
   await crearVentanaPrincipal();
 
@@ -240,6 +297,21 @@ app.whenReady().then(async () => {
   }
 });
 
+// El servidor debe cerrarse al salir: el puerto queda retenido si no.
+app.on("before-quit", () => {
+  servidorLocal?.close();
+  servidorLocal = null;
+});
+
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
+});
+
+// Crash del proceso de render: registrar el motivo y recargar (la sesión
+// de escritorio vive en el main process, no se pierde).
+app.on("render-process-gone", (_event, _webContents, details) => {
+  console.error("Proceso de renderizado terminado:", details.reason);
+  if (details.reason !== "clean-exit" && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.reload();
+  }
 });

@@ -1195,7 +1195,7 @@ export interface DatosCierresHistorial {
   fechaFin: string;
   cierres: Array<{
     fechaApertura: string;
-    cajeroNombre: string;
+    cajeroNombre: string | null;
     ventasEfectivo: number;
     ventasTransferencia: number;
     pedidosEfectivo: number;
@@ -1203,10 +1203,10 @@ export interface DatosCierresHistorial {
     gastosCaja: number;
     adelantosEfectivo: number;
     adelantosTransferencia: number;
-    devolucionesAnticipoEfectivo?: number;
+    devolucionesAnticipoEfectivo?: number | null;
     efectivoEsperado: number;
-    efectivoContado?: number;
-    diferenciaEfectivo?: number;
+    efectivoContado?: number | null;
+    diferenciaEfectivo?: number | null;
     tieneDiferenciaStock: boolean;
     estadoRevision: string;
   }>;
@@ -1215,7 +1215,7 @@ export interface DatosCierresHistorial {
     pedidosEfectivo: number; pedidosTransferencia: number;
     gastosCaja: number;
     adelantosEfectivo: number; adelantosTransferencia: number;
-    devolucionesAnticipoEfectivo?: number;
+    devolucionesAnticipoEfectivo?: number | null;
     efectivoEsperado: number; efectivoContado: number; diferenciaEfectivo: number;
   };
 }

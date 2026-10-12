@@ -15,28 +15,10 @@ import {
 } from "@pos/shared";
 import { Search } from "lucide-react";
 
-interface ResumenDiario {
-  fecha: string;
-  ventas: { efectivo: number; transferencia: number; total: number };
-  pedidos: { efectivo: number; transferencia: number; total: number };
-  gastos: {
-    caja: number; pedidos: number; total: number;
-    porCategoria: Array<{
-      categoriaId: number;
-      categoriaNombre: string;
-      total: number;
-      cantidad: number;
-    }>;
-  };
-  adelantos: { efectivo: number; transferencia: number; total: number };
-  devoluciones: { efectivo: number; transferencia: number; total: number };
-  multas: number;
-  consolidado: {
-    ingresosBrutos: number;
-    egresosTotales: number;
-    ingresoNeto: number;
-  };
-}
+// Tipos derivados del contrato window.pos (se mantienen sincronizados
+// con el preload/IPC sin duplicar shapes).
+type ResumenDiario = Awaited<ReturnType<typeof window.pos.reportes.reporteDiario>>;
+type ResumenRango = Awaited<ReturnType<typeof window.pos.reportes.reportePorFechas>>;
 
 interface PedidoPendiente {
   id: number;
@@ -66,10 +48,10 @@ export default function Reportes() {
     formatearFecha(new Date())
   );
   const [resumenDiario, setResumenDiario] = useState<ResumenDiario | null>(null);
-  const [resumenRango, setResumenRango] = useState<ResumenDiario | null>(null);
+  const [resumenRango, setResumenRango] = useState<ResumenRango | null>(null);
   const [pedidosPendientes, setPedidosPendientes] = useState<PedidoPendiente[]>([]);
   const [productosMasVendidos, setProductosMasVendidos] = useState<ProductoMasVendido[]>([]);
-  const [cierres, setCierres] = useState<any>(null);
+  const [cierres, setCierres] = useState<Awaited<ReturnType<typeof window.pos.reportes.listarCierresPorRango>> | null>(null);
   const [filtroCajero, setFiltroCajero] = useState<string>("todos");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -158,12 +140,12 @@ export default function Reportes() {
         ...cierres,
         cierres: filtroCajero === "todos"
           ? cierres.cierres
-          : cierres.cierres.filter((c: any) => c.cajeroNombre === filtroCajero),
+          : cierres.cierres.filter((c) => c.cajeroNombre === filtroCajero),
       }
     : null;
 
-  const cajerosUnicos = cierres
-    ? [...new Set(cierres.cierres.map((c: any) => c.cajeroNombre).filter(Boolean))]
+  const cajerosUnicos: string[] = cierres
+    ? [...new Set(cierres.cierres.map((c) => c.cajeroNombre).filter((n): n is string => n !== null))]
     : [];
 
   const descargarCsv = (contenido: string, nombreArchivo: string) => {

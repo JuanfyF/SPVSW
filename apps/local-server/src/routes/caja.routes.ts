@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { crearServicioCaja } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
 import { logAuditoriaLS } from "../middleware/auditoria";
+import { responderError, parseIdQuery } from "../middleware/errores";
 
 /**
  * Rutas de caja para el servidor local.
@@ -20,7 +21,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         const sesion = await caja.obtenerSesionAbierta(usuario.usuarioId);
         res.json({ sesion });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener sesión" });
+        responderError(res, error, "Error al obtener sesión");
       }
     }
   );
@@ -39,8 +40,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         logAuditoriaLS("caja_abierta", usuario.usuarioId, { sesionCajaId: sesion?.id });
         res.json({ sesion });
       } catch (error) {
-        console.error("Error al abrir caja:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al abrir caja" });
+        responderError(res, error, "Error al abrir caja", "Error al abrir caja");
       }
     }
   );
@@ -52,7 +52,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
     async (req: Request, res: Response) => {
       try {
         const usuario = (req as any).usuario;
-        const { sesionCajaId } = req.body;
+        const sesionCajaId = req.body.sesionCajaId;
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
@@ -82,8 +82,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         });
         res.json({ cierre });
       } catch (error) {
-        console.error("Error al cerrar caja:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al cerrar caja" });
+        responderError(res, error, "Error al cerrar caja", "Error al cerrar caja");
       }
     }
   );
@@ -94,16 +93,14 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
     requerirRol("propietario", "cajero"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
-        const efectivo = await caja.calcularEfectivoEsperado(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const efectivo = await caja.calcularEfectivoEsperado(sesionCajaId);
         res.json({ efectivoEsperado: efectivo });
       } catch (error) {
-        res.status(500).json({ error: "Error al calcular efectivo esperado" });
+        responderError(res, error, "Error al calcular efectivo esperado");
       }
     }
   );
@@ -114,16 +111,14 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
     requerirRol("propietario", "cajero"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
-        const resumen = await caja.obtenerResumenVentas(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const resumen = await caja.obtenerResumenVentas(sesionCajaId);
         res.json(resumen);
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener resumen" });
+        responderError(res, error, "Error al obtener resumen");
       }
     }
   );
@@ -134,16 +129,14 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
     requerirRol("propietario", "cajero"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
-        const resumen = await caja.obtenerResumenPedidos(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const resumen = await caja.obtenerResumenPedidos(sesionCajaId);
         res.json(resumen);
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener resumen" });
+        responderError(res, error, "Error al obtener resumen");
       }
     }
   );
@@ -155,7 +148,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
     async (req: Request, res: Response) => {
       try {
         const usuario = (req as any).usuario;
-        const { cierreCajaId } = req.body;
+        const cierreCajaId = req.body.cierreCajaId;
         if (!cierreCajaId) {
           return res.status(400).json({ error: "cierreCajaId es requerido" });
         }
@@ -163,8 +156,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         logAuditoriaLS("caja_revisada", usuario.usuarioId, { cierreCajaId });
         res.json({ mensaje: "Cierre marcado como revisado" });
       } catch (error) {
-        console.error("Error al marcar revisado:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al marcar revisado" });
+        responderError(res, error, "Error al marcar revisado", "Error al marcar revisado");
       }
     }
   );
@@ -176,7 +168,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
     async (req: Request, res: Response) => {
       try {
         const usuario = (req as any).usuario;
-        const { sesionCajaId } = req.body;
+        const sesionCajaId = req.body.sesionCajaId;
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
@@ -184,8 +176,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         logAuditoriaLS("caja_forzar_cierre", usuario.usuarioId, { sesionCajaId });
         res.json({ exito: true });
       } catch (error) {
-        console.error("Error al forzar cierre:", error instanceof Error ? error.message : "Error desconocido");
-        res.status(500).json({ error: "Error al forzar cierre" });
+        responderError(res, error, "Error al forzar cierre", "Error al forzar cierre");
       }
     }
   );

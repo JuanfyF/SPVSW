@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { crearServicioStock } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
 import { logAuditoriaLS } from "../middleware/auditoria";
+import { responderError, parseIdQuery, parseNumeroQuery } from "../middleware/errores";
 
 /**
  * Rutas de stock para el servidor local.
@@ -21,17 +22,15 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
     requerirRol("propietario", "cajero", "pastelera"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
 
-        const stockData = await stock.obtenerStockPorSesion(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const stockData = await stock.obtenerStockPorSesion(sesionCajaId);
         res.json({ stock: stockData });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener stock" });
+        responderError(res, error, "Error al obtener stock");
       }
     }
   );
@@ -42,17 +41,15 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
     requerirRol("propietario", "cajero", "pastelera"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
 
-        const mermasData = await stock.listarMermasPorSesion(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const mermasData = await stock.listarMermasPorSesion(sesionCajaId);
         res.json({ mermas: mermasData });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener mermas" });
+        responderError(res, error, "Error al obtener mermas");
       }
     }
   );
@@ -63,17 +60,15 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
     requerirRol("propietario", "cajero", "pastelera"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
 
-        const cortesiasData = await stock.listarCortesiasPorSesion(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const cortesiasData = await stock.listarCortesiasPorSesion(sesionCajaId);
         res.json({ cortesias: cortesiasData });
       } catch (error) {
-        res.status(500).json({ error: "Error al obtener cortesías" });
+        responderError(res, error, "Error al obtener cortesías");
       }
     }
   );
@@ -104,7 +99,7 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
 
         res.json({ merma });
       } catch (error) {
-        res.status(500).json({ error: "Error al registrar merma" });
+        responderError(res, error, "Error al registrar merma");
       }
     }
   );
@@ -137,7 +132,7 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
 
         res.json({ cortesia });
       } catch (error) {
-        res.status(500).json({ error: "Error al registrar cortesía" });
+        responderError(res, error, "Error al registrar cortesía");
       }
     }
   );
@@ -167,7 +162,7 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
 
         res.json({ corte });
       } catch (error) {
-        res.status(500).json({ error: "Error al registrar corte" });
+        responderError(res, error, "Error al registrar corte");
       }
     }
   );
@@ -195,7 +190,7 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
 
         res.json({ stock: stockActualizado });
       } catch (error) {
-        res.status(500).json({ error: "Error al registrar reposición" });
+        responderError(res, error, "Error al registrar reposición");
       }
     }
   );
@@ -214,21 +209,24 @@ export function stockAdminRoutes(
     requerirRol("propietario", "cajero", "pastelera"),
     async (req: Request, res: Response) => {
       try {
-        const { productoId, sesionCajaId, unidad, cantidad } = req.query;
-        if (!productoId || !sesionCajaId || !unidad || !cantidad) {
+        const productoId = parseIdQuery(req.query.productoId);
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
+        const unidad = req.query.unidad;
+        const cantidad = parseNumeroQuery(req.query.cantidad);
+        if (!productoId || !sesionCajaId || !unidad || cantidad === null) {
           return res.status(400).json({ error: "Faltan parámetros requeridos" });
         }
 
         const resultado = await stock.verificarDisponibilidad(
-          parseInt(productoId as string, 10),
-          parseInt(sesionCajaId as string, 10),
+          productoId,
+          sesionCajaId,
           unidad as "entero" | "porcion",
-          parseFloat(cantidad as string)
+          cantidad
         );
 
         res.json(resultado);
       } catch (error) {
-        res.status(500).json({ error: "Error al verificar disponibilidad" });
+        responderError(res, error, "Error al verificar disponibilidad");
       }
     }
   );
@@ -238,18 +236,16 @@ export function stockAdminRoutes(
     requerirRol("propietario", "cajero", "pastelera"),
     async (req: Request, res: Response) => {
       try {
-        const { sesionCajaId } = req.query;
+        const sesionCajaId = parseIdQuery(req.query.sesionCajaId);
         if (!sesionCajaId) {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
 
-        const resultado = await stock.calcularVendidoLote(
-          parseInt(sesionCajaId as string, 10)
-        );
+        const resultado = await stock.calcularVendidoLote(sesionCajaId);
 
         res.json({ vendido: resultado });
       } catch (error) {
-        res.status(500).json({ error: "Error al calcular vendido" });
+        responderError(res, error, "Error al calcular vendido");
       }
     }
   );

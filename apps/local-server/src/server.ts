@@ -29,6 +29,7 @@ import {
   logAuditoriaLS,
   registrarAuditoriaLocalServer,
 } from "./middleware/auditoria";
+import { esErrorValidacion } from "./middleware/errores";
 
 /**
  * IMPORTANTE (AGENT.md 5.1 — configuración de seguridad):
@@ -54,22 +55,14 @@ const recoveryListRate = crearRateLimiter();
 
 export function startLocalServer(opciones: OpcionesServidor) {
   const app = express();
-  app.use(express.json({ limit: "1mb" }));
 
   registrarAuditoriaLocalServer(opciones.db);
 
-  // Security headers (OWASP A05)
-  app.use((_req, res, next) => {
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("X-Frame-Options", "DENY");
-    res.setHeader("X-XSS-Protection", "1; mode=block");
-    res.setHeader("Content-Security-Policy", "default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:");
-    next();
-  });
-
-  // CORS restringido: solo localhost y rangos LAN privados
-  app.use((_req, res, next) => {
-    const origin = _req.headers.origin || "";
+  // CORS restringido: solo localhost y rangos LAN privados.
+  // VA ANTES del body parser para que las respuestas de error de parseo
+  // (JSON malformado) también lleven Access-Control-Allow-Origin.
+  app.use((req, res, next) => {
+    const origin = req.headers.origin || "";
     const permitido =
       origin === "http://localhost:5173" ||
       origin === "http://127.0.0.1:5173" ||
@@ -77,10 +70,24 @@ export function startLocalServer(opciones: OpcionesServidor) {
 
     if (permitido || !origin) {
       res.header("Access-Control-Allow-Origin", origin || "http://localhost:5173");
+      // Cache con múltiples orígenes: variar por Origin evita servir la
+      // respuesta CORS equivocada desde un proxy/caché compartido.
+      res.header("Vary", "Origin");
     }
     res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
     res.header("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-    if (_req.method === "OPTIONS") return res.sendStatus(204);
+    if (req.method === "OPTIONS") return res.sendStatus(204);
+    next();
+  });
+
+  app.use(express.json({ limit: "1mb" }));
+
+  // Security headers (OWASP A05)
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Content-Security-Policy", "default-src 'self'; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:");
     next();
   });
 
@@ -121,10 +128,16 @@ export function startLocalServer(opciones: OpcionesServidor) {
         });
       }
 
-      // Filtrar por rol si se especifica (AGENT.md 5.1 — defensa en profundidad)
+      // Filtrar por rol si se especifica (AGENT.md 5.1 — defensa en profundidad).
+      // Mismo 401 que PIN incorrecto: un 403 aquí sería un oráculo que
+      // revela "el PIN es válido pero de otro rol".
       if (rol && usuario.rol !== rol) {
-        return res.status(403).json({ error: "PIN no corresponde al rol solicitado" });
+        logAuditoriaLS("login_fallido", undefined, { motivo: "rol_mismatch", ip });
+        return res.status(401).json({ error: "PIN incorrecto" });
       }
+
+      // Login válido: no consume la cuota de intentos
+      rateLimit.exito(ip);
 
       const token = crearSesion({
         usuarioId: usuario.id,
@@ -139,6 +152,10 @@ export function startLocalServer(opciones: OpcionesServidor) {
 
       res.json({ token, usuario });
     } catch (error) {
+      if (esErrorValidacion(error)) {
+        return res.status(400).json({ error: "PIN inválido" });
+      }
+      console.error("Error en login:", error instanceof Error ? error.message : error);
       res.status(500).json({ error: "Error al iniciar sesión" });
     }
   });
@@ -194,7 +211,7 @@ export function startLocalServer(opciones: OpcionesServidor) {
       const usuariosService = crearServicioUsuarios(opciones.db);
       const todos = await usuariosService.listar();
       const pasteleras = todos
-        .filter((u: any) => u.rol === "pastelera")
+        .filter((u: any) => u.rol === "pastelera" && u.activo)
         .map((u: any) => ({ id: u.id, nombre: u.nombre, rol: u.rol }));
       res.json({ usuarios: pasteleras });
     } catch (error) {
@@ -204,10 +221,12 @@ export function startLocalServer(opciones: OpcionesServidor) {
 
   // ─── Listado público para recuperación de PIN (solo pasteleras) ─
   // Espejo de IPC usuarios:listarPublico — la pantalla de login móvil
-  // lo pide ANTES de autenticarse.
-  app.get("/auth/usuarios-recuperacion", async (_req, res) => {
+  // lo pide ANTES de autenticarse. Rate limit por IP (no global): una
+  // sola IP agotando la cuota no debe bloquear a las demás.
+  app.get("/auth/usuarios-recuperacion", async (req, res) => {
     try {
-      const { permitido } = recoveryListRate.verificar("pin-recovery");
+      const ip = req.ip || req.socket.remoteAddress || "unknown";
+      const { permitido } = recoveryListRate.verificar(ip);
       if (!permitido) {
         return res.status(429).json({ error: "Demasiadas solicitudes. Espere 15 minutos." });
       }
@@ -244,18 +263,27 @@ export function startLocalServer(opciones: OpcionesServidor) {
 
       res.json(resultado);
     } catch (error) {
-      // ZodError (usuarioId inválido) → 400; resto (no existe / rol no
-      // permitido / inactivo) → mismo mensaje genérico, sin enumeración.
-      const esErrorValidacion =
-        typeof error === "object" && error !== null && "issues" in error;
-      if (esErrorValidacion) {
+      // ZodError (usuarioId inválido) → 400
+      if (esErrorValidacion(error)) {
         return res.status(400).json({ error: "usuarioId inválido" });
       }
-      logAuditoriaLS("permiso_denegado", undefined, {
-        operacion: "reset_pin_publico",
+      // Error de dominio del core (no existe / rol no permitido / inactivo):
+      // mismo mensaje genérico, sin enumeración.
+      if (error instanceof Error && error.message === "No se puede restablecer este PIN") {
+        logAuditoriaLS("permiso_denegado", undefined, {
+          operacion: "reset_pin_publico",
+          ip,
+        });
+        return res.status(403).json({ error: "No se puede restablecer este PIN" });
+      }
+      // Error de DB u otro: NO es un "permiso denegado" — auditoría propia
+      // y 500 sin fugar el error interno.
+      console.error("Error en restablecer-pin:", error instanceof Error ? error.message : error);
+      logAuditoriaLS("pin_reset_error", undefined, {
         ip,
+        detalle: error instanceof Error ? error.message.slice(0, 200) : "desconocido",
       });
-      res.status(403).json({ error: "No se puede restablecer este PIN" });
+      res.status(500).json({ error: "No se pudo restablecer el PIN. Intente de nuevo." });
     }
   });
 
@@ -271,6 +299,13 @@ export function startLocalServer(opciones: OpcionesServidor) {
   // ─── Caja: propietario y cajero ───────────────────────
   app.use("/api/caja", cajaRoutes(servicios.caja));
 
+  // ─── API desconocida → 404 JSON (NO SPA fallback) ────
+  // Sin esto, una ruta /api o /auth mal escrita cae en el fallback del
+  // SPA y el cliente se queda colgado esperando respuesta.
+  app.use(["/api", "/auth"], (_req, res) => {
+    res.status(404).json({ error: "Ruta no encontrada" });
+  });
+
   // ─── SPA estática para mobile (producción) ─────────────
   const distPath = path.resolve(__dirname, "../dist");
   app.use(express.static(distPath));
@@ -280,11 +315,27 @@ export function startLocalServer(opciones: OpcionesServidor) {
     res.redirect(302, `/#${req.path}`);
   });
 
-  // SPA fallback
-  app.get("*", (req, res) => {
-    if (!req.path.startsWith("/api") && !req.path.startsWith("/auth")) {
-      res.sendFile(path.join(distPath, "index.html"));
+  // SPA fallback (solo rutas de UI)
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(distPath, "index.html"), (err) => {
+      if (err) {
+        res.status(404).send("No encontrado");
+      }
+    });
+  });
+
+  // ─── Middleware de error global ──────────────────────
+  // JSON malformado → 400 JSON (sin stack trace ni HTML); el resto → 500
+  // genérico. Sin esto, express devuelve un HTML con stack trace en LAN.
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err?.type === "entity.parse.failed") {
+      return res.status(400).json({ error: "JSON inválido" });
     }
+    if (err?.type === "entity.too.large") {
+      return res.status(413).json({ error: "Cuerpo demasiado grande" });
+    }
+    console.error("Error no controlado en local-server:", err?.message ?? err);
+    res.status(500).json({ error: "Error interno del servidor" });
   });
 
   // ─── Escuchar en todas las interfaces (0.0.0.0) ───────

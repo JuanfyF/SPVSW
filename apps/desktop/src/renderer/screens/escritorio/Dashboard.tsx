@@ -86,9 +86,9 @@ export default function Dashboard() {
   }>>([]);
   const [cierresPendientes, setCierresPendientes] = useState<Array<{
     id: number;
-    cajeroNombre: string;
+    cajeroNombre: string | null;
     fechaApertura: string;
-    diferenciaEfectivo: number;
+    diferenciaEfectivo: number | null;
     tieneDiferenciaStock: boolean;
   }>>([]);
   const [resumenNomina, setResumenNomina] = useState<{
@@ -528,15 +528,15 @@ export default function Dashboard() {
                 {cierresPendientes.map((c) => (
                   <div key={c.id} className="flex justify-between items-center p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/50">
                     <div>
-                      <p className="font-medium text-on-surface">{c.cajeroNombre}</p>
+                      <p className="font-medium text-on-surface">{c.cajeroNombre ?? "—"}</p>
                       <p className="text-caption text-on-surface-variant">
                         {c.fechaApertura}
                         {c.tieneDiferenciaStock && " • Diferencia de stock"}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className={`font-bold tabular-nums ${c.diferenciaEfectivo !== 0 ? "text-error" : "text-on-surface-variant"}`}>
-                        {formatearMoneda(Math.abs(c.diferenciaEfectivo))}
+                      <span className={`font-bold tabular-nums ${(c.diferenciaEfectivo ?? 0) !== 0 ? "text-error" : "text-on-surface-variant"}`}>
+                        {formatearMoneda(Math.abs(c.diferenciaEfectivo ?? 0))}
                       </span>
                       <button
                         onClick={() => navigate("/reportes")}

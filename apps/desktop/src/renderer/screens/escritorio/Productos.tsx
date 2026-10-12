@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Cake } from "lucide-react";
-import type { Producto } from "@pos/shared";
+import type { Producto, TipoVenta } from "@pos/shared";
 
 interface FormularioProducto {
   nombre: string;
   categoria: string;
-  tipoVenta: string;
+  tipoVenta: TipoVenta;
   precioEntero: string;
   precioPorcion: string;
   artesanal: boolean;
@@ -97,28 +97,26 @@ export default function Productos() {
       setModalError("La categoría no puede tener más de 100 caracteres");
       return;
     }
-    if (formulario.tipoVenta !== "personalizado") {
-      if (formulario.tipoVenta === "entero" || formulario.tipoVenta === "ambos") {
-        if (!formulario.precioEntero) {
-          setModalError("El precio entero es requerido");
-          return;
-        }
-        const pe = parseFloat(formulario.precioEntero);
-        if (isNaN(pe) || pe <= 0) {
-          setModalError("El precio entero debe ser un número positivo");
-          return;
-        }
+    if (formulario.tipoVenta === "entero" || formulario.tipoVenta === "ambos") {
+      if (!formulario.precioEntero) {
+        setModalError("El precio entero es requerido");
+        return;
       }
-      if (formulario.tipoVenta === "porcion" || formulario.tipoVenta === "ambos") {
-        if (!formulario.precioPorcion) {
-          setModalError("El precio porción es requerido");
-          return;
-        }
-        const pp = parseFloat(formulario.precioPorcion);
-        if (isNaN(pp) || pp <= 0) {
-          setModalError("El precio porción debe ser un número positivo");
-          return;
-        }
+      const pe = parseFloat(formulario.precioEntero);
+      if (isNaN(pe) || pe <= 0) {
+        setModalError("El precio entero debe ser un número positivo");
+        return;
+      }
+    }
+    if (formulario.tipoVenta === "porcion" || formulario.tipoVenta === "ambos") {
+      if (!formulario.precioPorcion) {
+        setModalError("El precio porción es requerido");
+        return;
+      }
+      const pp = parseFloat(formulario.precioPorcion);
+      if (isNaN(pp) || pp <= 0) {
+        setModalError("El precio porción debe ser un número positivo");
+        return;
       }
     }
 
@@ -365,11 +363,11 @@ export default function Productos() {
               <div>
                 <label className="block text-sm text-on-surface-variant mb-1">Tipo de venta *</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {[
+                  {([
                     { value: "entero", label: "Entero" },
                     { value: "porcion", label: "Porción" },
                     { value: "ambos", label: "Ambos" },
-                  ].map((opcion) => (
+                  ] as const).map((opcion) => (
                     <button
                       key={opcion.value}
                       onClick={() => setFormulario({ ...formulario, tipoVenta: opcion.value })}

@@ -16,6 +16,7 @@ import {
   eq,
   and,
   notInArray,
+  inArray,
   gte,
   lte,
 } from "@pos/db";
@@ -396,6 +397,31 @@ export function crearServicioPedidos(db: PosDatabase) {
         .from(pedidoDetalle)
         .leftJoin(productos, eq(pedidoDetalle.productoId, productos.id))
         .where(eq(pedidoDetalle.pedidoId, pedidoId));
+    },
+
+    /**
+     * Detalles de VARIOS pedidos en una sola query (inArray).
+     * Evita el N+1 de obtenerDetalle en listados (p.ej. vista de
+     * producción móvil, que arma un pedido a la vez).
+     */
+    async listarDetallesLote(pedidoIds: number[]) {
+      const ids = pedidoIds.filter((id) => Number.isSafeInteger(id) && id > 0);
+      if (ids.length === 0) return [];
+      return db
+        .select({
+          id: pedidoDetalle.id,
+          pedidoId: pedidoDetalle.pedidoId,
+          productoId: pedidoDetalle.productoId,
+          descripcionPersonalizada: pedidoDetalle.descripcionPersonalizada,
+          unidad: pedidoDetalle.unidad,
+          cantidad: pedidoDetalle.cantidad,
+          precioUnitario: pedidoDetalle.precioUnitario,
+          subtotal: pedidoDetalle.subtotal,
+          nombre: productos.nombre,
+        })
+        .from(pedidoDetalle)
+        .leftJoin(productos, eq(pedidoDetalle.productoId, productos.id))
+        .where(inArray(pedidoDetalle.pedidoId, ids));
     },
 
     /**

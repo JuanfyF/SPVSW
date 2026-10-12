@@ -111,7 +111,7 @@ export default function VentaMostrador() {
   const tieneStock = (producto: Producto): boolean => {
     if (!sesionCaja || Object.keys(stockDisponible).length === 0) return true;
     if (producto.tipoVenta === "entero") return getDisponible(producto.id, "entero") > 0;
-    if (producto.tipoVenta === "porcion" || producto.tipoVenta === "porcion_llevar") return getDisponible(producto.id, "porcion") > 0;
+    if (producto.tipoVenta === "porcion") return getDisponible(producto.id, "porcion") > 0;
     return getDisponible(producto.id, "entero") > 0 || getDisponible(producto.id, "porcion") > 0;
   };
 

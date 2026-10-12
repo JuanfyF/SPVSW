@@ -2,7 +2,7 @@ import { Menu, dialog, app } from "electron";
 
 let ventanaPrincipal: Electron.BrowserWindow | null = null;
 
-export function setVentanaPrincipal(win: Electron.BrowserWindow) {
+export function setVentanaPrincipal(win: Electron.BrowserWindow | null) {
   ventanaPrincipal = win;
 }
 
@@ -12,6 +12,18 @@ export function crearMenuPrincipal() {
       label: "Archivo",
       submenu: [
         { role: "quit", label: "Salir" },
+      ],
+    },
+    {
+      label: "Editar",
+      submenu: [
+        { role: "undo", label: "Deshacer" },
+        { role: "redo", label: "Rehacer" },
+        { type: "separator" },
+        { role: "cut", label: "Cortar" },
+        { role: "copy", label: "Copiar" },
+        { role: "paste", label: "Pegar" },
+        { role: "selectAll", label: "Seleccionar todo" },
       ],
     },
     {
@@ -38,7 +50,7 @@ export function crearMenuPrincipal() {
       ],
     },
     {
-      label: "Help",
+      label: "Ayuda",
       submenu: [
         {
           label: "Acerca de Sweet Bakery",
@@ -58,7 +70,7 @@ export function crearMenuPrincipal() {
 }
 
 function mostrarAcercaDe() {
-  dialog.showMessageBox(ventanaPrincipal!, {
+  dialog.showMessageBox(ventanaPrincipal as Electron.BaseWindow, {
     type: "info",
     title: "Acerca de Sweet Bakery",
     message: "Sweet Bakery POS",
@@ -75,14 +87,17 @@ function mostrarAcercaDe() {
 }
 
 function mostrarAtajos() {
-  dialog.showMessageBox(ventanaPrincipal!, {
+  dialog.showMessageBox(ventanaPrincipal as Electron.BaseWindow, {
     type: "info",
     title: "Atajos de teclado",
     message: "Atajos disponibles",
     detail: [
-      "Ctrl+1-9: Navegar entre secciones",
-      "Esc: Cancelar / Cerrar modal",
-      "Enter: Confirmar / Enviar formulario",
+      // Solo atajos implementados en el renderer (no inventar: el diálogo
+      // prometía Ctrl+1-9 que no existía).
+      "Esc: Cerrar modal (donde esté disponible)",
+      "Enter: Enviar el formulario activo",
+      "",
+      "Menú Editar: Deshacer/Rehacer, Cortar/Copiar/Pegar",
       "",
       "Navegación con teclado en la pantalla de PIN:",
       "0-9: Ingresar dígitos del PIN",

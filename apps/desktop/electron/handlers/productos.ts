@@ -23,6 +23,7 @@ export function registrarProductosHandlers() {
       precioEntero: resultado?.precioEntero,
       precioPorcion: resultado?.precioPorcion,
     });
+    ctx.notificarCambio();
     return resultado;
   }, { gestores: true }));
 
@@ -38,6 +39,7 @@ export function registrarProductosHandlers() {
       precioPorcionAntes: antes?.precioPorcion,
       precioPorcionDespues: resultado?.precioPorcion ?? antes?.precioPorcion,
     });
+    ctx.notificarCambio();
     return resultado;
   }, { gestores: true }));
 
@@ -45,6 +47,7 @@ export function registrarProductosHandlers() {
     const antes = await servicios.productos.obtenerPorId(id);
     await servicios.productos.desactivar(id);
     ctx.logAuditoria("producto_desactivado", undefined, { productoId: id, nombre: antes?.nombre });
+    ctx.notificarCambio();
   }, { gestores: true }));
 
   ipcMain.handle("productos:buscar", ctx.safeHandler(async (_event, nombre: string) => {

@@ -2,6 +2,7 @@
  * Tipos para la API expuesta al renderer via contextBridge.
  * Esta interfaz define lo que está disponible en window.pos.
  */
+import type { TipoVenta, Unidad } from "@pos/shared";
 
 export interface PosAPI {
   // ============================================================
@@ -45,7 +46,6 @@ export interface PosAPI {
       id: number;
       nombre: string;
       rol: string;
-      pinHash: string;
       activo: boolean;
       actualizadoEn: string;
     } | null>;
@@ -53,7 +53,6 @@ export interface PosAPI {
       id: number;
       nombre: string;
       rol: string;
-      pinHash: string;
       activo: boolean;
       actualizadoEn: string;
     }>;
@@ -61,7 +60,6 @@ export interface PosAPI {
       id: number;
       nombre: string;
       rol: string;
-      pinHash: string;
       activo: boolean;
       actualizadoEn: string;
     } | null>;
@@ -129,7 +127,7 @@ export interface PosAPI {
       id: number;
       nombre: string;
       categoria: string | null;
-      tipoVenta: string;
+      tipoVenta: TipoVenta;
       precioEntero: number | null;
       precioPorcion: number | null;
       artesanal: boolean;
@@ -140,7 +138,7 @@ export interface PosAPI {
       id: number;
       nombre: string;
       categoria: string | null;
-      tipoVenta: string;
+      tipoVenta: TipoVenta;
       precioEntero: number | null;
       precioPorcion: number | null;
       artesanal: boolean;
@@ -150,7 +148,7 @@ export interface PosAPI {
     crear: (datos: {
       nombre: string;
       categoria?: string | null;
-      tipoVenta: string;
+      tipoVenta: TipoVenta;
       precioEntero?: number | null;
       precioPorcion?: number | null;
       artesanal?: boolean;
@@ -158,7 +156,7 @@ export interface PosAPI {
       id: number;
       nombre: string;
       categoria: string | null;
-      tipoVenta: string;
+      tipoVenta: TipoVenta;
       precioEntero: number | null;
       precioPorcion: number | null;
       artesanal: boolean;
@@ -168,7 +166,7 @@ export interface PosAPI {
     actualizar: (id: number, datos: {
       nombre?: string;
       categoria?: string | null;
-      tipoVenta?: string;
+      tipoVenta?: TipoVenta;
       precioEntero?: number | null;
       precioPorcion?: number | null;
       artesanal?: boolean;
@@ -176,7 +174,7 @@ export interface PosAPI {
       id: number;
       nombre: string;
       categoria: string | null;
-      tipoVenta: string;
+      tipoVenta: TipoVenta;
       precioEntero: number | null;
       precioPorcion: number | null;
       artesanal: boolean;
@@ -188,7 +186,7 @@ export interface PosAPI {
       id: number;
       nombre: string;
       categoria: string | null;
-      tipoVenta: string;
+      tipoVenta: TipoVenta;
       precioEntero: number | null;
       precioPorcion: number | null;
       artesanal: boolean;
@@ -221,7 +219,7 @@ export interface PosAPI {
       revisadoPor?: number | null;
       conteoStock?: Array<{
         productoId: number;
-        unidad: string;
+        unidad: "entero" | "porcion";
         conteoFisico: number;
       }>;
     }) => Promise<{
@@ -266,7 +264,7 @@ export interface PosAPI {
     registrarStock: (datos: {
       productoId: number;
       sesionCajaId: number;
-      unidad?: string;
+      unidad?: "entero" | "porcion";
       fecha: string;
       cantidadInicial: number;
       cantidadAgregada?: number;
@@ -274,7 +272,7 @@ export interface PosAPI {
       id: number;
       productoId: number;
       sesionCajaId: number;
-      unidad: string;
+      unidad: "entero" | "porcion";
       fecha: string;
       cantidadInicial: number;
       cantidadAgregada: number;
@@ -286,12 +284,12 @@ export interface PosAPI {
       productoId: number,
       sesionCajaId: number,
       cantidad: number,
-      unidad?: string
+      unidad?: "entero" | "porcion"
     ) => Promise<{
       id: number;
       productoId: number;
       sesionCajaId: number;
-      unidad: string;
+      unidad: "entero" | "porcion";
       fecha: string;
       cantidadInicial: number;
       cantidadAgregada: number;
@@ -319,7 +317,7 @@ export interface PosAPI {
       productoId: number;
       sesionCajaId: number;
       cantidad: number;
-      unidad: string;
+      unidad: Unidad;
       motivo: string;
       registradoPor: number;
     }) => Promise<{
@@ -328,7 +326,7 @@ export interface PosAPI {
       sesionCajaId: number;
       fechaHora: string;
       cantidad: number;
-      unidad: string;
+      unidad: Unidad;
       motivo: string;
       registradoPor: number;
       actualizadoEn: string;
@@ -337,7 +335,7 @@ export interface PosAPI {
       productoId: number;
       sesionCajaId: number;
       cantidad: number;
-      unidad: string;
+      unidad: Unidad;
       motivo?: string | null;
       cliente?: string | null;
       registradoPor: number;
@@ -347,7 +345,7 @@ export interface PosAPI {
       sesionCajaId: number;
       fechaHora: string;
       cantidad: number;
-      unidad: string;
+      unidad: Unidad;
       motivo: string | null;
       cliente: string | null;
       registradoPor: number;
@@ -357,7 +355,7 @@ export interface PosAPI {
       id: number;
       productoId: number;
       sesionCajaId: number;
-      unidad: string;
+      unidad: "entero" | "porcion";
       fecha: string;
       cantidadInicial: number;
       cantidadAgregada: number;
@@ -365,7 +363,7 @@ export interface PosAPI {
       diferenciaDetectada: number | null;
       actualizadoEn: string;
     }>>;
-    calcularVendido: (productoId: number, sesionCajaId: number, unidad?: string) => Promise<number>;
+    calcularVendido: (productoId: number, sesionCajaId: number, unidad?: Unidad) => Promise<number>;
     calcularVendidoLote: (sesionCajaId: number) => Promise<Record<string, number>>;
     calcularAjusteCortesLote: (sesionCajaId: number) => Promise<Record<string, number>>;
     listarMermasPorSesion: (sesionCajaId: number) => Promise<Array<{
@@ -374,7 +372,7 @@ export interface PosAPI {
       sesionCajaId: number;
       fechaHora: string;
       cantidad: number;
-      unidad: string;
+      unidad: Unidad;
       motivo: string;
       registradoPor: number;
       actualizadoEn: string;
@@ -385,7 +383,7 @@ export interface PosAPI {
       sesionCajaId: number;
       fechaHora: string;
       cantidad: number;
-      unidad: string;
+      unidad: Unidad;
       motivo: string | null;
       cliente: string | null;
       registradoPor: number;
@@ -395,14 +393,14 @@ export interface PosAPI {
       sesionCajaId: number,
       conteoFisicoPorProducto: Array<{
         productoId: number;
-        unidad: string;
+        unidad: "entero" | "porcion";
         conteoFisico: number;
       }>
     ) => Promise<void>;
     verificarDisponibilidad: (
       productoId: number,
       sesionCajaId: number,
-      unidad: "entero" | "porcion",
+      unidad: Unidad,
       cantidadRequerida: number
     ) => Promise<{ suficiente: boolean; disponible: number }>;
   };
@@ -421,7 +419,7 @@ export interface PosAPI {
       clienteNombre?: string | null;
       detalles: Array<{
         productoId: number;
-        unidad: string;
+        unidad: Unidad;
         cantidad: number;
         precioUnitario: number;
         subtotal: number;
@@ -454,7 +452,7 @@ export interface PosAPI {
       id: number;
       ventaId: number;
       productoId: number;
-      unidad: string;
+      unidad: Unidad;
       cantidad: number;
       precioUnitario: number;
       subtotal: number;
@@ -882,7 +880,7 @@ export interface PosAPI {
       nombre: string;
       cargo: string;
       salarioMensual: number;
-      usuarioId?: number;
+      usuarioId?: number | null;
     }) => Promise<{
       id: number;
       usuarioId: number | null;
@@ -904,6 +902,14 @@ export interface PosAPI {
         efectivo: number; transferencia: number; total: number;
         cantidadEfectivo: number; cantidadTransferencia: number; cantidadTotal: number;
       };
+      ventasMostrador: {
+        efectivo: number; transferencia: number; total: number;
+        cantidadEfectivo: number; cantidadTransferencia: number; cantidadTotal: number;
+      };
+      saldosPedidos: {
+        efectivo: number; transferencia: number; total: number;
+        cantidadEfectivo: number; cantidadTransferencia: number; cantidadTotal: number;
+      };
       pedidos: {
         efectivo: number; transferencia: number; total: number;
         cantidadEfectivo: number; cantidadTransferencia: number; cantidadTotal: number;
@@ -916,8 +922,16 @@ export interface PosAPI {
           total: number;
           cantidad: number;
         }>;
+        detalle: Array<{
+          id: number;
+          descripcion: string;
+          monto: number;
+          origen: string;
+          categoriaNombre: string;
+        }>;
       };
       adelantos: { efectivo: number; transferencia: number; total: number };
+      devoluciones: { efectivo: number; transferencia: number; total: number };
       multas: number;
       consolidado: {
         ingresosBrutos: number;
@@ -932,7 +946,14 @@ export interface PosAPI {
       fechaInicio: string;
       fechaFin: string;
       ventas: { efectivo: number; transferencia: number; total: number };
+      pedidos: {
+        efectivo: number; transferencia: number; total: number;
+        cantidadEfectivo: number; cantidadTransferencia: number; cantidadTotal: number;
+      };
       gastos: { caja: number; pedidos: number; total: number };
+      adelantos: { efectivo: number; transferencia: number; total: number };
+      devoluciones: { efectivo: number; transferencia: number; total: number };
+      multas: number;
       consolidado: {
         ingresosBrutos: number;
         egresosTotales: number;
@@ -1043,7 +1064,6 @@ export interface PosAPI {
   onSesionExpirada: (callback: () => void) => () => void;
   onSesionAviso: (callback: () => void) => () => void;
   extenderSesion: () => Promise<void>;
-  onUpdateProgress: (callback: (data: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => () => void;
 }
 
 declare global {

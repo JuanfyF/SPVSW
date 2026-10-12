@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # @pos/db se excluye a propósito: tiene 1 error TS4058 preexistente
+      # en src/client.ts:18 que no bloquea (ver AGENT.md).
+      - name: Typecheck shared
+        run: pnpm --filter @pos/shared typecheck
+
+      - name: Typecheck core
+        run: pnpm --filter @pos/core typecheck
+
+      - name: Typecheck local-server
+        run: pnpm --filter @pos/local-server typecheck
+
+      - name: Typecheck desktop (main + renderer)
+        run: pnpm --filter @pos/desktop typecheck
+
+      - name: Unit tests
+        run: pnpm test

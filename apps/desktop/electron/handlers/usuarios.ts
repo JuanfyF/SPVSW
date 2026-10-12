@@ -41,6 +41,7 @@ export function registrarUsuariosHandlers() {
   ipcMain.handle("usuarios:crear", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.usuarios.crear(datos as any, actorActual());
     ctx.logAuditoria("usuario_creado", undefined, { usuarioId: resultado?.id, nombre: resultado?.nombre, rol: resultado?.rol });
+    ctx.notificarCambio();
     return resultado;
   }, { gestores: true }));
 
@@ -52,6 +53,7 @@ export function registrarUsuariosHandlers() {
       nombre: resultado?.nombre ?? cambios.nombre,
       rol: resultado?.rol ?? cambios.rol,
     });
+    ctx.notificarCambio();
     return resultado;
   }, { gestores: true }));
 
@@ -59,6 +61,7 @@ export function registrarUsuariosHandlers() {
     const usuario = await servicios.usuarios.obtenerPorId(id);
     const resultado = await servicios.usuarios.desactivar(id, actorActual());
     ctx.logAuditoria("usuario_desactivado", undefined, { usuarioId: id, nombre: usuario?.nombre, rol: usuario?.rol });
+    ctx.notificarCambio();
     return resultado;
   }, { gestores: true }));
 
@@ -67,6 +70,8 @@ export function registrarUsuariosHandlers() {
     // con debeCambiarPin) permitido a cualquier rol; cambiar el PIN de
     // OTRO usuario requiere propietario/cajero.
     if (id !== ctx.getUsuarioActual()?.id) ctx.requireGestor();
-    return servicios.usuarios.cambiarPin(id, nuevoPin, actorActual());
+    const resultado = await servicios.usuarios.cambiarPin(id, nuevoPin, actorActual());
+    ctx.notificarCambio();
+    return resultado;
   }, { auth: true }));
 }

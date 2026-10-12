@@ -24,7 +24,7 @@ import type { Producto } from "@pos/shared";
 
 interface StockItem {
   productoId: number;
-  unidad: string;
+  unidad: "entero" | "porcion";
   cantidadInicial: number;
   cantidadAgregada: number;
 }
@@ -400,7 +400,7 @@ export default function CierreCaja() {
 
       const datos: DatosCierreCaja = {
         sesionId: sesionCaja.id,
-        fechaApertura: sesionCaja.fechaApertura,
+        fechaApertura: `${sesionCaja.fecha} ${sesionCaja.horaApertura}`,
         fechaCierre: new Date().toLocaleString("es-EC"),
         cajeroNombre: usuario?.nombre || "N/A",
         ventas: resumen.ventas,

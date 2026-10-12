@@ -1,5 +1,8 @@
 appId: com.sweetbakery.pos
 productName: Sweet Bakery
+# builder ≥26 rechaza "@posdesktop" (el "@" no es seguro en rutas).
+# El nombre de userData NO cambia: sigue derivando de name/@pos/desktop.
+executableName: posdesktop
 directories:
   output: release
   buildResources: build

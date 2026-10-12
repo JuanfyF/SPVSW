@@ -2,7 +2,7 @@
   "version": "6",
   "dialect": "sqlite",
   "id": "da4b515e-eb71-4d75-9039-e6b4d053117d",
-  "prevId": "c9d23fca-8dd4-4267-8039-78c876686a15",
+  "prevId": "5e869493-96e7-4196-92e4-67298b47f793",
   "tables": {
     "adelantos_sueldo": {
       "name": "adelantos_sueldo",
