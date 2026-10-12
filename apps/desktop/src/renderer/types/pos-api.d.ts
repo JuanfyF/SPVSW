@@ -255,8 +255,8 @@ export interface PosAPI {
     } | null>;
     calcularEfectivoEsperado: (sesionCajaId: number) => Promise<number>;
     obtenerTotalDevoluciones: (sesionCajaId: number) => Promise<number>;
-    forzarCierre: (sesionCajaId: number, usuarioId: number) => Promise<{ exito: boolean }>;
-    marcarRevisado: (cierreCajaId: number, usuarioId: number) => Promise<void>;
+    forzarCierre: (sesionCajaId: number) => Promise<{ exito: boolean }>;
+    marcarRevisado: (cierreCajaId: number) => Promise<void>;
   };
 
   // ============================================================
@@ -996,6 +996,27 @@ export interface PosAPI {
         diferenciaEfectivo: number;
       };
     }>;
+  };
+
+  // ============================================================
+  // AUDITORÍA (lectura de audit_log — solo propietario)
+  // ============================================================
+  auditoria: {
+    listar: (filtros: {
+      fechaInicio?: string;
+      fechaFin?: string;
+      evento?: string;
+      usuarioId?: number;
+    }) => Promise<Array<{
+      id: number;
+      evento: string;
+      detalle: string | null;
+      origen: string;
+      createdAt: string;
+      usuarioId: number | null;
+      usuarioNombre: string | null;
+      usuarioRol: string | null;
+    }>>;
   };
 
   // ============================================================

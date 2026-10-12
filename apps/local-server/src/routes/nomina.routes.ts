@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { crearServicioNomina } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
+import { logAuditoriaLS } from "../middleware/auditoria";
 
 /**
  * Rutas de nómina para el servidor local.
@@ -29,7 +30,14 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
     requerirRol("propietario"),
     async (req: Request, res: Response) => {
       try {
+        const usuario = (req as any).usuario;
         const empleado = await nomina.crearEmpleado(req.body);
+        logAuditoriaLS("empleado_creado", usuario.usuarioId, {
+          empleadoId: empleado?.id,
+          nombre: empleado?.nombre,
+          cargo: empleado?.cargo,
+          salarioMensual: empleado?.salarioMensual,
+        });
         res.json({ empleado });
       } catch (error) {
         console.error("Error al crear empleado:", error instanceof Error ? error.message : "Error desconocido");
@@ -69,6 +77,11 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
           ...req.body,
           registradoPor: usuario.usuarioId,
         });
+        logAuditoriaLS("adelanto_registrado", usuario.usuarioId, {
+          adelantoId: adelanto?.id,
+          empleadoId: adelanto?.empleadoId,
+          monto: adelanto?.monto,
+        });
         res.json({ adelanto });
       } catch (error) {
         console.error("Error al registrar adelanto:", error instanceof Error ? error.message : "Error desconocido");
@@ -107,6 +120,12 @@ export function nominaRoutes(nomina: ReturnType<typeof crearServicioNomina>): Ro
         const multa = await nomina.registrarMulta({
           ...req.body,
           registradoPor: usuario.usuarioId,
+        });
+        logAuditoriaLS("multa_registrada", usuario.usuarioId, {
+          multaId: multa?.id,
+          empleadoId: multa?.empleadoId,
+          monto: multa?.monto,
+          motivo: multa?.motivo,
         });
         res.json({ multa });
       } catch (error) {

@@ -3,6 +3,7 @@ import {
   text,
   integer,
   real,
+  index,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
@@ -62,7 +63,9 @@ export const auditLog = sqliteTable("audit_log", {
   detalle: text("detalle"), // JSON adicional
   origen: text("origen").notNull().default("desktop"), // 'desktop' o IP del cliente
   createdAt: text("created_at").notNull().default(sql`(datetime('now'))`),
-});
+}, (table) => ({
+  createdAtIdx: index("audit_log_created_at_idx").on(table.createdAt),
+}));
 
 /* ============================================================
    2. PRODUCTOS

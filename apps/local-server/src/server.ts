@@ -1,6 +1,6 @@
 import path from "path";
 import express from "express";
-import { PosDatabase, auditLog, usuarios as usuariosTable } from "@pos/db";
+import { PosDatabase, usuarios as usuariosTable } from "@pos/db";
 import { eq } from "@pos/db";
 import {
   crearServicioAuth,
@@ -26,6 +26,10 @@ import {
   eliminarSesion,
   requerirRol,
 } from "./middleware/auth";
+import {
+  logAuditoriaLS,
+  registrarAuditoriaLocalServer,
+} from "./middleware/auditoria";
 
 /**
  * IMPORTANTE (AGENT.md 5.1 — configuración de seguridad):
@@ -50,6 +54,8 @@ const resetRateLimit = crearRateLimiter({ maxIntentos: 2, ventanaMs: 60 * 60 * 1
 export function startLocalServer(opciones: OpcionesServidor) {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
+
+  registrarAuditoriaLocalServer(opciones.db);
 
   // Security headers (OWASP A05)
   app.use((_req, res, next) => {
@@ -108,13 +114,7 @@ export function startLocalServer(opciones: OpcionesServidor) {
 
       const usuario = await servicios.auth.login(pin);
       if (!usuario) {
-        try {
-          opciones.db.insert(auditLog).values({
-            evento: "login_fallido",
-            detalle: JSON.stringify({ intentosRestantes: restantes, ip }),
-            origen: "local-server",
-          });
-        } catch { /* audit logging es best-effort */ }
+        logAuditoriaLS("login_fallido", undefined, { intentosRestantes: restantes, ip });
         return res.status(401).json({
           error: "PIN incorrecto",
         });
@@ -131,14 +131,10 @@ export function startLocalServer(opciones: OpcionesServidor) {
         rol: usuario.rol as "propietario" | "cajero" | "pastelera",
       });
 
-      try {
-        opciones.db.insert(auditLog).values({
-          evento: "login_exitoso",
-          usuarioId: usuario.id,
-          detalle: JSON.stringify({ nombre: usuario.nombre, rol: usuario.rol }),
-          origen: "local-server",
-        });
-      } catch { /* audit logging es best-effort */ }
+      logAuditoriaLS("login_exitoso", usuario.id, {
+        nombre: usuario.nombre,
+        rol: usuario.rol,
+      });
 
       res.json({ token, usuario });
     } catch (error) {
@@ -226,14 +222,7 @@ export function startLocalServer(opciones: OpcionesServidor) {
 
       await opciones.db.update(usuariosTable).set({ pinHash }).where(eq(usuariosTable.id, usuarioId));
 
-      try {
-        opciones.db.insert(auditLog).values({
-          evento: "pin_reset_publico",
-          usuarioId,
-          detalle: JSON.stringify({ expiracion }),
-          origen: "local-server",
-        });
-      } catch { /* best-effort */ }
+      logAuditoriaLS("pin_reset_publico", usuarioId, { expiracion, ip });
 
       res.json({ pinTemporal, expiracion });
     } catch (error) {

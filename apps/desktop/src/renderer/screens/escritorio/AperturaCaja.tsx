@@ -86,7 +86,7 @@ export default function AperturaCaja() {
     setLoading(true);
     setError("");
     try {
-      await window.pos.caja.forzarCierre(sesionStale.id, usuario.id);
+      await window.pos.caja.forzarCierre(sesionStale.id);
       setSesionStale(null);
       setError("");
       // Ahora sí puede abrir

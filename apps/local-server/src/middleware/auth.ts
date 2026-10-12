@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { crearServicioAuth } from "@pos/core";
 import { randomUUID } from "crypto";
+import { logAuditoriaLS } from "./auditoria";
 
 /**
  * Middleware de autenticación y control de roles para el servidor local.
@@ -98,6 +99,12 @@ export function requerirRol(...rolesPermitidos: string[]) {
     }
 
     if (!rolesPermitidos.includes(usuario.rol)) {
+      logAuditoriaLS("permiso_denegado", usuario.usuarioId, {
+        metodo: req.method,
+        ruta: req.originalUrl,
+        rol: usuario.rol,
+        rolesPermitidos,
+      });
       return res.status(403).json({
         error: "Acceso denegado para este rol",
       });

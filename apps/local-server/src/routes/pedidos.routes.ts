@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { crearServicioPedidos } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
+import { logAuditoriaLS } from "../middleware/auditoria";
 
 /**
  * Rutas de pedidos para el servidor local (vista de producción).
@@ -124,6 +125,7 @@ export function pedidosRoutes(
       try {
         const id = req.params.id as string;
         const { estado } = req.body;
+        const usuario = (req as any).usuario;
 
         if (!["en_proceso", "listo"].includes(estado)) {
           return res.status(400).json({
@@ -140,6 +142,12 @@ export function pedidosRoutes(
           await pedidos.marcarListo(pedido.id);
         } else {
           await pedidos.actualizarEstado(pedido.id, estado);
+        }
+
+        if (estado === "listo") {
+          logAuditoriaLS("pedido_listo", usuario.usuarioId, { pedidoId: pedido.id });
+        } else {
+          logAuditoriaLS("pedido_estado_cambiado", usuario.usuarioId, { pedidoId: pedido.id, nuevoEstado: estado });
         }
 
         res.json({ mensaje: "Estado actualizado correctamente" });
@@ -190,9 +198,15 @@ export function pedidosAdminRoutes(
   router.post(
     "/",
     requerirRol("propietario", "cajero"),
-    async (req: Request, res: Response) => {
+    async (req, res) => {
       try {
+        const usuario = (req as any).usuario;
         const pedido = await pedidos.crear(req.body);
+        logAuditoriaLS("pedido_creado", usuario.usuarioId, {
+          pedidoId: pedido.id,
+          cliente: pedido.cliente,
+          totalEstimado: pedido.totalEstimado,
+        });
         res.json({ pedido });
       } catch (error) {
         console.error("Error al crear el pedido:", error instanceof Error ? error.message : "Error desconocido");

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { crearServicioGastos } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
+import { logAuditoriaLS } from "../middleware/auditoria";
 
 /**
  * Rutas de gastos para el servidor local.
@@ -54,6 +55,12 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
           ...req.body,
           registradoPor: usuario.usuarioId,
         });
+        logAuditoriaLS("gasto_creado", usuario.usuarioId, {
+          gastoId: gasto?.id,
+          monto: gasto?.monto,
+          categoriaId: gasto?.categoriaId,
+          descripcion: gasto?.descripcion,
+        });
         res.json({ gasto });
       } catch (error) {
         console.error("Error al crear gasto:", error instanceof Error ? error.message : "Error desconocido");
@@ -68,11 +75,13 @@ export function gastosRoutes(gastos: ReturnType<typeof crearServicioGastos>): Ro
     requerirRol("propietario"),
     async (req: Request, res: Response) => {
       try {
+        const usuario = (req as any).usuario;
         const { nombre } = req.body;
         if (!nombre) {
           return res.status(400).json({ error: "nombre es requerido" });
         }
         const categoria = await gastos.crearCategoria(nombre);
+        logAuditoriaLS("categoria_gasto_creada", usuario.usuarioId, { nombre, categoriaId: categoria?.id });
         res.json({ categoria });
       } catch (error) {
         console.error("Error al crear categoría:", error instanceof Error ? error.message : "Error desconocido");

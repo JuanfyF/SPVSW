@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { crearServicioStock } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
+import { logAuditoriaLS } from "../middleware/auditoria";
 
 /**
  * Rutas de stock para el servidor local.
@@ -99,6 +100,8 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
           registradoPor: usuario.usuarioId,
         });
 
+        logAuditoriaLS("stock_merma", usuario.usuarioId, { productoId, cantidad, motivo, sesionCajaId });
+
         res.json({ merma });
       } catch (error) {
         res.status(500).json({ error: "Error al registrar merma" });
@@ -130,6 +133,8 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
           registradoPor: usuario.usuarioId,
         });
 
+        logAuditoriaLS("stock_cortesia", usuario.usuarioId, { productoId, cantidad, motivo, cliente, sesionCajaId });
+
         res.json({ cortesia });
       } catch (error) {
         res.status(500).json({ error: "Error al registrar cortesía" });
@@ -158,6 +163,8 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
           registradoPor: usuario.usuarioId,
         });
 
+        logAuditoriaLS("stock_corte", usuario.usuarioId, { productoId, unidadesEnteras: unidadesEnteras ?? 1, porcionesObtenidas });
+
         res.json({ corte });
       } catch (error) {
         res.status(500).json({ error: "Error al registrar corte" });
@@ -172,6 +179,7 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
     async (req: Request, res: Response) => {
       try {
         const { productoId, sesionCajaId, cantidad } = req.body;
+        const usuario = (req as any).usuario;
 
         if (!productoId || !sesionCajaId || !cantidad) {
           return res.status(400).json({ error: "Faltan campos requeridos" });
@@ -182,6 +190,8 @@ export function stockRoutes(stock: ReturnType<typeof crearServicioStock>): Route
           sesionCajaId,
           cantidad
         );
+
+        logAuditoriaLS("stock_reposicion", usuario.usuarioId, { productoId, cantidad, sesionCajaId });
 
         res.json({ stock: stockActualizado });
       } catch (error) {

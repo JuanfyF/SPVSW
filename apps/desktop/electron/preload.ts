@@ -87,10 +87,10 @@ contextBridge.exposeInMainWorld("pos", {
       invoke("caja:calcularEfectivoEsperado", sesionCajaId),
     obtenerTotalDevoluciones: (sesionCajaId: number) =>
       invoke("caja:obtenerTotalDevoluciones", sesionCajaId),
-    forzarCierre: (sesionCajaId: number, usuarioId: number) =>
-      invoke("caja:forzarCierre", sesionCajaId, usuarioId),
-    marcarRevisado: (cierreCajaId: number, usuarioId: number) =>
-      invoke("caja:marcarRevisado", cierreCajaId, usuarioId),
+    forzarCierre: (sesionCajaId: number) =>
+      invoke("caja:forzarCierre", sesionCajaId),
+    marcarRevisado: (cierreCajaId: number) =>
+      invoke("caja:marcarRevisado", cierreCajaId),
   },
 
   // ============================================================
@@ -203,6 +203,18 @@ contextBridge.exposeInMainWorld("pos", {
     reportePedidosPendientes: () => invoke("reportes:reportePedidosPendientes"),
     reporteProductosMasVendidos: (fechaInicio: string, fechaFin: string) =>
       invoke("reportes:reporteProductosMasVendidos", fechaInicio, fechaFin),
+  },
+
+  // ============================================================
+  // AUDITORÍA (solo propietario — el gate está en el handler)
+  // ============================================================
+  auditoria: {
+    listar: (filtros: {
+      fechaInicio?: string;
+      fechaFin?: string;
+      evento?: string;
+      usuarioId?: number;
+    }) => invoke("auditoria:listar", filtros),
   },
 
   // ============================================================

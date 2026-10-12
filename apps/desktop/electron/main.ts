@@ -46,6 +46,7 @@ import {
   crearServicioNomina,
   crearServicioReportes,
   crearServicioConfiguracion,
+  crearServicioAuditoria,
 } from "@pos/core";
 
 // ─── Handler imports ─────────────────────────────────
@@ -62,6 +63,7 @@ import { registrarGastosHandlers } from "./handlers/gastos";
 import { registrarNominaHandlers } from "./handlers/nomina";
 import { registrarReportesHandlers } from "./handlers/reportes";
 import { registrarSistemaHandlers } from "./handlers/sistema";
+import { registrarAuditoriaHandlers } from "./handlers/auditoria";
 
 let mainWindow: BrowserWindow | null = null;
 let db: ReturnType<typeof createDbWithSqlite>["db"] | null = null;
@@ -80,6 +82,7 @@ function registrarHandlers() {
   registrarNominaHandlers();
   registrarReportesHandlers();
   registrarSistemaHandlers();
+  registrarAuditoriaHandlers();
 }
 
 async function crearVentanaPrincipal() {
@@ -163,6 +166,7 @@ app.whenReady().then(async () => {
     nomina: crearServicioNomina(db),
     reportes: crearServicioReportes(db),
     configuracion: crearServicioConfiguracion(db),
+    auditoria: crearServicioAuditoria(db),
   };
 
   // Inicializar contexto de handlers

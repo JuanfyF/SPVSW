@@ -35,13 +35,17 @@ export function registrarCajaHandlers() {
     return servicios.caja.obtenerTotalDevoluciones(sesionCajaId);
   }, { auth: true }));
 
-  ipcMain.handle("caja:forzarCierre", ctx.safeHandler(async (_event, sesionCajaId: number, usuarioId: number) => {
+  ipcMain.handle("caja:forzarCierre", ctx.safeHandler(async (_event, sesionCajaId: number) => {
+    const usuarioId = ctx.getUsuarioActual()!.id;
     const resultado = await servicios.caja.forzarCierre(sesionCajaId, usuarioId);
     ctx.logAuditoria("caja_forzar_cierre", usuarioId, { sesionCajaId });
     return resultado;
   }, { admin: true }));
 
-  ipcMain.handle("caja:marcarRevisado", ctx.safeHandler(async (_event, cierreCajaId: number, usuarioId: number) => {
-    return servicios.caja.marcarRevisado(cierreCajaId, usuarioId);
+  ipcMain.handle("caja:marcarRevisado", ctx.safeHandler(async (_event, cierreCajaId: number) => {
+    const usuarioId = ctx.getUsuarioActual()!.id;
+    const resultado = await servicios.caja.marcarRevisado(cierreCajaId, usuarioId);
+    ctx.logAuditoria("caja_revisada", usuarioId, { cierreCajaId });
+    return resultado;
   }, { auth: true }));
 }

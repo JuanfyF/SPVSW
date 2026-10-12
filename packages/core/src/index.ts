@@ -32,3 +32,5 @@ export { crearServicioPedidos, montoCobradoEntrega } from "./modules/pedidos";
 export { crearServicioGastos } from "./modules/gastos";
 export { crearServicioNomina } from "./modules/nomina";
 export { crearServicioReportes } from "./modules/reportes";
+export { crearServicioAuditoria, LIMITE_AUDITORIA } from "./modules/auditoria";
+export type { RegistroAuditoria } from "./modules/auditoria";

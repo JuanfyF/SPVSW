@@ -41,6 +41,8 @@ export function registrarAuthHandlers() {
   }));
 
   ipcMain.handle("auth:logout", ctx.safeHandler(async () => {
+    const usuario = ctx.getUsuarioActual();
+    if (usuario) ctx.logAuditoria("logout", usuario.id, { nombre: usuario.nombre });
     ctx.setUsuarioActual(null);
     ctx.limpiarSesionesTimeout();
     return true;

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { crearServicioVentas } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
+import { logAuditoriaLS } from "../middleware/auditoria";
 
 /**
  * Rutas de ventas para el servidor local.
@@ -89,7 +90,13 @@ export function ventasRoutes(ventas: ReturnType<typeof crearServicioVentas>): Ro
     requerirRol("propietario", "cajero"),
     async (req: Request, res: Response) => {
       try {
+        const usuario = (req as any).usuario;
         const venta = await ventas.crear(req.body);
+        logAuditoriaLS("venta_creada", usuario.usuarioId, {
+          ventaId: venta.id,
+          total: venta.total,
+          metodoPago: venta.metodoPago,
+        });
         res.json({ venta });
       } catch (error) {
         console.error("Error al crear venta:", error instanceof Error ? error.message : "Error desconocido");

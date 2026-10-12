@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { crearServicioCaja } from "@pos/core";
 import { requerirRol } from "../middleware/auth";
+import { logAuditoriaLS } from "../middleware/auditoria";
 
 /**
  * Rutas de caja para el servidor local.
@@ -35,6 +36,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
           ...req.body,
           usuarioId: usuario.usuarioId,
         });
+        logAuditoriaLS("caja_abierta", usuario.usuarioId, { sesionCajaId: sesion?.id });
         res.json({ sesion });
       } catch (error) {
         console.error("Error al abrir caja:", error instanceof Error ? error.message : "Error desconocido");
@@ -59,6 +61,11 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
         if (usuario.rol !== "propietario") {
           const sesion = await caja.obtenerSesionAbierta(usuario.usuarioId);
           if (!sesion || sesion.id !== sesionCajaId) {
+            logAuditoriaLS("permiso_denegado", usuario.usuarioId, {
+              metodo: req.method,
+              ruta: req.originalUrl,
+              motivo: "sesion_caja_no_pertenece",
+            });
             return res.status(403).json({ error: "No tienes permiso para cerrar esta sesión" });
           }
         }
@@ -68,6 +75,10 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
           efectivoContado: req.body.efectivoContado,
           tieneDiferenciaStock: req.body.tieneDiferenciaStock,
           conteoStock: req.body.conteoStock,
+        });
+        logAuditoriaLS("caja_cerrada", usuario.usuarioId, {
+          cierreCajaId: cierre?.id,
+          efectivoEsperado: cierre?.efectivoEsperado,
         });
         res.json({ cierre });
       } catch (error) {
@@ -149,6 +160,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
           return res.status(400).json({ error: "cierreCajaId es requerido" });
         }
         await caja.marcarRevisado(cierreCajaId, usuario.usuarioId);
+        logAuditoriaLS("caja_revisada", usuario.usuarioId, { cierreCajaId });
         res.json({ mensaje: "Cierre marcado como revisado" });
       } catch (error) {
         console.error("Error al marcar revisado:", error instanceof Error ? error.message : "Error desconocido");
@@ -169,6 +181,7 @@ export function cajaRoutes(caja: ReturnType<typeof crearServicioCaja>): Router {
           return res.status(400).json({ error: "sesionCajaId es requerido" });
         }
         await caja.forzarCierre(sesionCajaId, usuario.usuarioId);
+        logAuditoriaLS("caja_forzar_cierre", usuario.usuarioId, { sesionCajaId });
         res.json({ exito: true });
       } catch (error) {
         console.error("Error al forzar cierre:", error instanceof Error ? error.message : "Error desconocido");

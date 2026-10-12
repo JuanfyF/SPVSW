@@ -29,6 +29,7 @@ const CierreCaja = lazy(() => import("./screens/escritorio/CierreCaja"));
 const Reportes = lazy(() => import("./screens/escritorio/Reportes"));
 const Usuarios = lazy(() => import("./screens/escritorio/Usuarios"));
 const BackupRestore = lazy(() => import("./screens/escritorio/BackupRestore"));
+const Auditoria = lazy(() => import("./screens/escritorio/Auditoria"));
 const Ayuda = lazy(() => import("./screens/escritorio/Ayuda"));
 
 // Pantallas móviles (lazy)
@@ -129,6 +130,10 @@ export const router: RouterType = createHashRouter([
       {
         path: "backup",
         element: <Suspense fallback={<LoadingScreen />}><BackupRestore /></Suspense>,
+      },
+      {
+        path: "auditoria",
+        element: <Suspense fallback={<LoadingScreen />}><Auditoria /></Suspense>,
       },
       {
         path: "ayuda",

@@ -8,11 +8,15 @@ export function registrarNominaHandlers() {
   const servicios = ctx.getServicios();
 
   ipcMain.handle("nomina:registrarAdelanto", ctx.safeHandler(async (_event, datos: unknown) => {
-    return servicios.nomina.registrarAdelanto(datos as any);
+    const resultado = await servicios.nomina.registrarAdelanto(datos as any);
+    ctx.logAuditoria("adelanto_registrado", undefined, { adelantoId: resultado?.id, empleadoId: resultado?.empleadoId, monto: resultado?.monto });
+    return resultado;
   }, { auth: true }));
 
   ipcMain.handle("nomina:registrarMulta", ctx.safeHandler(async (_event, datos: unknown) => {
-    return servicios.nomina.registrarMulta(datos as any);
+    const resultado = await servicios.nomina.registrarMulta(datos as any);
+    ctx.logAuditoria("multa_registrada", undefined, { multaId: resultado?.id, empleadoId: resultado?.empleadoId, monto: resultado?.monto, motivo: resultado?.motivo });
+    return resultado;
   }, { auth: true }));
 
   ipcMain.handle("nomina:listarAdelantosPorEmpleado", ctx.safeHandler(async (_event, empleadoId: number) => {
@@ -36,6 +40,8 @@ export function registrarNominaHandlers() {
   }, { auth: true }));
 
   ipcMain.handle("nomina:crearEmpleado", ctx.safeHandler(async (_event, datos: unknown) => {
-    return servicios.nomina.crearEmpleado(datos as any);
+    const resultado = await servicios.nomina.crearEmpleado(datos as any);
+    ctx.logAuditoria("empleado_creado", undefined, { empleadoId: resultado?.id, nombre: resultado?.nombre, cargo: resultado?.cargo });
+    return resultado;
   }, { auth: true }));
 }

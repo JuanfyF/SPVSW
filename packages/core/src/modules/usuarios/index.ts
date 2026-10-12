@@ -20,13 +20,16 @@ export function crearServicioUsuarios(db: PosDatabase) {
    * Regla: el cajero gestiona usuarios, salvo la cuenta del propietario.
    */
   function denegarGestionPropietario(actor: ActorUsuario, operacion: string) {
+    // drizzle con better-sqlite3 es perezoso: sin await/then la query no corre.
     try {
-      db.insert(auditLog).values({
-        evento: "permiso_denegado",
-        usuarioId: actor.id,
-        detalle: JSON.stringify({ operacion, motivo: "gestion_propietario_restringida" }),
-        origen: "core",
-      });
+      void Promise.resolve(
+        db.insert(auditLog).values({
+          evento: "permiso_denegado",
+          usuarioId: actor.id,
+          detalle: JSON.stringify({ operacion, motivo: "gestion_propietario_restringida" }),
+          origen: "core",
+        })
+      ).catch(() => {});
     } catch { /* audit logging es best-effort */ }
     throw new Error("El cajero no puede gestionar la cuenta del propietario");
   }

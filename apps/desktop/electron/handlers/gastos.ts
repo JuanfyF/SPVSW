@@ -9,6 +9,7 @@ export function registrarGastosHandlers() {
 
   ipcMain.handle("gastos:crear", ctx.safeHandler(async (_event, datos: unknown) => {
     const resultado = await servicios.gastos.crear(datos as any);
+    ctx.logAuditoria("gasto_creado", undefined, { gastoId: resultado?.id, monto: resultado?.monto, categoriaId: resultado?.categoriaId, descripcion: resultado?.descripcion });
     ctx.notificarCambio();
     return resultado;
   }, { auth: true }));
@@ -30,6 +31,8 @@ export function registrarGastosHandlers() {
   }, { auth: true }));
 
   ipcMain.handle("gastos:crearCategoria", ctx.safeHandler(async (_event, nombre: string) => {
-    return servicios.gastos.crearCategoria(nombre);
+    const resultado = await servicios.gastos.crearCategoria(nombre);
+    ctx.logAuditoria("categoria_gasto_creada", undefined, { categoriaId: (resultado as { id?: number })?.id, nombre });
+    return resultado;
   }, { auth: true }));
 }

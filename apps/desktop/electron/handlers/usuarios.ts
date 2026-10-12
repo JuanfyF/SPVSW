@@ -39,15 +39,27 @@ export function registrarUsuariosHandlers() {
   }, { gestores: true }));
 
   ipcMain.handle("usuarios:crear", ctx.safeHandler(async (_event, datos: unknown) => {
-    return servicios.usuarios.crear(datos as any, actorActual());
+    const resultado = await servicios.usuarios.crear(datos as any, actorActual());
+    ctx.logAuditoria("usuario_creado", undefined, { usuarioId: resultado?.id, nombre: resultado?.nombre, rol: resultado?.rol });
+    return resultado;
   }, { gestores: true }));
 
   ipcMain.handle("usuarios:actualizar", ctx.safeHandler(async (_event, id: number, datos: unknown) => {
-    return servicios.usuarios.actualizar(id, datos as any, actorActual());
+    const resultado = await servicios.usuarios.actualizar(id, datos as any, actorActual());
+    const cambios = datos as Record<string, unknown>;
+    ctx.logAuditoria("usuario_actualizado", undefined, {
+      usuarioId: id,
+      nombre: resultado?.nombre ?? cambios.nombre,
+      rol: resultado?.rol ?? cambios.rol,
+    });
+    return resultado;
   }, { gestores: true }));
 
   ipcMain.handle("usuarios:desactivar", ctx.safeHandler(async (_event, id: number) => {
-    return servicios.usuarios.desactivar(id, actorActual());
+    const usuario = await servicios.usuarios.obtenerPorId(id);
+    const resultado = await servicios.usuarios.desactivar(id, actorActual());
+    ctx.logAuditoria("usuario_desactivado", undefined, { usuarioId: id, nombre: usuario?.nombre, rol: usuario?.rol });
+    return resultado;
   }, { gestores: true }));
 
   ipcMain.handle("usuarios:cambiarPin", ctx.safeHandler(async (_event, id: number, nuevoPin: string) => {

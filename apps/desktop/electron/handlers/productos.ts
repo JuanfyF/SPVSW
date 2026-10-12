@@ -16,15 +16,35 @@ export function registrarProductosHandlers() {
   }, { auth: true }));
 
   ipcMain.handle("productos:crear", ctx.safeHandler(async (_event, datos: unknown) => {
-    return servicios.productos.crear(datos as any);
+    const resultado = await servicios.productos.crear(datos as any);
+    ctx.logAuditoria("producto_creado", undefined, {
+      productoId: resultado?.id,
+      nombre: resultado?.nombre,
+      precioEntero: resultado?.precioEntero,
+      precioPorcion: resultado?.precioPorcion,
+    });
+    return resultado;
   }, { auth: true }));
 
   ipcMain.handle("productos:actualizar", ctx.safeHandler(async (_event, id: number, datos: unknown) => {
-    return servicios.productos.actualizar(id, datos as any);
+    const antes = await servicios.productos.obtenerPorId(id);
+    const resultado = await servicios.productos.actualizar(id, datos as any);
+    ctx.logAuditoria("producto_actualizado", undefined, {
+      productoId: id,
+      nombreAntes: antes?.nombre,
+      nombre: resultado?.nombre ?? antes?.nombre,
+      precioEnteroAntes: antes?.precioEntero,
+      precioEnteroDespues: resultado?.precioEntero ?? antes?.precioEntero,
+      precioPorcionAntes: antes?.precioPorcion,
+      precioPorcionDespues: resultado?.precioPorcion ?? antes?.precioPorcion,
+    });
+    return resultado;
   }, { auth: true }));
 
   ipcMain.handle("productos:desactivar", ctx.safeHandler(async (_event, id: number) => {
-    return servicios.productos.desactivar(id);
+    const antes = await servicios.productos.obtenerPorId(id);
+    await servicios.productos.desactivar(id);
+    ctx.logAuditoria("producto_desactivado", undefined, { productoId: id, nombre: antes?.nombre });
   }, { auth: true }));
 
   ipcMain.handle("productos:buscar", ctx.safeHandler(async (_event, nombre: string) => {

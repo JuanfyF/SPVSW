@@ -20,6 +20,7 @@ import {
   crearServicioNomina,
   crearServicioReportes,
   crearServicioConfiguracion,
+  crearServicioAuditoria,
 } from "@pos/core";
 
 export interface UsuarioActual {
@@ -41,6 +42,7 @@ export interface Servicios {
   nomina: ReturnType<typeof crearServicioNomina>;
   reportes: ReturnType<typeof crearServicioReportes>;
   configuracion: ReturnType<typeof crearServicioConfiguracion>;
+  auditoria: ReturnType<typeof crearServicioAuditoria>;
 }
 
 export interface HandlerContext {
@@ -55,6 +57,7 @@ export interface HandlerContext {
   requireAdmin: () => void;
   requireGestor: () => void;
   limpiarSesionesTimeout: () => void;
+  /** Inserta en audit_log. Si usuarioId se omite, usa el usuario de la sesión actual. */
   logAuditoria: (evento: string, usuarioId?: number, detalle?: Record<string, unknown>) => void;
   notificarCambio: () => void;
 }
@@ -78,6 +81,9 @@ function _reiniciarTimeoutSesion() {
     }, SESION_AVISO_MS);
     _timeoutSesion = setTimeout(() => {
       console.log("Sesión expirada por inactividad (15 min)");
+      if (_usuarioActual) {
+        _logAuditoria("sesion_expirada", _usuarioActual.id, { nombre: _usuarioActual.nombre });
+      }
       _usuarioActual = null;
       _mainWindow?.webContents.send("sesion:expirada");
     }, SESION_TIMEOUT_MS);
@@ -93,14 +99,7 @@ function _requireAuth(): void {
 function _requireAdmin(): void {
   _requireAuth();
   if (_usuarioActual!.rol !== "propietario") {
-    try {
-      _db?.insert(auditLog).values({
-        evento: "permiso_denegado",
-        usuarioId: _usuarioActual!.id,
-        detalle: JSON.stringify({ rol: _usuarioActual!.rol }),
-        origen: "desktop",
-      });
-    } catch { /* audit logging es best-effort */ }
+    _logAuditoria("permiso_denegado", _usuarioActual!.id, { rol: _usuarioActual!.rol });
     throw new Error("No tiene permisos para realizar esta acción.");
   }
 }
@@ -109,14 +108,10 @@ function _requireAdmin(): void {
 function _requireGestor(): void {
   _requireAuth();
   if (_usuarioActual!.rol !== "propietario" && _usuarioActual!.rol !== "cajero") {
-    try {
-      _db?.insert(auditLog).values({
-        evento: "permiso_denegado",
-        usuarioId: _usuarioActual!.id,
-        detalle: JSON.stringify({ rol: _usuarioActual!.rol, operacion: "gestion_usuarios" }),
-        origen: "desktop",
-      });
-    } catch { /* audit logging es best-effort */ }
+    _logAuditoria("permiso_denegado", _usuarioActual!.id, {
+      rol: _usuarioActual!.rol,
+      operacion: "gestion_usuarios",
+    });
     throw new Error("No tiene permisos para gestionar usuarios.");
   }
 }
@@ -140,15 +135,26 @@ function _safeHandler<T extends (...args: any[]) => Promise<any>>(
   }) as T;
 }
 
+/**
+ * Inserta en audit_log. Si usuarioId se omite, usa el usuario de la sesión.
+ * drizzle con better-sqlite3 es perezoso: SIN await/then la query no se
+ * ejecuta — por eso se resuelve la promesa en fire-and-forget.
+ */
 function _logAuditoria(evento: string, usuarioId?: number, detalle?: Record<string, unknown>) {
   try {
-    _db?.insert(auditLog).values({
-      evento,
-      usuarioId,
-      detalle: detalle ? JSON.stringify(detalle) : undefined,
-      origen: "desktop",
+    void Promise.resolve(
+      _db?.insert(auditLog).values({
+        evento,
+        usuarioId: usuarioId ?? _usuarioActual?.id,
+        detalle: detalle ? JSON.stringify(detalle) : undefined,
+        origen: "desktop",
+      })
+    ).catch((err) => {
+      console.error(`[Auditoria] No se pudo registrar "${evento}":`, err);
     });
-  } catch { /* audit logging es best-effort */ }
+  } catch (err) {
+    console.error(`[Auditoria] No se pudo registrar "${evento}":`, err);
+  }
 }
 
 function _notificarCambio() {

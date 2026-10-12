@@ -421,6 +421,19 @@ export const ListarPedidosFechaSchema = z.object({
   fechaFin: FechaSchema,
 });
 
+/** Filtros de la pantalla Auditoría (lectura de audit_log) */
+export const AuditoriaFiltrosSchema = z
+  .object({
+    fechaInicio: FechaSchema.optional(),
+    fechaFin: FechaSchema.optional(),
+    evento: z.string().trim().max(64, "Evento demasiado largo").optional(),
+    usuarioId: IdSchema.optional(),
+  })
+  .refine((data) => !data.fechaInicio || !data.fechaFin || data.fechaInicio <= data.fechaFin, {
+    message: "Fecha inicio no puede ser posterior a fecha fin",
+    path: ["fechaInicio"],
+  });
+
 // ============================================================
 // TIPOS INFERIDOS
 // ============================================================
@@ -457,3 +470,4 @@ export type RegistrarMultaInput = z.infer<typeof RegistrarMultaSchema>;
 export type ReporteDiarioInput = z.infer<typeof ReporteDiarioSchema>;
 export type ReportePorFechasInput = z.infer<typeof ReportePorFechasSchema>;
 export type ListarPedidosFechaInput = z.infer<typeof ListarPedidosFechaSchema>;
+export type AuditoriaFiltrosInput = z.infer<typeof AuditoriaFiltrosSchema>;

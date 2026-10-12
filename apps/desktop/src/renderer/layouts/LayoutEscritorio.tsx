@@ -14,6 +14,7 @@ import {
   BarChart3,
   KeyRound,
   HardDrive,
+  ScrollText,
   HelpCircle,
 } from "lucide-react";
 import Onboarding, { shouldShowOnboarding } from "../components/Onboarding";
@@ -31,6 +32,7 @@ const menuItemsAdmin = [
   { path: "/reportes", label: "Reportes", icon: <BarChart3 className="w-5 h-5" /> },
   { path: "/usuarios", label: "Usuarios", icon: <KeyRound className="w-5 h-5" /> },
   { path: "/backup", label: "Backup", icon: <HardDrive className="w-5 h-5" />, soloPropietario: true },
+  { path: "/auditoria", label: "Auditoría", icon: <ScrollText className="w-5 h-5" />, soloPropietario: true },
   { path: "/ayuda", label: "Ayuda", icon: <HelpCircle className="w-5 h-5" /> },
 ];
 
@@ -49,6 +51,7 @@ const rutasRestringidasPastelera = [
   "/reportes",
   "/usuarios",
   "/backup",
+  "/auditoria",
   "/caja/apertura",
   "/caja/cierre",
 ];

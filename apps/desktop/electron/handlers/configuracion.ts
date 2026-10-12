@@ -14,6 +14,13 @@ export function registrarConfiguracionHandlers() {
   }));
 
   ipcMain.handle("configuracion:guardar", ctx.safeHandler(async (_event, datos: unknown) => {
-    return servicios.configuracion.guardar(datos as any);
+    const antes = await servicios.configuracion.obtener();
+    const resultado = await servicios.configuracion.guardar(datos as any);
+    const nuevos = datos as { nombreNegocio?: string };
+    ctx.logAuditoria("configuracion_guardada", undefined, {
+      nombreAntes: antes.nombreNegocio,
+      nombreNuevo: nuevos.nombreNegocio ?? antes.nombreNegocio,
+    });
+    return resultado;
   }, { admin: true }));
 }
